@@ -1,0 +1,87 @@
+{
+  "common": {
+    "welcome": "Bem-vindo",
+    "login": "Entrar",
+    "logout": "Sair",
+    "register": "Registar",
+    "email": "Email",
+    "password": "Palavra-passe",
+    "confirmPassword": "Confirmar palavra-passe",
+    "name": "Nome",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "edit": "Editar",
+    "delete": "Eliminar",
+    "search": "Pesquisar",
+    "loading": "A carregar...",
+    "settings": "Configurações",
+    "profile": "Perfil",
+    "changePassword": "Alterar palavra-passe",
+    "language": "Idioma"
+  },
+  "landing": {
+    "hero": {
+      "title": "Gestão Inteligente para Wellness & Fitness",
+      "subtitle": "A plataforma completa para gerir o seu negócio de fitness. Alunos, aulas, pagamentos e muito mais.",
+      "cta": "Começar Agora",
+      "demo": "Ver Demonstração"
+    },
+    "features": {
+      "title": "Tudo o que precisa numa só plataforma",
+      "students": {
+        "title": "Gestão de Alunos",
+        "description": "Acompanhe todos os seus alunos, planos de treino e evolução."
+      },
+      "classes": {
+        "title": "Aulas & Serviços",
+        "description": "Organize horários, confirme presenças e gira as suas aulas."
+      },
+      "financial": {
+        "title": "Controlo Financeiro",
+        "description": "Gerencie pagamentos, salários e tenha relatórios detalhados."
+      },
+      "team": {
+        "title": "Equipa",
+        "description": "Gerencie personal trainers, instrutores e todo o staff."
+      }
+    }
+  },
+  "auth": {
+    "loginTitle": "Entrar na sua conta",
+    "registerTitle": "Criar conta",
+    "forgotPassword": "Esqueceu a palavra-passe?",
+    "noAccount": "Ainda não tem conta?",
+    "hasAccount": "Já tem uma conta?",
+    "companyName": "Nome da empresa",
+    "phone": "Telefone"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "students": "Alunos",
+    "hr": "Recursos Humanos",
+    "classes": "Aulas/Serviços",
+    "communication": "Comunicação",
+    "financial": "Financeiro",
+    "equipment": "Material Desportivo",
+    "shop": "Loja",
+    "events": "Eventos",
+    "totalStudents": "Total de Alunos",
+    "activeClasses": "Aulas Ativas",
+    "monthlyRevenue": "Receita do Mês",
+    "pendingPayments": "Pagamentos Pendentes"
+  },
+  "personal": {
+    "myStudents": "Meus Alunos",
+    "schedule": "Agenda",
+    "trainingPlans": "Planos de Treino",
+    "nutritionPlans": "Planos Nutricionais",
+    "myFinancial": "Meu Financeiro",
+    "confirmClass": "Confirmar Aula",
+    "attendance": "Lista de Presença"
+  },
+  "student": {
+    "myDashboard": "Meu Dashboard",
+    "myClasses": "Minhas Aulas",
+    "myPlans": "Meus Planos"
+  }
+}
