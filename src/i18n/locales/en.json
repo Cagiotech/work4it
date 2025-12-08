@@ -1,0 +1,87 @@
+{
+  "common": {
+    "welcome": "Welcome",
+    "login": "Login",
+    "logout": "Logout",
+    "register": "Register",
+    "email": "Email",
+    "password": "Password",
+    "confirmPassword": "Confirm password",
+    "name": "Name",
+    "save": "Save",
+    "cancel": "Cancel",
+    "edit": "Edit",
+    "delete": "Delete",
+    "search": "Search",
+    "loading": "Loading...",
+    "settings": "Settings",
+    "profile": "Profile",
+    "changePassword": "Change password",
+    "language": "Language"
+  },
+  "landing": {
+    "hero": {
+      "title": "Smart Management for Wellness & Fitness",
+      "subtitle": "The complete platform to manage your fitness business. Students, classes, payments and much more.",
+      "cta": "Get Started",
+      "demo": "Watch Demo"
+    },
+    "features": {
+      "title": "Everything you need in one platform",
+      "students": {
+        "title": "Student Management",
+        "description": "Track all your students, training plans and progress."
+      },
+      "classes": {
+        "title": "Classes & Services",
+        "description": "Organize schedules, confirm attendance and manage your classes."
+      },
+      "financial": {
+        "title": "Financial Control",
+        "description": "Manage payments, salaries and get detailed reports."
+      },
+      "team": {
+        "title": "Team",
+        "description": "Manage personal trainers, instructors and all staff."
+      }
+    }
+  },
+  "auth": {
+    "loginTitle": "Sign in to your account",
+    "registerTitle": "Create account",
+    "forgotPassword": "Forgot password?",
+    "noAccount": "Don't have an account?",
+    "hasAccount": "Already have an account?",
+    "companyName": "Company name",
+    "phone": "Phone"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "students": "Students",
+    "hr": "Human Resources",
+    "classes": "Classes/Services",
+    "communication": "Communication",
+    "financial": "Financial",
+    "equipment": "Sports Equipment",
+    "shop": "Shop",
+    "events": "Events",
+    "totalStudents": "Total Students",
+    "activeClasses": "Active Classes",
+    "monthlyRevenue": "Monthly Revenue",
+    "pendingPayments": "Pending Payments"
+  },
+  "personal": {
+    "myStudents": "My Students",
+    "schedule": "Schedule",
+    "trainingPlans": "Training Plans",
+    "nutritionPlans": "Nutrition Plans",
+    "myFinancial": "My Financial",
+    "confirmClass": "Confirm Class",
+    "attendance": "Attendance List"
+  },
+  "student": {
+    "myDashboard": "My Dashboard",
+    "myClasses": "My Classes",
+    "myPlans": "My Plans"
+  }
+}
