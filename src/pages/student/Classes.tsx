@@ -79,60 +79,63 @@ export default function StudentClasses() {
     <>
       <StudentHeader title={t("student.classes")} />
       
-      <div className="flex-1 overflow-auto p-6 space-y-6">
+      <div className="flex-1 overflow-auto p-4 md:p-6 space-y-4 md:space-y-6">
         <Tabs defaultValue="upcoming" className="w-full">
-          <TabsList>
+          <TabsList className="w-full md:w-auto grid grid-cols-2 md:flex">
             <TabsTrigger value="upcoming">Próximas Aulas</TabsTrigger>
             <TabsTrigger value="history">Histórico</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="upcoming" className="mt-6">
-            <div className="space-y-4">
+          <TabsContent value="upcoming" className="mt-4 md:mt-6">
+            <div className="space-y-3 md:space-y-4">
               {upcomingClasses.map((classItem) => (
                 <Card key={classItem.id} className="hover:shadow-lg transition-shadow border-l-4 border-l-primary">
-                  <CardContent className="p-6">
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <h3 className="font-heading font-semibold text-lg text-foreground">
+                  <CardContent className="p-4 md:p-6">
+                    <div className="flex flex-col gap-4">
+                      {/* Header */}
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-2 md:gap-3 flex-wrap">
+                          <h3 className="font-heading font-semibold text-base md:text-lg text-foreground">
                             {classItem.name}
                           </h3>
                           <Badge 
                             variant="outline"
                             className={classItem.status === "confirmed" 
-                              ? "border-success text-success" 
-                              : "border-warning text-warning"
+                              ? "border-success text-success text-xs" 
+                              : "border-warning text-warning text-xs"
                             }
                           >
                             {classItem.status === "confirmed" ? "Confirmada" : "Pendente"}
                           </Badge>
                         </div>
-                        
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                          <div className="flex items-center gap-2 text-muted-foreground">
-                            <Calendar className="h-4 w-4" />
-                            <span>{classItem.date}</span>
-                          </div>
-                          <div className="flex items-center gap-2 text-muted-foreground">
-                            <Clock className="h-4 w-4" />
-                            <span>{classItem.time}</span>
-                          </div>
-                          <div className="flex items-center gap-2 text-muted-foreground">
-                            <User className="h-4 w-4" />
-                            <span>{classItem.trainer}</span>
-                          </div>
-                          <div className="flex items-center gap-2 text-muted-foreground">
-                            <MapPin className="h-4 w-4" />
-                            <span>{classItem.location}</span>
-                          </div>
+                      </div>
+                      
+                      {/* Details Grid */}
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4 text-sm">
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <Calendar className="h-4 w-4 flex-shrink-0" />
+                          <span className="truncate">{classItem.date}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <Clock className="h-4 w-4 flex-shrink-0" />
+                          <span>{classItem.time}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <User className="h-4 w-4 flex-shrink-0" />
+                          <span className="truncate">{classItem.trainer}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <MapPin className="h-4 w-4 flex-shrink-0" />
+                          <span className="truncate">{classItem.location}</span>
                         </div>
                       </div>
                       
-                      <div className="flex gap-2">
+                      {/* Actions */}
+                      <div className="flex flex-col sm:flex-row gap-2">
                         {classItem.status === "pending" && (
-                          <Button size="sm">Confirmar Presença</Button>
+                          <Button size="sm" className="flex-1 sm:flex-none">Confirmar Presença</Button>
                         )}
-                        <Button variant="outline" size="sm">Ver Detalhes</Button>
+                        <Button variant="outline" size="sm" className="flex-1 sm:flex-none">Ver Detalhes</Button>
                       </div>
                     </div>
                   </CardContent>
@@ -141,39 +144,39 @@ export default function StudentClasses() {
             </div>
           </TabsContent>
 
-          <TabsContent value="history" className="mt-6">
+          <TabsContent value="history" className="mt-4 md:mt-6">
             <Card>
               <CardHeader>
-                <CardTitle>Aulas Anteriores</CardTitle>
+                <CardTitle className="text-base md:text-lg">Aulas Anteriores</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
                   {pastClasses.map((classItem) => (
                     <div 
                       key={classItem.id} 
-                      className="flex items-center justify-between p-4 bg-muted/30 rounded-xl"
+                      className="flex items-center justify-between p-3 md:p-4 bg-muted/30 rounded-xl gap-3"
                     >
-                      <div className="flex items-center gap-4">
-                        <div className={`h-10 w-10 rounded-full flex items-center justify-center ${
+                      <div className="flex items-center gap-3 md:gap-4 min-w-0">
+                        <div className={`h-8 w-8 md:h-10 md:w-10 rounded-full flex items-center justify-center flex-shrink-0 ${
                           classItem.attended 
                             ? "bg-success/10 text-success" 
                             : "bg-destructive/10 text-destructive"
                         }`}>
-                          <CheckCircle className="h-5 w-5" />
+                          <CheckCircle className="h-4 w-4 md:h-5 md:w-5" />
                         </div>
-                        <div>
-                          <h4 className="font-medium text-foreground">{classItem.name}</h4>
-                          <p className="text-sm text-muted-foreground">
+                        <div className="min-w-0">
+                          <h4 className="font-medium text-foreground text-sm md:text-base truncate">{classItem.name}</h4>
+                          <p className="text-xs md:text-sm text-muted-foreground truncate">
                             {classItem.date} • {classItem.trainer}
                           </p>
                         </div>
                       </div>
                       <Badge 
                         variant="outline"
-                        className={classItem.attended 
+                        className={`flex-shrink-0 text-xs ${classItem.attended 
                           ? "border-success text-success" 
                           : "border-destructive text-destructive"
-                        }
+                        }`}
                       >
                         {classItem.attended ? "Presente" : "Faltou"}
                       </Badge>
