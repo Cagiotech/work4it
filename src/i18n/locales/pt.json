@@ -80,8 +80,12 @@
     "attendance": "Lista de Presença"
   },
   "student": {
-    "myDashboard": "Meu Dashboard",
-    "myClasses": "Minhas Aulas",
-    "myPlans": "Meus Planos"
+    "dashboard": "O Meu Dashboard",
+    "classes": "As Minhas Aulas",
+    "plans": "Planos de Treino",
+    "settings": "Configurações",
+    "myDashboard": "O Meu Dashboard",
+    "myClasses": "As Minhas Aulas",
+    "myPlans": "Os Meus Planos"
   }
 }

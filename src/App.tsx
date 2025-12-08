@@ -20,7 +20,14 @@ import Financial from "./pages/company/Financial";
 import Equipment from "./pages/company/Equipment";
 import Shop from "./pages/company/Shop";
 import Events from "./pages/company/Events";
-import Settings from "./pages/company/Settings";
+import CompanySettings from "./pages/company/Settings";
+
+// Student Layout & Pages
+import { StudentLayout } from "./layouts/StudentLayout";
+import StudentDashboard from "./pages/student/Dashboard";
+import StudentClasses from "./pages/student/Classes";
+import TrainingPlans from "./pages/student/TrainingPlans";
+import StudentSettings from "./pages/student/Settings";
 
 const queryClient = new QueryClient();
 
@@ -46,7 +53,15 @@ const App = () => (
             <Route path="equipment" element={<Equipment />} />
             <Route path="shop" element={<Shop />} />
             <Route path="events" element={<Events />} />
-            <Route path="settings" element={<Settings />} />
+            <Route path="settings" element={<CompanySettings />} />
+          </Route>
+          
+          {/* Student Dashboard Routes */}
+          <Route path="/student" element={<StudentLayout />}>
+            <Route index element={<StudentDashboard />} />
+            <Route path="classes" element={<StudentClasses />} />
+            <Route path="plans" element={<TrainingPlans />} />
+            <Route path="settings" element={<StudentSettings />} />
           </Route>
           
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
