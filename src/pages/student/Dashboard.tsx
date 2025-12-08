@@ -1,10 +1,12 @@
 import { useTranslation } from "react-i18next";
-import { Calendar, Dumbbell, Clock, TrendingUp, Target, Award } from "lucide-react";
+import { Calendar, Dumbbell, Clock, TrendingUp, Target, Award, CreditCard, MessageCircle, Apple } from "lucide-react";
+import { Link } from "react-router-dom";
 import { StudentHeader } from "@/components/student/StudentHeader";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 export default function StudentDashboard() {
   const { t } = useTranslation();
@@ -21,23 +23,44 @@ export default function StudentDashboard() {
     { exercise: "Peso Morto", previous: "100kg", current: "110kg", improvement: "+10%" },
   ];
 
+  const quickActions = [
+    { icon: Calendar, label: "Ver Aulas", href: "/student/classes", color: "bg-blue-500/10 text-blue-500" },
+    { icon: Apple, label: "Nutrição", href: "/student/nutrition", color: "bg-green-500/10 text-green-500" },
+    { icon: CreditCard, label: "Pagamentos", href: "/student/payments", color: "bg-purple-500/10 text-purple-500" },
+    { icon: MessageCircle, label: "Mensagens", href: "/student/chat", color: "bg-orange-500/10 text-orange-500" },
+  ];
+
   return (
     <>
       <StudentHeader title={t("student.dashboard")} />
       
-      <div className="flex-1 overflow-auto p-6 space-y-6">
+      <div className="flex-1 overflow-auto p-4 md:p-6 space-y-4 md:space-y-6">
         {/* Welcome Message */}
-        <div className="bg-gradient-primary rounded-2xl p-6 text-primary-foreground">
-          <h2 className="font-heading text-2xl font-bold mb-2">
+        <div className="bg-gradient-primary rounded-2xl p-4 md:p-6 text-primary-foreground">
+          <h2 className="font-heading text-xl md:text-2xl font-bold mb-2">
             Olá, Maria! 👋
           </h2>
-          <p className="opacity-90">
+          <p className="opacity-90 text-sm md:text-base">
             Tens uma aula agendada para hoje às 10:00. Continua o bom trabalho!
           </p>
         </div>
 
+        {/* Quick Actions - Mobile Only */}
+        <div className="grid grid-cols-4 gap-2 md:hidden">
+          {quickActions.map((action, index) => (
+            <Link key={index} to={action.href}>
+              <div className="flex flex-col items-center gap-1 p-3 rounded-xl bg-card border border-border hover:border-primary/50 transition-colors">
+                <div className={`h-10 w-10 rounded-lg ${action.color} flex items-center justify-center`}>
+                  <action.icon className="h-5 w-5" />
+                </div>
+                <span className="text-xs font-medium text-foreground">{action.label}</span>
+              </div>
+            </Link>
+          ))}
+        </div>
+
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
           <StatCard
             title="Aulas Este Mês"
             value={12}
@@ -65,54 +88,62 @@ export default function StudentDashboard() {
           />
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
           {/* Upcoming Classes */}
           <Card className="lg:col-span-2">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Calendar className="h-5 w-5 text-primary" />
-                Próximas Aulas
-              </CardTitle>
+            <CardHeader className="pb-2 md:pb-4">
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2 text-base md:text-lg">
+                  <Calendar className="h-5 w-5 text-primary" />
+                  Próximas Aulas
+                </CardTitle>
+                <Button variant="ghost" size="sm" asChild className="hidden md:flex">
+                  <Link to="/student/classes">Ver todas</Link>
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {upcomingClasses.map((classItem, index) => (
                   <div 
                     key={index} 
-                    className="flex items-center justify-between p-4 bg-muted/30 rounded-xl border border-border hover:border-primary/50 transition-colors"
+                    className="flex items-center justify-between p-3 md:p-4 bg-muted/30 rounded-xl border border-border hover:border-primary/50 transition-colors"
                   >
-                    <div className="flex items-center gap-4">
-                      <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center">
-                        <Dumbbell className="h-6 w-6 text-primary" />
+                    <div className="flex items-center gap-3 md:gap-4">
+                      <div className="h-10 w-10 md:h-12 md:w-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                        <Dumbbell className="h-5 w-5 md:h-6 md:w-6 text-primary" />
                       </div>
                       <div>
-                        <h4 className="font-semibold text-foreground">{classItem.name}</h4>
-                        <p className="text-sm text-muted-foreground">
+                        <h4 className="font-semibold text-foreground text-sm md:text-base">{classItem.name}</h4>
+                        <p className="text-xs md:text-sm text-muted-foreground">
                           com {classItem.trainer}
                         </p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <Badge variant="outline" className="border-primary text-primary">
+                      <Badge variant="outline" className="border-primary text-primary text-xs">
                         {classItem.date}
                       </Badge>
-                      <p className="text-sm font-medium text-foreground mt-1">{classItem.time}</p>
+                      <p className="text-xs md:text-sm font-medium text-foreground mt-1">{classItem.time}</p>
                     </div>
                   </div>
                 ))}
               </div>
+              <Button variant="outline" className="w-full mt-3 md:hidden" asChild>
+                <Link to="/student/classes">Ver todas as aulas</Link>
+              </Button>
             </CardContent>
           </Card>
 
           {/* Weekly Goal */}
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
+            <CardHeader className="pb-2 md:pb-4">
+              <CardTitle className="flex items-center gap-2 text-base md:text-lg">
                 <Target className="h-5 w-5 text-primary" />
                 Objetivo Semanal
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-4 md:space-y-6">
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Treinos</span>
@@ -137,8 +168,8 @@ export default function StudentDashboard() {
                 <Progress value={83} className="h-2" />
               </div>
               
-              <div className="pt-4 border-t border-border">
-                <p className="text-sm text-muted-foreground text-center">
+              <div className="pt-3 md:pt-4 border-t border-border">
+                <p className="text-xs md:text-sm text-muted-foreground text-center">
                   Estás a 1 treino de atingir o objetivo! 💪
                 </p>
               </div>
@@ -148,22 +179,22 @@ export default function StudentDashboard() {
 
         {/* Progress Card */}
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
+          <CardHeader className="pb-2 md:pb-4">
+            <CardTitle className="flex items-center gap-2 text-base md:text-lg">
               <TrendingUp className="h-5 w-5 text-primary" />
               Evolução Recente
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
               {recentProgress.map((item, index) => (
-                <div key={index} className="p-4 bg-muted/30 rounded-xl border border-border">
-                  <h4 className="font-semibold text-foreground">{item.exercise}</h4>
+                <div key={index} className="p-3 md:p-4 bg-muted/30 rounded-xl border border-border">
+                  <h4 className="font-semibold text-foreground text-sm md:text-base">{item.exercise}</h4>
                   <div className="flex items-center gap-2 mt-2">
-                    <span className="text-muted-foreground line-through">{item.previous}</span>
+                    <span className="text-muted-foreground line-through text-sm">{item.previous}</span>
                     <span className="text-lg font-bold text-primary">{item.current}</span>
                   </div>
-                  <Badge variant="outline" className="mt-2 border-success text-success">
+                  <Badge variant="outline" className="mt-2 border-success text-success text-xs">
                     {item.improvement}
                   </Badge>
                 </div>

@@ -27,6 +27,9 @@ import { StudentLayout } from "./layouts/StudentLayout";
 import StudentDashboard from "./pages/student/Dashboard";
 import StudentClasses from "./pages/student/Classes";
 import TrainingPlans from "./pages/student/TrainingPlans";
+import NutritionPlan from "./pages/student/Nutrition";
+import Payments from "./pages/student/Payments";
+import StudentChat from "./pages/student/Chat";
 import StudentSettings from "./pages/student/Settings";
 
 const queryClient = new QueryClient();
@@ -61,6 +64,9 @@ const App = () => (
             <Route index element={<StudentDashboard />} />
             <Route path="classes" element={<StudentClasses />} />
             <Route path="plans" element={<TrainingPlans />} />
+            <Route path="nutrition" element={<NutritionPlan />} />
+            <Route path="payments" element={<Payments />} />
+            <Route path="chat" element={<StudentChat />} />
             <Route path="settings" element={<StudentSettings />} />
           </Route>
           

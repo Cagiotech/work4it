@@ -3,6 +3,9 @@ import {
   LayoutDashboard,
   Calendar,
   Dumbbell,
+  Apple,
+  CreditCard,
+  MessageCircle,
   Settings,
   ChevronLeft,
   LogOut,
@@ -28,6 +31,9 @@ const menuItems = [
   { key: "dashboard", icon: LayoutDashboard, url: "/student" },
   { key: "classes", icon: Calendar, url: "/student/classes" },
   { key: "plans", icon: Dumbbell, url: "/student/plans" },
+  { key: "nutrition", icon: Apple, url: "/student/nutrition" },
+  { key: "payments", icon: CreditCard, url: "/student/payments" },
+  { key: "chat", icon: MessageCircle, url: "/student/chat" },
   { key: "settings", icon: Settings, url: "/student/settings" },
 ];
 

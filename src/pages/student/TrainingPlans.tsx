@@ -82,22 +82,22 @@ export default function TrainingPlans() {
     <>
       <StudentHeader title={t("student.plans")} />
       
-      <div className="flex-1 overflow-auto p-6 space-y-6">
+      <div className="flex-1 overflow-auto p-4 md:p-6 space-y-4 md:space-y-6">
         {/* Current Plan Overview */}
         <Card className="bg-gradient-card border-primary/20">
-          <CardContent className="p-6">
+          <CardContent className="p-4 md:p-6">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
                 <Badge className="mb-2">Plano Atual</Badge>
-                <h2 className="font-heading text-2xl font-bold text-foreground">
+                <h2 className="font-heading text-xl md:text-2xl font-bold text-foreground">
                   {currentPlan.name}
                 </h2>
-                <p className="text-muted-foreground">
+                <p className="text-muted-foreground text-sm md:text-base">
                   Personal: {currentPlan.trainer} • {currentPlan.startDate} - {currentPlan.endDate}
                 </p>
               </div>
-              <div className="text-right">
-                <div className="text-3xl font-bold text-primary">{currentPlan.progress}%</div>
+              <div className="text-left md:text-right">
+                <div className="text-2xl md:text-3xl font-bold text-primary">{currentPlan.progress}%</div>
                 <p className="text-sm text-muted-foreground">
                   {currentPlan.daysCompleted}/{currentPlan.totalDays} dias
                 </p>
@@ -108,18 +108,17 @@ export default function TrainingPlans() {
         </Card>
 
         <Tabs defaultValue="today" className="w-full">
-          <TabsList>
+          <TabsList className="w-full md:w-auto grid grid-cols-2 md:flex">
             <TabsTrigger value="today">Treino de Hoje</TabsTrigger>
             <TabsTrigger value="week">Plano Semanal</TabsTrigger>
-            <TabsTrigger value="nutrition">Plano Nutricional</TabsTrigger>
           </TabsList>
 
           {/* Today's Workout */}
-          <TabsContent value="today" className="mt-6">
+          <TabsContent value="today" className="mt-4 md:mt-6">
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
+              <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 md:pb-4">
                 <div>
-                  <CardTitle className="flex items-center gap-2">
+                  <CardTitle className="flex items-center gap-2 text-base md:text-lg">
                     <Dumbbell className="h-5 w-5 text-primary" />
                     {todayWorkout.name}
                   </CardTitle>
@@ -127,31 +126,31 @@ export default function TrainingPlans() {
                     {todayWorkout.exercises.length} exercícios • ~65 minutos
                   </p>
                 </div>
-                <Button className="gap-2">
+                <Button className="gap-2 w-full sm:w-auto">
                   <Play className="h-4 w-4" />
                   Iniciar Treino
                 </Button>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
+                <div className="space-y-2 md:space-y-3">
                   {todayWorkout.exercises.map((exercise, index) => (
                     <div 
                       key={index}
-                      className="flex items-center justify-between p-4 bg-muted/30 rounded-xl border border-border hover:border-primary/50 transition-colors"
+                      className="flex items-center justify-between p-3 md:p-4 bg-muted/30 rounded-xl border border-border hover:border-primary/50 transition-colors gap-3"
                     >
-                      <div className="flex items-center gap-4">
-                        <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
+                      <div className="flex items-center gap-3 md:gap-4 min-w-0">
+                        <div className="h-8 w-8 md:h-10 md:w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm flex-shrink-0">
                           {index + 1}
                         </div>
-                        <div>
-                          <h4 className="font-medium text-foreground">{exercise.name}</h4>
-                          <p className="text-sm text-muted-foreground">
-                            {exercise.sets} séries × {exercise.reps} • Peso: {exercise.weight}
+                        <div className="min-w-0">
+                          <h4 className="font-medium text-foreground text-sm md:text-base truncate">{exercise.name}</h4>
+                          <p className="text-xs md:text-sm text-muted-foreground">
+                            {exercise.sets} séries × {exercise.reps} • {exercise.weight}
                           </p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <Badge variant="outline">{exercise.rest} descanso</Badge>
+                      <div className="flex items-center gap-2 md:gap-3 flex-shrink-0">
+                        <Badge variant="outline" className="hidden sm:flex text-xs">{exercise.rest}</Badge>
                         <ChevronRight className="h-5 w-5 text-muted-foreground" />
                       </div>
                     </div>
@@ -162,8 +161,8 @@ export default function TrainingPlans() {
           </TabsContent>
 
           {/* Weekly Plan */}
-          <TabsContent value="week" className="mt-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <TabsContent value="week" className="mt-4 md:mt-6">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4">
               {weekWorkouts.map((workout, index) => (
                 <Card 
                   key={index}
@@ -171,31 +170,31 @@ export default function TrainingPlans() {
                     workout.completed ? "opacity-75" : ""
                   } ${workout.day === "Quinta" ? "ring-2 ring-primary" : ""}`}
                 >
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <Badge variant={workout.completed ? "secondary" : "default"}>
+                  <CardContent className="p-3 md:p-4">
+                    <div className="flex items-center justify-between mb-2 md:mb-3">
+                      <Badge variant={workout.completed ? "secondary" : "default"} className="text-xs">
                         {workout.day}
                       </Badge>
                       {workout.completed && (
-                        <CheckCircle2 className="h-5 w-5 text-success" />
+                        <CheckCircle2 className="h-4 w-4 md:h-5 md:w-5 text-success" />
                       )}
                     </div>
-                    <h4 className="font-semibold text-foreground">{workout.name}</h4>
-                    <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
+                    <h4 className="font-semibold text-foreground text-sm md:text-base">{workout.name}</h4>
+                    <div className="flex flex-col md:flex-row md:items-center gap-1 md:gap-4 mt-2 text-xs md:text-sm text-muted-foreground">
                       <div className="flex items-center gap-1">
-                        <Clock className="h-4 w-4" />
+                        <Clock className="h-3 w-3 md:h-4 md:w-4" />
                         {workout.duration}
                       </div>
                       <div className="flex items-center gap-1">
-                        <Dumbbell className="h-4 w-4" />
-                        {workout.exercises} exercícios
+                        <Dumbbell className="h-3 w-3 md:h-4 md:w-4" />
+                        {workout.exercises} ex.
                       </div>
                     </div>
                     {!workout.completed && (
                       <Button 
                         variant="outline" 
                         size="sm" 
-                        className="w-full mt-3"
+                        className="w-full mt-3 text-xs"
                       >
                         Ver Treino
                       </Button>
@@ -204,49 +203,6 @@ export default function TrainingPlans() {
                 </Card>
               ))}
             </div>
-          </TabsContent>
-
-          {/* Nutrition Plan */}
-          <TabsContent value="nutrition" className="mt-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Plano Nutricional</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                  <div className="p-4 bg-muted/30 rounded-xl text-center">
-                    <p className="text-sm text-muted-foreground">Calorias Diárias</p>
-                    <p className="text-2xl font-bold text-primary">2800 kcal</p>
-                  </div>
-                  <div className="p-4 bg-muted/30 rounded-xl text-center">
-                    <p className="text-sm text-muted-foreground">Proteína</p>
-                    <p className="text-2xl font-bold text-foreground">180g</p>
-                  </div>
-                  <div className="p-4 bg-muted/30 rounded-xl text-center">
-                    <p className="text-sm text-muted-foreground">Água</p>
-                    <p className="text-2xl font-bold text-foreground">3L</p>
-                  </div>
-                </div>
-                
-                <div className="space-y-4">
-                  {[
-                    { meal: "Pequeno-almoço", time: "07:30", foods: "Ovos, aveia, fruta" },
-                    { meal: "Lanche Manhã", time: "10:30", foods: "Iogurte grego, nozes" },
-                    { meal: "Almoço", time: "13:00", foods: "Frango, arroz, legumes" },
-                    { meal: "Lanche Tarde", time: "16:30", foods: "Batido proteico, banana" },
-                    { meal: "Jantar", time: "20:00", foods: "Peixe, batata-doce, salada" },
-                  ].map((meal, index) => (
-                    <div key={index} className="flex items-center justify-between p-4 border border-border rounded-xl">
-                      <div>
-                        <h4 className="font-medium text-foreground">{meal.meal}</h4>
-                        <p className="text-sm text-muted-foreground">{meal.foods}</p>
-                      </div>
-                      <Badge variant="outline">{meal.time}</Badge>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
           </TabsContent>
         </Tabs>
       </div>
