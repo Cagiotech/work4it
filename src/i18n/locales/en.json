@@ -80,6 +80,10 @@
     "attendance": "Attendance List"
   },
   "student": {
+    "dashboard": "My Dashboard",
+    "classes": "My Classes",
+    "plans": "Training Plans",
+    "settings": "Settings",
     "myDashboard": "My Dashboard",
     "myClasses": "My Classes",
     "myPlans": "My Plans"
