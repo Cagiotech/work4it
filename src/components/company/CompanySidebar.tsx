@@ -1,4 +1,5 @@
 import { useTranslation } from "react-i18next";
+import { useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
   Users,
@@ -10,8 +11,6 @@ import {
   ShoppingBag,
   CalendarDays,
   Settings,
-  ChevronLeft,
-  LogOut,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import {
@@ -19,15 +18,12 @@ import {
   SidebarContent,
   SidebarGroup,
   SidebarGroupContent,
+  SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarHeader,
-  SidebarFooter,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 import logoLight from "@/assets/logo-light.png";
 
 const menuItems = [
@@ -45,59 +41,44 @@ const menuItems = [
 
 export function CompanySidebar() {
   const { t } = useTranslation();
-  const { state, toggleSidebar } = useSidebar();
+  const { state } = useSidebar();
+  const location = useLocation();
   const collapsed = state === "collapsed";
 
-  return (
-    <Sidebar
-      className={cn(
-        "border-r border-sidebar-border bg-sidebar transition-all duration-300",
-        collapsed ? "w-16" : "w-64"
-      )}
-      collapsible="icon"
-    >
-      <SidebarHeader className="p-4 border-b border-sidebar-border">
-        <div className="flex items-center justify-between">
-          {!collapsed && (
-            <img src={logoLight} alt="Cagiotech" className="h-8" />
-          )}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={toggleSidebar}
-            className="h-8 w-8 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground"
-          >
-            <ChevronLeft
-              className={cn(
-                "h-4 w-4 transition-transform duration-300",
-                collapsed && "rotate-180"
-              )}
-            />
-          </Button>
-        </div>
-      </SidebarHeader>
+  const isActive = (path: string) => {
+    if (path === "/company") {
+      return location.pathname === path;
+    }
+    return location.pathname.startsWith(path);
+  };
 
-      <SidebarContent className="py-4">
+  return (
+    <Sidebar collapsible="icon" className="border-r border-border">
+      <SidebarContent className="bg-card">
         <SidebarGroup>
+          <SidebarGroupLabel className="px-4 py-3">
+            {!collapsed && (
+              <img src={logoLight} alt="Cagiotech" className="h-8" />
+            )}
+          </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {menuItems.map((item) => (
                 <SidebarMenuItem key={item.key}>
-                  <SidebarMenuButton asChild>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={isActive(item.url)}
+                    tooltip={t(`dashboard.${item.key === "dashboard" ? "title" : item.key}`)}
+                  >
                     <NavLink
                       to={item.url}
                       end={item.url === "/company"}
-                      className={cn(
-                        "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-all duration-200",
-                        collapsed && "justify-center px-2"
-                      )}
-                      activeClassName="bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground shadow-primary"
+                      className="flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-200 text-foreground/70 hover:bg-muted hover:text-foreground"
+                      activeClassName="bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground font-medium"
                     >
-                      <item.icon className="h-5 w-5 flex-shrink-0" />
+                      <item.icon className="h-5 w-5 shrink-0" />
                       {!collapsed && (
-                        <span className="font-medium">
-                          {t(`dashboard.${item.key === "dashboard" ? "title" : item.key}`)}
-                        </span>
+                        <span>{t(`dashboard.${item.key === "dashboard" ? "title" : item.key}`)}</span>
                       )}
                     </NavLink>
                   </SidebarMenuButton>
@@ -107,19 +88,6 @@ export function CompanySidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-
-      <SidebarFooter className="p-4 border-t border-sidebar-border">
-        <Button
-          variant="ghost"
-          className={cn(
-            "w-full text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-destructive",
-            collapsed ? "justify-center px-2" : "justify-start gap-3"
-          )}
-        >
-          <LogOut className="h-5 w-5" />
-          {!collapsed && <span>{t("common.logout")}</span>}
-        </Button>
-      </SidebarFooter>
     </Sidebar>
   );
 }
