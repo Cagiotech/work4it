@@ -70,7 +70,10 @@ export function CompanySidebar() {
         <div className="px-4 py-4">
           {!collapsed ? (
             <>
-              <img src={logoLight} alt="Cagiotech" className="h-8" />
+              <div className="flex items-center gap-2">
+                <img src={logoLight} alt="Cagiotech" className="h-8" />
+                <span className="text-lg font-bold text-foreground">Cagiotech</span>
+              </div>
               <div className="mt-3">
                 <p className="text-sm font-medium text-foreground">{userName}</p>
               </div>
