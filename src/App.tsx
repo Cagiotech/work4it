@@ -32,6 +32,18 @@ import Payments from "./pages/student/Payments";
 import StudentChat from "./pages/student/Chat";
 import StudentSettings from "./pages/student/Settings";
 
+// Personal Trainer Layout & Pages
+import PersonalLayout from "./layouts/PersonalLayout";
+import PersonalDashboard from "./pages/personal/Dashboard";
+import PersonalStudents from "./pages/personal/Students";
+import PersonalSchedule from "./pages/personal/Schedule";
+import PersonalTrainingPlans from "./pages/personal/TrainingPlans";
+import PersonalNutrition from "./pages/personal/Nutrition";
+import PersonalFinancial from "./pages/personal/Financial";
+import PersonalAttendance from "./pages/personal/Attendance";
+import PersonalChat from "./pages/personal/Chat";
+import PersonalSettings from "./pages/personal/Settings";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -68,6 +80,19 @@ const App = () => (
             <Route path="payments" element={<Payments />} />
             <Route path="chat" element={<StudentChat />} />
             <Route path="settings" element={<StudentSettings />} />
+          </Route>
+
+          {/* Personal Trainer Dashboard Routes */}
+          <Route path="/personal" element={<PersonalLayout />}>
+            <Route index element={<PersonalDashboard />} />
+            <Route path="students" element={<PersonalStudents />} />
+            <Route path="schedule" element={<PersonalSchedule />} />
+            <Route path="training-plans" element={<PersonalTrainingPlans />} />
+            <Route path="nutrition" element={<PersonalNutrition />} />
+            <Route path="financial" element={<PersonalFinancial />} />
+            <Route path="attendance" element={<PersonalAttendance />} />
+            <Route path="chat" element={<PersonalChat />} />
+            <Route path="settings" element={<PersonalSettings />} />
           </Route>
           
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
