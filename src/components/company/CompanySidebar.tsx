@@ -25,8 +25,8 @@ import {
   SidebarFooter,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import logoLight from "@/assets/logo-light.png";
 
 const menuItems = [
   { key: "dashboard", icon: LayoutDashboard, url: "/company" },
@@ -50,7 +50,6 @@ export function CompanySidebar() {
 
   // Mock data - will come from backend later
   const userName = "Javysson Oliveira";
-  const userRole = "Administrador";
   const studentsCount = 0;
 
   const isActive = (path: string) => {
@@ -71,17 +70,14 @@ export function CompanySidebar() {
         <div className="px-4 py-4">
           {!collapsed ? (
             <>
-              <h1 className="text-xl font-bold text-foreground">Cagiotech</h1>
+              <img src={logoLight} alt="Cagiotech" className="h-8" />
               <div className="mt-3">
                 <p className="text-sm font-medium text-foreground">{userName}</p>
-                <Badge variant="outline" className="mt-1 text-xs">
-                  {userRole}
-                </Badge>
               </div>
             </>
           ) : (
             <div className="flex justify-center">
-              <span className="text-lg font-bold text-primary">C</span>
+              <img src={logoLight} alt="Cagiotech" className="h-6" />
             </div>
           )}
         </div>
