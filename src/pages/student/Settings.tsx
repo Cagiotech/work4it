@@ -1,6 +1,5 @@
 import { useTranslation } from "react-i18next";
 import { User, Lock, Bell, Palette } from "lucide-react";
-import { StudentHeader } from "@/components/student/StudentHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -14,11 +13,8 @@ export default function StudentSettings() {
   const { t } = useTranslation();
 
   return (
-    <>
-      <StudentHeader title={t("common.settings")} />
-      
-      <div className="flex-1 overflow-auto p-4 md:p-6">
-        <Tabs defaultValue="profile" className="w-full">
+    <div className="space-y-6">
+      <Tabs defaultValue="profile" className="w-full">
           <TabsList className="mb-4 md:mb-6 w-full md:w-auto grid grid-cols-2 md:grid-cols-4 md:flex">
             <TabsTrigger value="profile" className="gap-1 md:gap-2 text-xs md:text-sm">
               <User className="h-4 w-4" />
@@ -165,7 +161,6 @@ export default function StudentSettings() {
             </Card>
           </TabsContent>
         </Tabs>
-      </div>
-    </>
+    </div>
   );
 }

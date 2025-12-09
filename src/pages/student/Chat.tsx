@@ -1,7 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { useTranslation } from "react-i18next";
 import { Send, MessageCircle, User, Building, Paperclip, Smile } from "lucide-react";
-import { StudentHeader } from "@/components/student/StudentHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -140,13 +138,8 @@ function ChatWindow({ messages: initialMessages, recipientName, recipientAvatar 
 }
 
 export default function Chat() {
-  const { t } = useTranslation();
-
   return (
-    <>
-      <StudentHeader title={t("student.chat")} />
-      
-      <div className="flex-1 overflow-auto p-4 md:p-6">
+    <div className="space-y-6">
         <Tabs defaultValue="personal" className="w-full">
           <TabsList className="w-full md:w-auto grid grid-cols-2 md:flex mb-4">
             <TabsTrigger value="personal" className="gap-2">
@@ -181,7 +174,6 @@ export default function Chat() {
             </Card>
           </TabsContent>
         </Tabs>
-      </div>
-    </>
+    </div>
   );
 }

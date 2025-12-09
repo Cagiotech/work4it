@@ -1,7 +1,5 @@
-import { useTranslation } from "react-i18next";
 import { Calendar, Dumbbell, Clock, TrendingUp, Target, Award, CreditCard, MessageCircle, Apple } from "lucide-react";
 import { Link } from "react-router-dom";
-import { StudentHeader } from "@/components/student/StudentHeader";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -9,8 +7,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
 export default function StudentDashboard() {
-  const { t } = useTranslation();
-
   const upcomingClasses = [
     { name: "Treino Funcional", time: "10:00", trainer: "João Silva", date: "Hoje" },
     { name: "Yoga", time: "18:00", trainer: "Ana Costa", date: "Amanhã" },
@@ -31,10 +27,7 @@ export default function StudentDashboard() {
   ];
 
   return (
-    <>
-      <StudentHeader title={t("student.dashboard")} />
-      
-      <div className="flex-1 overflow-auto p-4 md:p-6 space-y-4 md:space-y-6">
+    <div className="space-y-6">
         {/* Welcome Message */}
         <div className="bg-gradient-primary rounded-2xl p-4 md:p-6 text-primary-foreground">
           <h2 className="font-heading text-xl md:text-2xl font-bold mb-2">
@@ -202,7 +195,6 @@ export default function StudentDashboard() {
             </div>
           </CardContent>
         </Card>
-      </div>
-    </>
+    </div>
   );
 }
