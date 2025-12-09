@@ -99,8 +99,8 @@ export function CompanySidebar() {
                     <NavLink
                       to={item.url}
                       end={item.url === "/company"}
-                      className="flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-200 text-foreground/70 hover:bg-muted hover:text-foreground"
-                      activeClassName="bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground font-medium"
+                      className="flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-200 text-foreground/70 hover:bg-muted hover:text-foreground border border-primary/30"
+                      activeClassName="bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground font-medium border-primary"
                     >
                       <item.icon className="h-5 w-5 shrink-0" />
                       {!collapsed && (
