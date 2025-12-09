@@ -23,6 +23,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
+import logoLight from "@/assets/logo-light.png";
 
 const menuItems = [
   { title: "Dashboard", url: "/admin", icon: LayoutDashboard },
@@ -50,12 +51,12 @@ export function AdminSidebar() {
   };
 
   return (
-    <Sidebar collapsible="icon" className="border-r border-border/50">
+    <Sidebar collapsible="icon" className="border-r border-border">
       <SidebarContent className="bg-card">
         <SidebarGroup>
           <SidebarGroupLabel className="px-4 py-3">
             {!collapsed && (
-              <span className="text-lg font-bold text-primary">Administração</span>
+              <img src={logoLight} alt="Cagiotech" className="h-8" />
             )}
           </SidebarGroupLabel>
           <SidebarGroupContent>
@@ -70,8 +71,8 @@ export function AdminSidebar() {
                     <NavLink
                       to={item.url}
                       end={item.url === "/admin"}
-                      className="flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-200 hover:bg-accent/50"
-                      activeClassName="bg-primary/10 text-primary font-medium border-l-2 border-primary"
+                      className="flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-200 text-foreground/70 hover:bg-muted hover:text-foreground"
+                      activeClassName="bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground font-medium"
                     >
                       <item.icon className="h-5 w-5 shrink-0" />
                       {!collapsed && <span>{item.title}</span>}
