@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { Bell, Search, User } from "lucide-react";
+import { Bell, Search, User, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
@@ -11,71 +11,66 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { SidebarTrigger } from "@/components/ui/sidebar";
+import { useNavigate } from "react-router-dom";
 
-interface CompanyHeaderProps {
-  title: string;
-}
-
-export function CompanyHeader({ title }: CompanyHeaderProps) {
+export function CompanyHeader() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
 
   return (
-    <header className="h-16 border-b border-border bg-card px-6 flex items-center justify-between">
-      <div className="flex items-center gap-4">
-        <h1 className="font-heading text-xl font-bold text-foreground">{title}</h1>
-      </div>
+    <header className="sticky top-0 z-50 w-full border-b border-border/50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="flex h-14 md:h-16 items-center gap-2 md:gap-4 px-3 md:px-6">
+        <SidebarTrigger className="md:hidden">
+          <Menu className="h-5 w-5" />
+        </SidebarTrigger>
 
-      <div className="flex items-center gap-4">
-        {/* Search */}
-        <div className="relative hidden md:block">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder={t("common.search")}
-            className="w-64 pl-10 bg-background"
-          />
+        <div className="hidden md:flex flex-1 items-center gap-4">
+          <div className="relative w-full max-w-sm">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder={t("common.search")}
+              className="pl-10 bg-muted/50 border-0 focus-visible:ring-1"
+            />
+          </div>
         </div>
 
-        {/* Language Switcher */}
-        <LanguageSwitcher />
+        <div className="flex flex-1 md:flex-none items-center justify-end gap-2 md:gap-4">
+          <LanguageSwitcher />
+          
+          <Button variant="ghost" size="icon" className="relative">
+            <Bell className="h-5 w-5" />
+            <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-primary text-[10px] font-medium text-primary-foreground flex items-center justify-center">
+              3
+            </span>
+          </Button>
 
-        {/* Notifications */}
-        <Button variant="ghost" size="icon" className="relative">
-          <Bell className="h-5 w-5 text-muted-foreground" />
-          <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-primary text-[10px] font-bold text-primary-foreground flex items-center justify-center">
-            3
-          </span>
-        </Button>
-
-        {/* User Menu */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="flex items-center gap-2 px-2">
-              <Avatar className="h-8 w-8">
-                <AvatarImage src="" />
-                <AvatarFallback className="bg-primary text-primary-foreground text-sm">
-                  JD
-                </AvatarFallback>
-              </Avatar>
-              <span className="hidden md:block font-medium text-foreground">
-                João Silva
-              </span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuItem>
-              <User className="h-4 w-4 mr-2" />
-              {t("common.profile")}
-            </DropdownMenuItem>
-            <DropdownMenuItem>
-              {t("common.settings")}
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-destructive">
-              {t("common.logout")}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="relative h-9 w-9 rounded-full">
+                <Avatar className="h-9 w-9">
+                  <AvatarImage src="/placeholder.svg" alt="Empresa" />
+                  <AvatarFallback className="bg-primary/10 text-primary">JS</AvatarFallback>
+                </Avatar>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-56" align="end" forceMount>
+              <div className="flex flex-col space-y-1 p-2">
+                <p className="text-sm font-medium">João Silva</p>
+                <p className="text-xs text-muted-foreground">admin@gymfitness.pt</p>
+              </div>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => navigate("/company/settings")}>
+                <User className="mr-2 h-4 w-4" />
+                <span>{t("common.profile")}</span>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => navigate("/login")}>
+                <span>{t("common.logout")}</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
     </header>
   );
