@@ -44,6 +44,19 @@ import PersonalAttendance from "./pages/personal/Attendance";
 import PersonalChat from "./pages/personal/Chat";
 import PersonalSettings from "./pages/personal/Settings";
 
+// Admin Layout & Pages
+import AdminLayout from "./layouts/AdminLayout";
+import AdminDashboard from "./pages/admin/Dashboard";
+import AdminUsers from "./pages/admin/Users";
+import AdminCompanies from "./pages/admin/Companies";
+import AdminPlans from "./pages/admin/Plans";
+import AdminPermissions from "./pages/admin/Permissions";
+import AdminReports from "./pages/admin/Reports";
+import AdminMonitoring from "./pages/admin/Monitoring";
+import AdminEvents from "./pages/admin/Events";
+import AdminRoadmap from "./pages/admin/Roadmap";
+import AdminSettings from "./pages/admin/Settings";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -93,6 +106,20 @@ const App = () => (
             <Route path="attendance" element={<PersonalAttendance />} />
             <Route path="chat" element={<PersonalChat />} />
             <Route path="settings" element={<PersonalSettings />} />
+          </Route>
+
+          {/* Admin Dashboard Routes */}
+          <Route path="/admin" element={<AdminLayout />}>
+            <Route index element={<AdminDashboard />} />
+            <Route path="users" element={<AdminUsers />} />
+            <Route path="companies" element={<AdminCompanies />} />
+            <Route path="plans" element={<AdminPlans />} />
+            <Route path="permissions" element={<AdminPermissions />} />
+            <Route path="reports" element={<AdminReports />} />
+            <Route path="monitoring" element={<AdminMonitoring />} />
+            <Route path="events" element={<AdminEvents />} />
+            <Route path="roadmap" element={<AdminRoadmap />} />
+            <Route path="settings" element={<AdminSettings />} />
           </Route>
           
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
