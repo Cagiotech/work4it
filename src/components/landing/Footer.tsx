@@ -17,6 +17,20 @@ export function Footer() {
             © {new Date().getFullYear()} Cagiotech. Todos os direitos reservados.
           </p>
         </div>
+        
+        <div className="mt-6 pt-6 border-t border-border/50 text-center">
+          <p className="text-sm text-muted-foreground">
+            Desenvolvido com 💙 por{" "}
+            <a
+              href="https://instagram.com/newdester.io"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:underline font-medium transition-colors"
+            >
+              Newdester
+            </a>
+          </p>
+        </div>
       </div>
     </footer>
   );
