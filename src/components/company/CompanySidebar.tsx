@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   Users,
@@ -11,6 +11,7 @@ import {
   ShoppingBag,
   CalendarDays,
   Settings,
+  LogOut,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import {
@@ -18,13 +19,14 @@ import {
   SidebarContent,
   SidebarGroup,
   SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarFooter,
   useSidebar,
 } from "@/components/ui/sidebar";
-import logoLight from "@/assets/logo-light.png";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 
 const menuItems = [
   { key: "dashboard", icon: LayoutDashboard, url: "/company" },
@@ -43,7 +45,13 @@ export function CompanySidebar() {
   const { t } = useTranslation();
   const { state } = useSidebar();
   const location = useLocation();
+  const navigate = useNavigate();
   const collapsed = state === "collapsed";
+
+  // Mock data - will come from backend later
+  const userName = "Javysson Oliveira";
+  const userRole = "Administrador";
+  const studentsCount = 0;
 
   const isActive = (path: string) => {
     if (path === "/company") {
@@ -52,15 +60,34 @@ export function CompanySidebar() {
     return location.pathname.startsWith(path);
   };
 
+  const handleLogout = () => {
+    navigate("/login");
+  };
+
   return (
     <Sidebar collapsible="icon" className="border-r border-border">
-      <SidebarContent className="bg-card">
-        <SidebarGroup>
-          <SidebarGroupLabel className="px-4 py-3">
-            {!collapsed && (
-              <img src={logoLight} alt="Cagiotech" className="h-8" />
-            )}
-          </SidebarGroupLabel>
+      <SidebarContent className="bg-card flex flex-col">
+        {/* Header with user info */}
+        <div className="px-4 py-4">
+          {!collapsed ? (
+            <>
+              <h1 className="text-xl font-bold text-foreground">Cagiotech</h1>
+              <div className="mt-3">
+                <p className="text-sm font-medium text-foreground">{userName}</p>
+                <Badge variant="outline" className="mt-1 text-xs">
+                  {userRole}
+                </Badge>
+              </div>
+            </>
+          ) : (
+            <div className="flex justify-center">
+              <span className="text-lg font-bold text-primary">C</span>
+            </div>
+          )}
+        </div>
+
+        {/* Menu Items */}
+        <SidebarGroup className="flex-1">
           <SidebarGroupContent>
             <SidebarMenu>
               {menuItems.map((item) => (
@@ -87,6 +114,36 @@ export function CompanySidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {/* Footer with students count and logout */}
+        <SidebarFooter className="mt-auto">
+          <Separator className="mb-2" />
+          
+          {/* Students count */}
+          <div className="px-4 py-2">
+            <div className="flex items-center justify-between text-sm">
+              <div className="flex items-center gap-2 text-foreground/70">
+                <Users className="h-4 w-4" />
+                {!collapsed && <span>{t("dashboard.students")}</span>}
+              </div>
+              <span className="text-primary font-semibold">{studentsCount}</span>
+            </div>
+          </div>
+
+          {/* Logout button */}
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                onClick={handleLogout}
+                tooltip={t("common.logout")}
+                className="flex items-center gap-3 px-4 py-2.5 text-foreground/70 hover:bg-muted hover:text-foreground rounded-lg transition-all duration-200"
+              >
+                <LogOut className="h-5 w-5 shrink-0" />
+                {!collapsed && <span>{t("common.logout")}</span>}
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarFooter>
       </SidebarContent>
     </Sidebar>
   );
