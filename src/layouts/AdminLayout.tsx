@@ -2,6 +2,7 @@ import { Outlet } from "react-router-dom";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { AdminHeader } from "@/components/admin/AdminHeader";
+import { DeveloperFooter } from "@/components/DeveloperFooter";
 
 export default function AdminLayout() {
   return (
@@ -13,6 +14,7 @@ export default function AdminLayout() {
           <main className="flex-1 p-3 md:p-6 overflow-auto">
             <Outlet />
           </main>
+          <DeveloperFooter />
         </div>
       </div>
     </SidebarProvider>
