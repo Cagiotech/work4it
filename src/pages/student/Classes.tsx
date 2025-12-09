@@ -1,6 +1,4 @@
-import { useTranslation } from "react-i18next";
 import { Calendar, Clock, User, MapPin, CheckCircle } from "lucide-react";
-import { StudentHeader } from "@/components/student/StudentHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -73,13 +71,8 @@ const pastClasses = [
 ];
 
 export default function StudentClasses() {
-  const { t } = useTranslation();
-
   return (
-    <>
-      <StudentHeader title={t("student.classes")} />
-      
-      <div className="flex-1 overflow-auto p-4 md:p-6 space-y-4 md:space-y-6">
+    <div className="space-y-6">
         <Tabs defaultValue="upcoming" className="w-full">
           <TabsList className="w-full md:w-auto grid grid-cols-2 md:flex">
             <TabsTrigger value="upcoming">Próximas Aulas</TabsTrigger>
@@ -187,7 +180,6 @@ export default function StudentClasses() {
             </Card>
           </TabsContent>
         </Tabs>
-      </div>
-    </>
+    </div>
   );
 }

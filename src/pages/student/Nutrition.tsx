@@ -1,6 +1,4 @@
-import { useTranslation } from "react-i18next";
 import { Apple, Droplets, Flame, Clock, ChevronRight, Utensils, Coffee, Moon, Sun } from "lucide-react";
-import { StudentHeader } from "@/components/student/StudentHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -70,8 +68,6 @@ const weeklyPlan = [
 ];
 
 export default function NutritionPlan() {
-  const { t } = useTranslation();
-
   const totalCalories = dailyMeals.reduce((acc, meal) => 
     acc + meal.foods.reduce((a, f) => a + f.calories, 0), 0
   );
@@ -80,10 +76,7 @@ export default function NutritionPlan() {
   );
 
   return (
-    <>
-      <StudentHeader title={t("student.nutrition")} />
-      
-      <div className="flex-1 overflow-auto p-4 md:p-6 space-y-4 md:space-y-6">
+    <div className="space-y-6">
         {/* Daily Summary */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
           <Card className="bg-gradient-card">
@@ -274,7 +267,6 @@ export default function NutritionPlan() {
             </Card>
           </TabsContent>
         </Tabs>
-      </div>
-    </>
+    </div>
   );
 }

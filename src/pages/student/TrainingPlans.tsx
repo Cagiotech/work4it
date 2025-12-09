@@ -1,6 +1,4 @@
-import { useTranslation } from "react-i18next";
-import { Dumbbell, Calendar, Clock, ChevronRight, Play, CheckCircle2 } from "lucide-react";
-import { StudentHeader } from "@/components/student/StudentHeader";
+import { Dumbbell, Clock, ChevronRight, Play, CheckCircle2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -76,13 +74,8 @@ const todayWorkout = {
 };
 
 export default function TrainingPlans() {
-  const { t } = useTranslation();
-
   return (
-    <>
-      <StudentHeader title={t("student.plans")} />
-      
-      <div className="flex-1 overflow-auto p-4 md:p-6 space-y-4 md:space-y-6">
+    <div className="space-y-6">
         {/* Current Plan Overview */}
         <Card className="bg-gradient-card border-primary/20">
           <CardContent className="p-4 md:p-6">
@@ -205,7 +198,6 @@ export default function TrainingPlans() {
             </div>
           </TabsContent>
         </Tabs>
-      </div>
-    </>
+    </div>
   );
 }
