@@ -10,8 +10,8 @@ export function Hero() {
     <section className="relative overflow-hidden bg-gradient-hero py-20 lg:py-32">
       {/* Background decorations */}
       <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -right-40 h-80 w-80 rounded-full bg-primary/10 blur-3xl" />
-        <div className="absolute -bottom-40 -left-40 h-80 w-80 rounded-full bg-primary/10 blur-3xl" />
+        <div className="absolute -top-40 -right-40 h-80 w-80 rounded-full bg-primary/20 blur-3xl" />
+        <div className="absolute -bottom-40 -left-40 h-80 w-80 rounded-full bg-primary/20 blur-3xl" />
       </div>
 
       <div className="container relative">
@@ -32,7 +32,7 @@ export function Hero() {
                 <ArrowRight className="transition-transform group-hover:translate-x-1" />
               </Button>
             </Link>
-            <Button variant="hero-outline" size="xl">
+            <Button variant="outline" size="xl" className="border-foreground/20 text-foreground hover:bg-foreground/5">
               <Play className="h-5 w-5" />
               {t('landing.hero.demo')}
             </Button>
@@ -48,7 +48,7 @@ export function Hero() {
             { value: '99%', label: 'Satisfação' },
           ].map((stat, index) => (
             <div key={index} className="text-center">
-              <div className="font-heading text-3xl font-bold text-primary sm:text-4xl">
+              <div className="font-heading text-3xl font-bold text-foreground sm:text-4xl">
                 {stat.value}
               </div>
               <div className="mt-1 text-sm text-muted-foreground">{stat.label}</div>

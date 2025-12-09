@@ -59,7 +59,7 @@ export function StudentSidebar() {
             variant="ghost"
             size="icon"
             onClick={toggleSidebar}
-            className="h-8 w-8 text-sidebar-foreground hover:bg-sidebar-accent"
+            className="h-8 w-8 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground"
           >
             <ChevronLeft
               className={cn(
