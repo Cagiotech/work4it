@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { User, Heart, CreditCard, FileText, StickyNote, Pencil, Trash2, X, Save, Apple } from "lucide-react";
+import { User, Heart, CreditCard, FileText, StickyNote, Pencil, Trash2, X, Save, Apple, CalendarDays } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 // Context for save trigger
@@ -23,6 +23,7 @@ import { StudentPlansTab } from "./tabs/StudentPlansTab";
 import { StudentNotesTab } from "./tabs/StudentNotesTab";
 import { StudentDocumentsTab } from "./tabs/StudentDocumentsTab";
 import { StudentNutritionTab } from "./tabs/StudentNutritionTab";
+import { StudentScheduleTab } from "./tabs/StudentScheduleTab";
 
 interface Student {
   id: string;
@@ -177,7 +178,7 @@ export function StudentProfileDialog({
           <SaveTriggerContext.Provider value={{ registerSave, unregisterSave }}>
             <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1">
               <div className="px-6 pt-2">
-                <TabsList className="grid w-full grid-cols-6">
+                <TabsList className="grid w-full grid-cols-7">
                   <TabsTrigger value="profile" className="gap-1 text-xs sm:text-sm">
                     <User className="h-4 w-4" />
                     <span className="hidden sm:inline">Perfil</span>
@@ -185,6 +186,10 @@ export function StudentProfileDialog({
                   <TabsTrigger value="anamnesis" className="gap-1 text-xs sm:text-sm">
                     <Heart className="h-4 w-4" />
                     <span className="hidden sm:inline">Saúde</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="schedule" className="gap-1 text-xs sm:text-sm">
+                    <CalendarDays className="h-4 w-4" />
+                    <span className="hidden sm:inline">Agenda</span>
                   </TabsTrigger>
                   <TabsTrigger value="nutrition" className="gap-1 text-xs sm:text-sm">
                     <Apple className="h-4 w-4" />
@@ -221,6 +226,10 @@ export function StudentProfileDialog({
                     healthNotes={student.health_notes}
                     onHealthNotesChange={() => onUpdate()}
                   />
+                </TabsContent>
+
+                <TabsContent value="schedule" className="mt-0">
+                  <StudentScheduleTab studentId={student.id} />
                 </TabsContent>
 
                 <TabsContent value="nutrition" className="mt-0">
