@@ -9,7 +9,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, ChevronRight, ChevronLeft, User, Phone, MapPin, Heart, CheckCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { DeveloperFooter } from "@/components/DeveloperFooter";
 import logoLight from "@/assets/logo-light.png";
@@ -35,7 +34,6 @@ interface StudentData {
 
 export default function StudentOnboarding() {
   const { t } = useTranslation();
-  const { user } = useAuth();
   const navigate = useNavigate();
   
   const [loading, setLoading] = useState(true);
@@ -64,8 +62,12 @@ export default function StudentOnboarding() {
 
   useEffect(() => {
     const fetchStudent = async () => {
-      if (!user?.id) {
-        setLoading(false);
+      // First check if there's a session
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session?.user) {
+        // No session, redirect to login
+        navigate('/login');
         return;
       }
 
@@ -73,12 +75,19 @@ export default function StudentOnboarding() {
         const { data, error } = await supabase
           .from('students')
           .select('*')
-          .eq('user_id', user.id)
+          .eq('user_id', session.user.id)
           .maybeSingle();
 
         if (error) throw error;
         
         if (data) {
+          // Check if student actually needs onboarding
+          if (data.registration_method !== 'self_registered' || data.status !== 'pending') {
+            // Already completed onboarding or company-added student
+            navigate('/student');
+            return;
+          }
+          
           setStudent(data);
           setFormData({
             phone: data.phone || "",
@@ -100,13 +109,14 @@ export default function StudentOnboarding() {
         }
       } catch (error) {
         console.error('Error fetching student:', error);
+        navigate('/login');
       } finally {
         setLoading(false);
       }
     };
 
     fetchStudent();
-  }, [user?.id, navigate]);
+  }, [navigate]);
 
   const handleNext = () => {
     if (step < 4) setStep(step + 1);
