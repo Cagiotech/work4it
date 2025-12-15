@@ -24,7 +24,7 @@ const Login = () => {
     const checkUser = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
-        redirectBasedOnOnboarding(session.user.id);
+        redirectBasedOnRole(session.user.id);
       }
     };
     checkUser();
@@ -33,7 +33,7 @@ const Login = () => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         if (session?.user) {
-          redirectBasedOnOnboarding(session.user.id);
+          redirectBasedOnRole(session.user.id);
         }
       }
     );
@@ -41,7 +41,38 @@ const Login = () => {
     return () => subscription.unsubscribe();
   }, []);
 
-  const redirectBasedOnOnboarding = async (userId: string) => {
+  const redirectBasedOnRole = async (userId: string) => {
+    // Check if user is a student
+    const { data: student } = await supabase
+      .from('students')
+      .select('id, registration_method, status')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (student) {
+      // User is a student
+      if (student.registration_method === 'self_registered' && student.status === 'pending') {
+        navigate('/onboarding-new-student');
+      } else {
+        navigate('/student');
+      }
+      return;
+    }
+
+    // Check if user is staff
+    const { data: staff } = await supabase
+      .from('staff')
+      .select('id')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (staff) {
+      // Staff member - redirect to company panel (they'll see based on permissions)
+      navigate('/company');
+      return;
+    }
+
+    // Check company owner profile
     const { data: profile } = await supabase
       .from('profiles')
       .select('onboarding_completed')
@@ -76,7 +107,7 @@ const Login = () => {
 
       if (data.user) {
         toast.success('Login realizado com sucesso!');
-        await redirectBasedOnOnboarding(data.user.id);
+        await redirectBasedOnRole(data.user.id);
       }
     } catch (error: any) {
       console.error('Login error:', error);
