@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { User, Lock, Building, Save, LogOut, Link, FileText, Copy, Check, Trash2, AlertTriangle, LayoutGrid } from "lucide-react";
+import { User, Lock, Building, Save, LogOut, Link, FileText, Copy, Check, Trash2, AlertTriangle, LayoutGrid, UserCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -33,6 +34,7 @@ interface ExtendedCompany {
   terms_text?: string | null;
   regulations_text?: string | null;
   anamnesis_filled_by?: string;
+  require_student_approval?: boolean;
 }
 
 export default function Settings() {
@@ -61,6 +63,7 @@ export default function Settings() {
     termsText: '',
     regulationsText: '',
     anamnesisFilledBy: 'trainer',
+    requireStudentApproval: false,
   });
 
   const [passwordData, setPasswordData] = useState({
@@ -87,7 +90,7 @@ export default function Settings() {
   const fetchExtendedCompanyData = async (companyId: string) => {
     const { data, error } = await supabase
       .from('companies')
-      .select('id, name, address, registration_code, terms_text, regulations_text, anamnesis_filled_by')
+      .select('id, name, address, registration_code, terms_text, regulations_text, anamnesis_filled_by, require_student_approval')
       .eq('id', companyId)
       .single();
 
@@ -97,6 +100,7 @@ export default function Settings() {
         termsText: data.terms_text || '',
         regulationsText: data.regulations_text || '',
         anamnesisFilledBy: data.anamnesis_filled_by || 'trainer',
+        requireStudentApproval: data.require_student_approval || false,
       });
     }
   };
@@ -175,13 +179,14 @@ export default function Settings() {
           terms_text: regulationsData.termsText.trim() || null,
           regulations_text: regulationsData.regulationsText.trim() || null,
           anamnesis_filled_by: regulationsData.anamnesisFilledBy,
+          require_student_approval: regulationsData.requireStudentApproval,
         })
         .eq('id', company.id);
 
       if (error) throw error;
-      toast.success('Regulamentos atualizados!');
+      toast.success('Configurações atualizadas!');
     } catch (error: any) {
-      toast.error(error.message || 'Erro ao atualizar regulamentos');
+      toast.error(error.message || 'Erro ao atualizar configurações');
     } finally {
       setLoading(false);
     }
@@ -392,7 +397,27 @@ export default function Settings() {
                 Partilhe este link para os alunos se registarem na sua empresa.
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-6">
+              {/* Approval Switch */}
+              <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/30">
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-2">
+                    <UserCheck className="h-4 w-4 text-primary" />
+                    <Label htmlFor="requireApproval" className="font-medium">
+                      Requer Aprovação de Novos Alunos
+                    </Label>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Quando ativo, alunos que se registarem pelo link ficarão pendentes de aprovação antes de poderem aceder à plataforma.
+                  </p>
+                </div>
+                <Switch
+                  id="requireApproval"
+                  checked={regulationsData.requireStudentApproval}
+                  onCheckedChange={(checked) => setRegulationsData({ ...regulationsData, requireStudentApproval: checked })}
+                />
+              </div>
+
               <div className="space-y-2">
                 <Label>Link de Registo</Label>
                 <div className="flex gap-2">
@@ -410,7 +435,9 @@ export default function Settings() {
                   </Button>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Os alunos que se registarem por este link irão preencher os seus dados e aceitar os termos automaticamente.
+                  {regulationsData.requireStudentApproval 
+                    ? 'Os alunos que se registarem por este link ficarão pendentes até serem aprovados manualmente.'
+                    : 'Os alunos que se registarem por este link terão acesso imediato após completar o registo.'}
                 </p>
               </div>
 
@@ -435,7 +462,7 @@ export default function Settings() {
 
               <Button onClick={handleSaveRegulations} disabled={loading}>
                 <Save className="h-4 w-4 mr-2" />
-                {loading ? 'Salvando...' : 'Salvar'}
+                {loading ? 'Salvando...' : 'Salvar Configurações'}
               </Button>
             </CardContent>
           </Card>
