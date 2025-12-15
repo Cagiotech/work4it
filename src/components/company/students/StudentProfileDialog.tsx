@@ -217,7 +217,9 @@ export function StudentProfileDialog({
                 <TabsContent value="anamnesis" className="mt-0">
                   <StudentAnamnesisTab 
                     studentId={student.id} 
-                    canEdit={canEdit && isEditing} 
+                    canEdit={canEdit && isEditing}
+                    healthNotes={student.health_notes}
+                    onHealthNotesChange={() => onUpdate()}
                   />
                 </TabsContent>
 
