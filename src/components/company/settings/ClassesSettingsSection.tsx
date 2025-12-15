@@ -490,10 +490,13 @@ export function ClassesSettingsSection() {
               </div>
               <div className="space-y-2">
                 <Label>Sala</Label>
-                <Select value={classFormData.room_id} onValueChange={(value) => setClassFormData({ ...classFormData, room_id: value })}>
+                <Select 
+                  value={classFormData.room_id || "none"} 
+                  onValueChange={(value) => setClassFormData({ ...classFormData, room_id: value === "none" ? "" : value })}
+                >
                   <SelectTrigger><SelectValue placeholder="Selecione uma sala (opcional)" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Nenhuma</SelectItem>
+                    <SelectItem value="none">Nenhuma</SelectItem>
                     {rooms.map((room) => (
                       <SelectItem key={room.id} value={room.id}>{room.name} {room.location ? `(${room.location})` : ''}</SelectItem>
                     ))}
@@ -502,10 +505,13 @@ export function ClassesSettingsSection() {
               </div>
               <div className="space-y-2">
                 <Label>Instrutor Padrão</Label>
-                <Select value={classFormData.default_instructor_id} onValueChange={(value) => setClassFormData({ ...classFormData, default_instructor_id: value })}>
+                <Select 
+                  value={classFormData.default_instructor_id || "none"} 
+                  onValueChange={(value) => setClassFormData({ ...classFormData, default_instructor_id: value === "none" ? "" : value })}
+                >
                   <SelectTrigger><SelectValue placeholder="Selecione um instrutor (opcional)" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Nenhum</SelectItem>
+                    <SelectItem value="none">Nenhum</SelectItem>
                     {staff.map((member) => (
                       <SelectItem key={member.id} value={member.id}>{member.full_name}</SelectItem>
                     ))}
