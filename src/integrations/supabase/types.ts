@@ -119,11 +119,17 @@ export type Database = {
           color: string | null
           company_id: string
           created_at: string
+          default_days_of_week: number[] | null
+          default_end_time: string | null
+          default_instructor_id: string | null
+          default_start_time: string | null
           description: string | null
           duration_minutes: number
+          has_fixed_schedule: boolean | null
           id: string
           is_active: boolean | null
           name: string
+          room_id: string | null
           updated_at: string
         }
         Insert: {
@@ -131,11 +137,17 @@ export type Database = {
           color?: string | null
           company_id: string
           created_at?: string
+          default_days_of_week?: number[] | null
+          default_end_time?: string | null
+          default_instructor_id?: string | null
+          default_start_time?: string | null
           description?: string | null
           duration_minutes?: number
+          has_fixed_schedule?: boolean | null
           id?: string
           is_active?: boolean | null
           name: string
+          room_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -143,11 +155,17 @@ export type Database = {
           color?: string | null
           company_id?: string
           created_at?: string
+          default_days_of_week?: number[] | null
+          default_end_time?: string | null
+          default_instructor_id?: string | null
+          default_start_time?: string | null
           description?: string | null
           duration_minutes?: number
+          has_fixed_schedule?: boolean | null
           id?: string
           is_active?: boolean | null
           name?: string
+          room_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -156,6 +174,20 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "classes_default_instructor_id_fkey"
+            columns: ["default_instructor_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "classes_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
             referencedColumns: ["id"]
           },
         ]
@@ -343,6 +375,47 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "roles_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rooms: {
+        Row: {
+          capacity: number
+          company_id: string
+          created_at: string
+          id: string
+          is_active: boolean | null
+          location: string | null
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          capacity?: number
+          company_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          location?: string | null
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          capacity?: number
+          company_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          location?: string | null
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rooms_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"

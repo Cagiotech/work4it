@@ -12,16 +12,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-interface ClassType {
-  id: string;
-  name: string;
-  description: string | null;
-  duration_minutes: number;
-  capacity: number;
-  color: string;
-  is_active: boolean;
-}
-
 interface ClassSchedule {
   id: string;
   class_id: string;
@@ -31,7 +21,12 @@ interface ClassSchedule {
   end_time: string;
   status: string;
   notes: string | null;
-  class: ClassType;
+  class: {
+    id: string;
+    name: string;
+    capacity: number;
+    color: string;
+  };
   instructor: { full_name: string } | null;
   enrollments_count: number;
 }

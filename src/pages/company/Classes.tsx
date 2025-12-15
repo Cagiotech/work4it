@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { Plus, Calendar as CalendarIcon, Clock, Users, Pencil, Trash2, UserPlus, CalendarDays, List } from "lucide-react";
+import { Plus, Calendar as CalendarIcon, Clock, Users, Pencil, Trash2, UserPlus, CalendarDays, List, MapPin, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +14,7 @@ import { CreateClassDialog } from "@/components/company/classes/CreateClassDialo
 import { ScheduleClassDialog } from "@/components/company/classes/ScheduleClassDialog";
 import { EnrollStudentsDialog } from "@/components/company/classes/EnrollStudentsDialog";
 import { MonthlyCalendarView } from "@/components/company/classes/MonthlyCalendarView";
+import { RoomsSection } from "@/components/company/classes/RoomsSection";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,6 +26,19 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
+interface Room {
+  id: string;
+  name: string;
+  capacity: number;
+  location: string | null;
+  is_active?: boolean;
+}
+
+interface Staff {
+  id: string;
+  full_name: string;
+}
+
 interface ClassType {
   id: string;
   name: string;
@@ -33,6 +47,14 @@ interface ClassType {
   capacity: number;
   color: string;
   is_active: boolean;
+  room_id?: string | null;
+  default_instructor_id?: string | null;
+  has_fixed_schedule?: boolean;
+  default_start_time?: string | null;
+  default_end_time?: string | null;
+  default_days_of_week?: number[] | null;
+  room?: Room | null;
+  default_instructor?: Staff | null;
 }
 
 interface ClassSchedule {
@@ -44,7 +66,13 @@ interface ClassSchedule {
   end_time: string;
   status: string;
   notes: string | null;
-  class: ClassType;
+  class: {
+    id: string;
+    name: string;
+    capacity: number;
+    color: string;
+    room?: Room | null;
+  };
   instructor: { full_name: string } | null;
   enrollments_count: number;
 }
@@ -62,6 +90,8 @@ export default function Classes() {
   const { t } = useTranslation();
   const { profile } = useAuth();
   const [classTypes, setClassTypes] = useState<ClassType[]>([]);
+  const [rooms, setRooms] = useState<Room[]>([]);
+  const [staff, setStaff] = useState<Staff[]>([]);
   const [weekSchedules, setWeekSchedules] = useState<ClassSchedule[]>([]);
   const [monthSchedules, setMonthSchedules] = useState<ClassSchedule[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -82,10 +112,36 @@ export default function Classes() {
     
     setIsLoading(true);
     try {
-      // Fetch class types
+      // Fetch rooms
+      const { data: roomsData, error: roomsError } = await supabase
+        .from('rooms')
+        .select('*')
+        .eq('company_id', profile.company_id)
+        .eq('is_active', true)
+        .order('name');
+      
+      if (roomsError) throw roomsError;
+      setRooms(roomsData || []);
+
+      // Fetch staff
+      const { data: staffData, error: staffError } = await supabase
+        .from('staff')
+        .select('id, full_name')
+        .eq('company_id', profile.company_id)
+        .eq('is_active', true)
+        .order('full_name');
+      
+      if (staffError) throw staffError;
+      setStaff(staffData || []);
+
+      // Fetch class types with room and instructor
       const { data: classes, error: classError } = await supabase
         .from('classes')
-        .select('*')
+        .select(`
+          *,
+          room:rooms(id, name, capacity, location),
+          default_instructor:staff!classes_default_instructor_id_fkey(id, full_name)
+        `)
         .eq('company_id', profile.company_id)
         .order('name');
       
@@ -255,6 +311,9 @@ export default function Classes() {
         </div>
       </div>
 
+      {/* Rooms Section */}
+      <RoomsSection rooms={rooms} onRefresh={fetchData} />
+
       {/* Monthly Calendar View */}
       {viewMode === 'month' && (
         <Card>
@@ -318,8 +377,14 @@ export default function Classes() {
                       </div>
                       {schedule.instructor && (
                         <div className="flex items-center gap-2 text-muted-foreground">
-                          <Users className="h-4 w-4" />
+                          <User className="h-4 w-4" />
                           <span>{schedule.instructor.full_name}</span>
+                        </div>
+                      )}
+                      {schedule.class?.room && (
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <MapPin className="h-4 w-4" />
+                          <span>{schedule.class.room.name}</span>
                         </div>
                       )}
                     </div>
@@ -377,21 +442,43 @@ export default function Classes() {
               </Button>
             </div>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {classTypes.map((classType) => (
                 <div 
                   key={classType.id} 
-                  className="p-4 rounded-xl text-center hover:shadow-md transition-all cursor-pointer group relative"
-                  style={{ backgroundColor: `${classType.color}20` }}
+                  className="p-4 rounded-xl hover:shadow-md transition-all cursor-pointer group relative border"
+                  style={{ backgroundColor: `${classType.color}15` }}
                 >
-                  <div 
-                    className="w-3 h-3 rounded-full mx-auto mb-2"
-                    style={{ backgroundColor: classType.color }}
-                  />
-                  <span className="font-medium text-foreground">{classType.name}</span>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {classType.duration_minutes} min | {classType.capacity} vagas
-                  </p>
+                  <div className="flex items-start gap-3">
+                    <div 
+                      className="w-3 h-3 rounded-full mt-1.5 shrink-0"
+                      style={{ backgroundColor: classType.color }}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <span className="font-medium text-foreground block">{classType.name}</span>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {classType.duration_minutes} min | {classType.capacity} vagas
+                      </p>
+                      {classType.room && (
+                        <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                          <MapPin className="h-3 w-3" />
+                          {classType.room.name}
+                        </p>
+                      )}
+                      {classType.default_instructor && (
+                        <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                          <User className="h-3 w-3" />
+                          {classType.default_instructor.full_name}
+                        </p>
+                      )}
+                      {classType.has_fixed_schedule && classType.default_start_time && (
+                        <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                          <Clock className="h-3 w-3" />
+                          {classType.default_start_time.slice(0, 5)} - {classType.default_end_time?.slice(0, 5)}
+                        </p>
+                      )}
+                    </div>
+                  </div>
                   <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
                     <Button
                       variant="ghost"
@@ -432,6 +519,8 @@ export default function Classes() {
           if (!open) setSelectedClassType(null);
         }}
         classType={selectedClassType}
+        rooms={rooms}
+        staff={staff}
         onSuccess={fetchData}
       />
 
@@ -439,6 +528,8 @@ export default function Classes() {
         open={showScheduleDialog}
         onOpenChange={setShowScheduleDialog}
         classTypes={classTypes}
+        rooms={rooms}
+        staff={staff}
         onSuccess={fetchData}
       />
 
