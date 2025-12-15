@@ -1,12 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import { useTranslation } from "react-i18next";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { SaveTriggerContext } from "../StudentProfileDialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -47,21 +47,23 @@ interface StudentProfileTabProps {
 
 export function StudentProfileTab({ student, canEdit, onUpdate }: StudentProfileTabProps) {
   const { t } = useTranslation();
+  const { registerSave, unregisterSave } = useContext(SaveTriggerContext);
   const [loading, setLoading] = useState(false);
   const [editData, setEditData] = useState<StudentData>(student);
   const [confirmSaveOpen, setConfirmSaveOpen] = useState(false);
-  const [hasChanges, setHasChanges] = useState(false);
 
   useEffect(() => {
     setEditData(student);
-    setHasChanges(false);
   }, [student]);
 
+  // Register save function with parent
   useEffect(() => {
-    // Check if there are changes
-    const changed = JSON.stringify(editData) !== JSON.stringify(student);
-    setHasChanges(changed);
-  }, [editData, student]);
+    const saveFn = async () => {
+      setConfirmSaveOpen(true);
+    };
+    registerSave("profile", saveFn);
+    return () => unregisterSave("profile");
+  }, [registerSave, unregisterSave, editData]);
 
   const handleSave = async () => {
     setConfirmSaveOpen(false);
@@ -90,9 +92,7 @@ export function StudentProfileTab({ student, canEdit, onUpdate }: StudentProfile
         })
         .eq('id', student.id);
 
-      if (error) throw error;
       toast.success("Dados atualizados com sucesso");
-      setHasChanges(false);
       onUpdate();
     } catch (error: any) {
       toast.error(error.message || "Erro ao atualizar dados");
@@ -308,15 +308,6 @@ export function StudentProfileTab({ student, canEdit, onUpdate }: StudentProfile
             rows={3}
           />
         </div>
-
-        {/* Save Button - Only show when editing and has changes */}
-        {canEdit && hasChanges && (
-          <div className="flex justify-end pt-4 border-t">
-            <Button onClick={() => setConfirmSaveOpen(true)} disabled={loading}>
-              {loading ? "A guardar..." : "Guardar Alterações"}
-            </Button>
-          </div>
-        )}
       </div>
 
       {/* Save Confirmation Dialog */}
