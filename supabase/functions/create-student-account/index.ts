@@ -6,10 +6,11 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-interface CreateStudentRequest {
+interface CreateAccountRequest {
   email: string;
   fullName: string;
-  studentId: string;
+  recordId: string;
+  recordType: "student" | "staff";
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -30,9 +31,9 @@ const handler = async (req: Request): Promise<Response> => {
       }
     );
 
-    const { email, fullName, studentId }: CreateStudentRequest = await req.json();
+    const { email, fullName, recordId, recordType = "student" }: CreateAccountRequest = await req.json();
 
-    console.log(`Creating account for student: ${email}`);
+    console.log(`Creating account for ${recordType}: ${email}`);
 
     // Create the user with temporary password
     const { data: userData, error: createError } = await supabaseAdmin.auth.admin.createUser({
@@ -41,7 +42,7 @@ const handler = async (req: Request): Promise<Response> => {
       email_confirm: true,
       user_metadata: {
         full_name: fullName,
-        role: "student",
+        role: recordType,
       },
     });
 
@@ -67,23 +68,24 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log(`User created successfully: ${userData.user?.id}`);
 
-    // Update the student record with the user_id
+    // Update the record with the user_id based on record type
+    const tableName = recordType === "student" ? "students" : "staff";
     const { error: updateError } = await supabaseAdmin
-      .from("students")
+      .from(tableName)
       .update({ 
         user_id: userData.user?.id,
         password_changed: false 
       })
-      .eq("id", studentId);
+      .eq("id", recordId);
 
     if (updateError) {
-      console.error("Error updating student:", updateError);
+      console.error(`Error updating ${recordType}:`, updateError);
       // Try to delete the created user if we can't link it
       await supabaseAdmin.auth.admin.deleteUser(userData.user!.id);
       throw updateError;
     }
 
-    console.log(`Student ${studentId} linked to user ${userData.user?.id}`);
+    console.log(`${recordType} ${recordId} linked to user ${userData.user?.id}`);
 
     return new Response(
       JSON.stringify({ 

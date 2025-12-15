@@ -201,6 +201,7 @@ export type Database = {
           hire_date: string | null
           id: string
           is_active: boolean | null
+          password_changed: boolean | null
           phone: string | null
           position: string | null
           role_id: string | null
@@ -215,6 +216,7 @@ export type Database = {
           hire_date?: string | null
           id?: string
           is_active?: boolean | null
+          password_changed?: boolean | null
           phone?: string | null
           position?: string | null
           role_id?: string | null
@@ -229,6 +231,7 @@ export type Database = {
           hire_date?: string | null
           id?: string
           is_active?: boolean | null
+          password_changed?: boolean | null
           phone?: string | null
           position?: string | null
           role_id?: string | null
