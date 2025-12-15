@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,17 +8,82 @@ import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { DeveloperFooter } from '@/components/DeveloperFooter';
 import logo from '@/assets/logo-light.png';
 import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 const Login = () => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    // Check if user is already logged in
+    const checkUser = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        redirectBasedOnOnboarding(session.user.id);
+      }
+    };
+    checkUser();
+
+    // Listen for auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        if (session?.user) {
+          redirectBasedOnOnboarding(session.user.id);
+        }
+      }
+    );
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const redirectBasedOnOnboarding = async (userId: string) => {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('onboarding_completed')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (profile?.onboarding_completed) {
+      navigate('/company');
+    } else {
+      navigate('/onboarding');
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Implement login with Supabase
-    console.log('Login:', { email, password });
+    setLoading(true);
+
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        if (error.message.includes('Invalid login credentials')) {
+          toast.error('Email ou senha incorretos');
+        } else {
+          throw error;
+        }
+        return;
+      }
+
+      if (data.user) {
+        toast.success('Login realizado com sucesso!');
+        await redirectBasedOnOnboarding(data.user.id);
+      }
+    } catch (error: any) {
+      console.error('Login error:', error);
+      toast.error(error.message || 'Erro ao fazer login');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -62,6 +127,7 @@ const Login = () => {
                     placeholder="nome@empresa.pt"
                     className="pl-10"
                     required
+                    disabled={loading}
                   />
                 </div>
               </div>
@@ -78,6 +144,7 @@ const Login = () => {
                     placeholder="••••••••"
                     className="pl-10 pr-10"
                     required
+                    disabled={loading}
                   />
                   <button
                     type="button"
@@ -95,8 +162,8 @@ const Login = () => {
                 </Link>
               </div>
 
-              <Button type="submit" variant="hero" className="w-full" size="lg">
-                {t('common.login')}
+              <Button type="submit" variant="hero" className="w-full" size="lg" disabled={loading}>
+                {loading ? 'Entrando...' : t('common.login')}
               </Button>
             </form>
           </div>
