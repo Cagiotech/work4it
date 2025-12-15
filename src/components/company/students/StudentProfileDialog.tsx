@@ -1,11 +1,13 @@
-import { useState, useEffect, useRef, createContext, useContext } from "react";
+import { useState, useEffect, useRef, createContext } from "react";
+import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { User, Heart, CreditCard, FileText, StickyNote, Pencil, Trash2, X, Save } from "lucide-react";
+import { User, Heart, CreditCard, FileText, StickyNote, Pencil, Trash2, X, Save, Apple } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 // Context for save trigger
 export const SaveTriggerContext = createContext<{
@@ -20,6 +22,7 @@ import { StudentAnamnesisTab } from "./tabs/StudentAnamnesisTab";
 import { StudentPlansTab } from "./tabs/StudentPlansTab";
 import { StudentNotesTab } from "./tabs/StudentNotesTab";
 import { StudentDocumentsTab } from "./tabs/StudentDocumentsTab";
+import { StudentNutritionTab } from "./tabs/StudentNutritionTab";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -187,7 +190,7 @@ export function StudentProfileDialog({
           <SaveTriggerContext.Provider value={{ registerSave, unregisterSave }}>
             <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1">
               <div className="px-6 pt-2">
-                <TabsList className="grid w-full grid-cols-5">
+                <TabsList className="grid w-full grid-cols-6">
                   <TabsTrigger value="profile" className="gap-1 text-xs sm:text-sm">
                     <User className="h-4 w-4" />
                     <span className="hidden sm:inline">Perfil</span>
@@ -195,6 +198,10 @@ export function StudentProfileDialog({
                   <TabsTrigger value="anamnesis" className="gap-1 text-xs sm:text-sm">
                     <Heart className="h-4 w-4" />
                     <span className="hidden sm:inline">Saúde</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="nutrition" className="gap-1 text-xs sm:text-sm">
+                    <Apple className="h-4 w-4" />
+                    <span className="hidden sm:inline">Nutrição</span>
                   </TabsTrigger>
                   <TabsTrigger value="plans" className="gap-1 text-xs sm:text-sm">
                     <CreditCard className="h-4 w-4" />
@@ -222,6 +229,13 @@ export function StudentProfileDialog({
 
                 <TabsContent value="anamnesis" className="mt-0">
                   <StudentAnamnesisTab 
+                    studentId={student.id} 
+                    canEdit={canEdit && isEditing} 
+                  />
+                </TabsContent>
+
+                <TabsContent value="nutrition" className="mt-0">
+                  <StudentNutritionTab 
                     studentId={student.id} 
                     canEdit={canEdit && isEditing} 
                   />

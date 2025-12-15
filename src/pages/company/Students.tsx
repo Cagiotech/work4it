@@ -80,6 +80,14 @@ export default function Students() {
 
       if (error) throw error;
       setStudents(data || []);
+      
+      // Update selectedStudent if it exists to reflect any changes
+      if (selectedStudent && data) {
+        const updated = data.find(s => s.id === selectedStudent.id);
+        if (updated) {
+          setSelectedStudent(updated);
+        }
+      }
     } catch (error: any) {
       console.error('Error fetching students:', error);
       toast.error('Erro ao carregar alunos');

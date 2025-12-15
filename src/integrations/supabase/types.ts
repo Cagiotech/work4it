@@ -403,6 +403,62 @@ export type Database = {
           },
         ]
       }
+      student_nutrition_plans: {
+        Row: {
+          calories_target: number | null
+          carbs_target: number | null
+          created_at: string
+          description: string | null
+          fat_target: number | null
+          id: string
+          is_active: boolean | null
+          meals: string | null
+          notes: string | null
+          protein_target: number | null
+          student_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          calories_target?: number | null
+          carbs_target?: number | null
+          created_at?: string
+          description?: string | null
+          fat_target?: number | null
+          id?: string
+          is_active?: boolean | null
+          meals?: string | null
+          notes?: string | null
+          protein_target?: number | null
+          student_id: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          calories_target?: number | null
+          carbs_target?: number | null
+          created_at?: string
+          description?: string | null
+          fat_target?: number | null
+          id?: string
+          is_active?: boolean | null
+          meals?: string | null
+          notes?: string | null
+          protein_target?: number | null
+          student_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_nutrition_plans_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       student_subscriptions: {
         Row: {
           created_at: string

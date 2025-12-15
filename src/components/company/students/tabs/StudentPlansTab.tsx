@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -7,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { CreditCard, Calendar, UserCheck, Plus, Trash2 } from "lucide-react";
+import { CreditCard, Calendar, UserCheck, Plus, Trash2, Settings, Users } from "lucide-react";
 import { format } from "date-fns";
 import { pt } from "date-fns/locale";
 import {
@@ -54,6 +55,7 @@ interface StudentPlansTabProps {
 }
 
 export function StudentPlansTab({ studentId, personalTrainerId, companyId, canEdit, onUpdate }: StudentPlansTabProps) {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
@@ -242,9 +244,20 @@ export function StudentPlansTab({ studentId, personalTrainerId, companyId, canEd
               )}
             </div>
             {trainers.length === 0 && (
-              <p className="text-sm text-muted-foreground">
-                Nenhum colaborador cadastrado. Adicione colaboradores em Recursos Humanos.
-              </p>
+              <div className="text-center py-4">
+                <Users className="h-8 w-8 mx-auto text-muted-foreground/50 mb-2" />
+                <p className="text-sm text-muted-foreground mb-3">
+                  Nenhum colaborador cadastrado.
+                </p>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => navigate('/company/human-resources')}
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Ir para Recursos Humanos
+                </Button>
+              </div>
             )}
           </CardContent>
         </Card>
@@ -305,9 +318,19 @@ export function StudentPlansTab({ studentId, personalTrainerId, companyId, canEd
             )}
 
             {plans.length === 0 && !isAddingPlan && (
-              <p className="text-sm text-muted-foreground text-center py-4">
-                Nenhum plano disponível. Crie planos em Configurações → Planos.
-              </p>
+              <div className="text-center py-6">
+                <Settings className="h-10 w-10 mx-auto text-muted-foreground/50 mb-3" />
+                <p className="text-sm text-muted-foreground mb-4">
+                  Nenhum plano de assinatura criado.
+                </p>
+                <Button 
+                  variant="outline"
+                  onClick={() => navigate('/company/settings')}
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Criar Planos em Configurações
+                </Button>
+              </div>
             )}
 
             {subscriptions.length === 0 && !isAddingPlan && plans.length > 0 && (
