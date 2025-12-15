@@ -1,17 +1,13 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { Calendar, LayoutGrid, DoorOpen } from "lucide-react";
+import { Calendar as CalendarIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { format, startOfWeek, startOfMonth, endOfMonth, addDays } from "date-fns";
-import { CreateClassDialog } from "@/components/company/classes/CreateClassDialog";
 import { ScheduleClassDialog } from "@/components/company/classes/ScheduleClassDialog";
 import { EnrollStudentsDialog } from "@/components/company/classes/EnrollStudentsDialog";
 import { CalendarSection } from "@/components/company/classes/CalendarSection";
-import { ClassTypesSection } from "@/components/company/classes/ClassTypesSection";
-import { RoomsSection } from "@/components/company/classes/RoomsSection";
-import { cn } from "@/lib/utils";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -74,30 +70,19 @@ interface ClassSchedule {
   enrollments_count: number;
 }
 
-type ActiveSection = 'calendar' | 'class-types' | 'rooms';
-
-const sidebarItems = [
-  { key: 'calendar' as const, label: 'Calendário', icon: Calendar },
-  { key: 'class-types' as const, label: 'Tipos de Aula', icon: LayoutGrid },
-  { key: 'rooms' as const, label: 'Salas', icon: DoorOpen },
-];
-
 export default function Classes() {
   const { t } = useTranslation();
   const { profile } = useAuth();
-  const [activeSection, setActiveSection] = useState<ActiveSection>('calendar');
   const [classTypes, setClassTypes] = useState<ClassType[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [staff, setStaff] = useState<Staff[]>([]);
   const [weekSchedules, setWeekSchedules] = useState<ClassSchedule[]>([]);
   const [monthSchedules, setMonthSchedules] = useState<ClassSchedule[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showScheduleDialog, setShowScheduleDialog] = useState(false);
   const [showEnrollDialog, setShowEnrollDialog] = useState(false);
-  const [selectedClassType, setSelectedClassType] = useState<ClassType | null>(null);
   const [selectedSchedule, setSelectedSchedule] = useState<ClassSchedule | null>(null);
-  const [deleteConfirm, setDeleteConfirm] = useState<{ type: 'class' | 'schedule', id: string } | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   
   const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
   const currentMonthStart = startOfMonth(new Date());
@@ -144,8 +129,8 @@ export default function Classes() {
       if (classError) throw classError;
       setClassTypes(classes || []);
 
-      // Fetch schedules for this week (extended range for week navigation)
-      const weekEnd = addDays(weekStart, 13); // 2 weeks ahead
+      // Fetch schedules for extended range (for week navigation)
+      const weekEnd = addDays(weekStart, 20);
       const { data: weekData, error: weekError } = await supabase
         .from('class_schedules')
         .select(`
@@ -153,7 +138,7 @@ export default function Classes() {
           class:classes(*),
           instructor:staff(full_name)
         `)
-        .gte('scheduled_date', format(addDays(weekStart, -7), 'yyyy-MM-dd'))
+        .gte('scheduled_date', format(addDays(weekStart, -14), 'yyyy-MM-dd'))
         .lte('scheduled_date', format(weekEnd, 'yyyy-MM-dd'))
         .order('scheduled_date')
         .order('start_time');
@@ -210,34 +195,14 @@ export default function Classes() {
     fetchData();
   }, [profile?.company_id]);
 
-  const handleDeleteClass = async () => {
-    if (!deleteConfirm || deleteConfirm.type !== 'class') return;
-    
-    try {
-      const { error } = await supabase
-        .from('classes')
-        .delete()
-        .eq('id', deleteConfirm.id);
-      
-      if (error) throw error;
-      toast.success('Tipo de aula eliminado');
-      fetchData();
-    } catch (error) {
-      console.error('Error deleting class:', error);
-      toast.error('Erro ao eliminar tipo de aula');
-    } finally {
-      setDeleteConfirm(null);
-    }
-  };
-
   const handleDeleteSchedule = async () => {
-    if (!deleteConfirm || deleteConfirm.type !== 'schedule') return;
+    if (!deleteConfirm) return;
     
     try {
       const { error } = await supabase
         .from('class_schedules')
         .delete()
-        .eq('id', deleteConfirm.id);
+        .eq('id', deleteConfirm);
       
       if (error) throw error;
       toast.success('Aula eliminada');
@@ -259,94 +224,24 @@ export default function Classes() {
   }
 
   return (
-    <div className="flex gap-6 min-h-[calc(100vh-12rem)]">
-      {/* Side Navigation */}
-      <div className="w-48 shrink-0 hidden md:block">
-        <nav className="sticky top-4 space-y-1">
-          {sidebarItems.map((item) => (
-            <button
-              key={item.key}
-              onClick={() => setActiveSection(item.key)}
-              className={cn(
-                "w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors text-left",
-                activeSection === item.key
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
-              )}
-            >
-              <item.icon className="h-4 w-4" />
-              {item.label}
-            </button>
-          ))}
-        </nav>
+    <div className="space-y-6">
+      <div className="flex items-center gap-3">
+        <CalendarIcon className="h-6 w-6 text-primary" />
+        <h1 className="text-2xl font-heading font-bold">Aulas e Serviços</h1>
       </div>
 
-      {/* Mobile Navigation */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-background border-t z-50 p-2">
-        <div className="flex justify-around">
-          {sidebarItems.map((item) => (
-            <button
-              key={item.key}
-              onClick={() => setActiveSection(item.key)}
-              className={cn(
-                "flex flex-col items-center gap-1 px-4 py-2 rounded-lg text-xs transition-colors",
-                activeSection === item.key
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground"
-              )}
-            >
-              <item.icon className="h-5 w-5" />
-              {item.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="flex-1 min-w-0 pb-20 md:pb-0">
-        {activeSection === 'calendar' && (
-          <CalendarSection
-            weekSchedules={weekSchedules}
-            monthSchedules={monthSchedules}
-            onEnroll={(schedule) => {
-              setSelectedSchedule(schedule);
-              setShowEnrollDialog(true);
-            }}
-            onDelete={(id) => setDeleteConfirm({ type: 'schedule', id })}
-            onScheduleClass={() => setShowScheduleDialog(true)}
-          />
-        )}
-
-        {activeSection === 'class-types' && (
-          <ClassTypesSection
-            classTypes={classTypes}
-            onEdit={(classType) => {
-              setSelectedClassType(classType);
-              setShowCreateDialog(true);
-            }}
-            onDelete={(id) => setDeleteConfirm({ type: 'class', id })}
-            onCreate={() => setShowCreateDialog(true)}
-          />
-        )}
-
-        {activeSection === 'rooms' && (
-          <RoomsSection rooms={rooms} onRefresh={fetchData} />
-        )}
-      </div>
-
-      {/* Dialogs */}
-      <CreateClassDialog
-        open={showCreateDialog}
-        onOpenChange={(open) => {
-          setShowCreateDialog(open);
-          if (!open) setSelectedClassType(null);
+      <CalendarSection
+        weekSchedules={weekSchedules}
+        monthSchedules={monthSchedules}
+        onEnroll={(schedule) => {
+          setSelectedSchedule(schedule);
+          setShowEnrollDialog(true);
         }}
-        classType={selectedClassType}
-        rooms={rooms}
-        staff={staff}
-        onSuccess={fetchData}
+        onDelete={(id) => setDeleteConfirm(id)}
+        onScheduleClass={() => setShowScheduleDialog(true)}
       />
 
+      {/* Dialogs */}
       <ScheduleClassDialog
         open={showScheduleDialog}
         onOpenChange={setShowScheduleDialog}
@@ -366,22 +261,19 @@ export default function Classes() {
         onSuccess={fetchData}
       />
 
-      {/* Delete Confirmations */}
+      {/* Delete Confirmation */}
       <AlertDialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Confirmar eliminação</AlertDialogTitle>
             <AlertDialogDescription>
-              {deleteConfirm?.type === 'class' 
-                ? 'Tem certeza que deseja eliminar este tipo de aula? Todas as aulas agendadas deste tipo também serão eliminadas.'
-                : 'Tem certeza que deseja eliminar esta aula agendada? Todas as inscrições serão canceladas.'
-              }
+              Tem certeza que deseja eliminar esta aula agendada? Todas as inscrições serão canceladas.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction 
-              onClick={deleteConfirm?.type === 'class' ? handleDeleteClass : handleDeleteSchedule}
+              onClick={handleDeleteSchedule}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Eliminar
