@@ -1,7 +1,8 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { format, addDays, startOfWeek, addWeeks, subWeeks, startOfDay, isSameDay } from "date-fns";
 import { pt } from "date-fns/locale";
-import { ChevronLeft, ChevronRight, Clock, Users, UserPlus, Trash2, User, MapPin, List, CalendarDays, Calendar as CalendarIcon } from "lucide-react";
+import { ChevronLeft, ChevronRight, Clock, Users, UserPlus, Trash2, User, MapPin, List, CalendarDays, Calendar as CalendarIcon, Plus, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -39,6 +40,7 @@ interface ClassSchedule {
 interface CalendarSectionProps {
   weekSchedules: ClassSchedule[];
   monthSchedules: ClassSchedule[];
+  hasClassTypes: boolean;
   onEnroll: (schedule: ClassSchedule) => void;
   onDelete: (id: string) => void;
   onScheduleClass: () => void;
@@ -57,13 +59,39 @@ const weekDays = [
 export function CalendarSection({ 
   weekSchedules, 
   monthSchedules, 
+  hasClassTypes,
   onEnroll, 
   onDelete,
   onScheduleClass 
 }: CalendarSectionProps) {
+  const navigate = useNavigate();
   const [viewMode, setViewMode] = useState<'day' | 'week' | 'month'>('week');
   const [currentWeekStart, setCurrentWeekStart] = useState(startOfWeek(new Date(), { weekStartsOn: 1 }));
   const [selectedDay, setSelectedDay] = useState(startOfDay(new Date()));
+
+  // If no class types exist, show empty state with button to settings
+  if (!hasClassTypes) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 text-center space-y-4">
+        <div className="p-4 rounded-full bg-muted">
+          <CalendarIcon className="h-12 w-12 text-muted-foreground" />
+        </div>
+        <div className="space-y-2">
+          <h3 className="text-lg font-semibold">Nenhum tipo de aula configurado</h3>
+          <p className="text-muted-foreground max-w-md">
+            Antes de agendar aulas, é necessário criar os tipos de aula nas configurações.
+          </p>
+        </div>
+        <Button 
+          onClick={() => navigate('/company/settings?tab=classes')}
+          className="gap-2"
+        >
+          <Plus className="h-4 w-4" />
+          Criar Tipo de Aula
+        </Button>
+      </div>
+    );
+  }
 
   const getSchedulesForDate = (date: Date) => {
     const dateStr = format(date, 'yyyy-MM-dd');
