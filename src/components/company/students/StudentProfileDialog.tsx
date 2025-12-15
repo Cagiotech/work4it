@@ -23,16 +23,6 @@ import { StudentPlansTab } from "./tabs/StudentPlansTab";
 import { StudentNotesTab } from "./tabs/StudentNotesTab";
 import { StudentDocumentsTab } from "./tabs/StudentDocumentsTab";
 import { StudentNutritionTab } from "./tabs/StudentNutritionTab";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 
 interface Student {
   id: string;
@@ -78,7 +68,7 @@ export function StudentProfileDialog({
 }: StudentProfileDialogProps) {
   const [activeTab, setActiveTab] = useState("profile");
   const [isEditing, setIsEditing] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  
   const [isSaving, setIsSaving] = useState(false);
   const saveFunctionsRef = useRef<Map<string, () => Promise<void>>>(new Map());
 
@@ -124,10 +114,6 @@ export function StudentProfileDialog({
     }
   };
 
-  const handleConfirmDelete = () => {
-    setDeleteDialogOpen(false);
-    onDelete?.();
-  };
 
   return (
     <>
@@ -178,7 +164,7 @@ export function StudentProfileDialog({
                     variant="outline" 
                     size="icon"
                     className="text-destructive hover:text-destructive"
-                    onClick={() => setDeleteDialogOpen(true)}
+                    onClick={() => onDelete()}
                     title="Eliminar aluno"
                   >
                     <Trash2 className="h-4 w-4" />
@@ -270,28 +256,6 @@ export function StudentProfileDialog({
           </SaveTriggerContext.Provider>
         </DialogContent>
       </Dialog>
-
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tem certeza que deseja eliminar o aluno "{student.full_name}"? 
-              Esta ação não pode ser desfeita e todos os dados associados serão perdidos.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleConfirmDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Eliminar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </>
   );
 }
