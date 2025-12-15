@@ -35,7 +35,6 @@ interface StudentData {
   citizen_card?: string | null;
   emergency_contact: string | null;
   emergency_phone: string | null;
-  health_notes: string | null;
   status: string | null;
 }
 
@@ -87,7 +86,6 @@ export function StudentProfileTab({ student, canEdit, onUpdate }: StudentProfile
           citizen_card: editData.citizen_card,
           emergency_contact: editData.emergency_contact,
           emergency_phone: editData.emergency_phone,
-          health_notes: editData.health_notes,
           status: editData.status,
         })
         .eq('id', student.id);
@@ -293,20 +291,6 @@ export function StudentProfileTab({ student, canEdit, onUpdate }: StudentProfile
               />
             </div>
           </div>
-        </div>
-
-        {/* Health Notes */}
-        <div className="space-y-4">
-          <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
-            Notas de Saúde
-          </h3>
-          <Textarea
-            value={editData.health_notes || ""}
-            onChange={(e) => setEditData({ ...editData, health_notes: e.target.value })}
-            disabled={!canEdit}
-            placeholder="Informações importantes sobre saúde, alergias, medicamentos..."
-            rows={3}
-          />
         </div>
       </div>
 

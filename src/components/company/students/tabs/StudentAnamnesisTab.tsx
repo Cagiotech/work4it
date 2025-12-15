@@ -7,7 +7,7 @@ import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Activity, Heart, Moon, Dumbbell, Stethoscope } from "lucide-react";
+import { Activity, Heart, Moon, Dumbbell, Stethoscope, FileWarning } from "lucide-react";
 import { SaveTriggerContext } from "../StudentProfileDialog";
 import {
   AlertDialog,
@@ -55,6 +55,8 @@ interface AnamnesisData {
 interface StudentAnamnesisTabProps {
   studentId: string;
   canEdit: boolean;
+  healthNotes?: string | null;
+  onHealthNotesChange?: (notes: string) => void;
 }
 
 const defaultAnamnesis: Omit<AnamnesisData, 'student_id'> = {
@@ -87,13 +89,14 @@ const defaultAnamnesis: Omit<AnamnesisData, 'student_id'> = {
   additional_notes: null,
 };
 
-export function StudentAnamnesisTab({ studentId, canEdit }: StudentAnamnesisTabProps) {
+export function StudentAnamnesisTab({ studentId, canEdit, healthNotes, onHealthNotesChange }: StudentAnamnesisTabProps) {
   const { registerSave, unregisterSave } = useContext(SaveTriggerContext);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [data, setData] = useState<AnamnesisData>({ ...defaultAnamnesis, student_id: studentId });
   const [originalData, setOriginalData] = useState<string>("");
   const [confirmSaveOpen, setConfirmSaveOpen] = useState(false);
+  const [localHealthNotes, setLocalHealthNotes] = useState(healthNotes || "");
 
   useEffect(() => {
     fetchAnamnesis();
@@ -132,6 +135,7 @@ export function StudentAnamnesisTab({ studentId, canEdit }: StudentAnamnesisTabP
     setConfirmSaveOpen(false);
     setSaving(true);
     try {
+      // Save anamnesis data
       if (data.id) {
         const { error } = await supabase
           .from('student_anamnesis')
@@ -144,6 +148,17 @@ export function StudentAnamnesisTab({ studentId, canEdit }: StudentAnamnesisTabP
           .insert({ ...data, student_id: studentId });
         if (error) throw error;
       }
+      
+      // Save health notes to students table if changed
+      if (localHealthNotes !== healthNotes) {
+        const { error: notesError } = await supabase
+          .from('students')
+          .update({ health_notes: localHealthNotes })
+          .eq('id', studentId);
+        if (notesError) throw notesError;
+        onHealthNotesChange?.(localHealthNotes);
+      }
+      
       toast.success("Anamnese guardada com sucesso");
       fetchAnamnesis();
     } catch (error: any) {
@@ -164,6 +179,25 @@ export function StudentAnamnesisTab({ studentId, canEdit }: StudentAnamnesisTabP
   return (
     <>
       <div className="space-y-6">
+        {/* General Health Notes */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <FileWarning className="h-4 w-4 text-primary" />
+              Notas de Saúde Gerais
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Textarea
+              value={localHealthNotes}
+              onChange={(e) => setLocalHealthNotes(e.target.value)}
+              disabled={!canEdit}
+              placeholder="Informações importantes sobre saúde, alergias, medicamentos, condições especiais..."
+              rows={3}
+            />
+          </CardContent>
+        </Card>
+
         {/* Physical Measurements */}
         <Card>
           <CardHeader className="pb-3">
