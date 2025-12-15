@@ -172,14 +172,14 @@ export function ScheduleClassDialog({
             <div className="space-y-2">
               <Label>Instrutor</Label>
               <Select
-                value={formData.instructor_id}
-                onValueChange={(value) => setFormData({ ...formData, instructor_id: value })}
+                value={formData.instructor_id || "none"}
+                onValueChange={(value) => setFormData({ ...formData, instructor_id: value === "none" ? "" : value })}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione um instrutor (opcional)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Nenhum</SelectItem>
+                  <SelectItem value="none">Nenhum</SelectItem>
                   {staff.map((member) => (
                     <SelectItem key={member.id} value={member.id}>
                       {member.full_name}
