@@ -22,6 +22,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import * as XLSX from "xlsx";
 
 interface ImportStudentsDialogProps {
   open: boolean;
@@ -66,30 +67,49 @@ export function ImportStudentsDialog({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleDownloadTemplate = () => {
-    const BOM = '\uFEFF';
-    const csvContent = BOM + [
-      'Nome Completo;Email;Telefone;Data de Nascimento;Género;NIF;NISS;Cartão de Cidadão',
-      'João Silva;joao.silva@email.com;912345678;1990-05-15;Masculino;123456789;12345678901;12345678',
-      'Maria Santos;maria.santos@email.com;913456789;1985-10-20;Feminino;987654321;98765432109;87654321',
-      'Pedro Costa;pedro.costa@email.com;914567890;1995-03-10;Masculino;456789123;45678912345;45678901'
-    ].join('\n');
+    // Create workbook and worksheet
+    const templateData = [
+      ['Nome Completo', 'Email', 'Telefone', 'Data de Nascimento', 'Género', 'NIF', 'NISS', 'Cartão de Cidadão'],
+      ['João Silva', 'joao.silva@email.com', '912345678', '1990-05-15', 'Masculino', '123456789', '12345678901', '12345678'],
+      ['Maria Santos', 'maria.santos@email.com', '913456789', '1985-10-20', 'Feminino', '987654321', '98765432109', '87654321'],
+      ['Pedro Costa', 'pedro.costa@email.com', '914567890', '1995-03-10', 'Masculino', '456789123', '45678912345', '45678901']
+    ];
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = 'modelo_importacao_alunos.csv';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(link.href);
+    const ws = XLSX.utils.aoa_to_sheet(templateData);
+    
+    // Set column widths
+    ws['!cols'] = [
+      { wch: 20 }, // Nome Completo
+      { wch: 25 }, // Email
+      { wch: 12 }, // Telefone
+      { wch: 18 }, // Data de Nascimento
+      { wch: 12 }, // Género
+      { wch: 12 }, // NIF
+      { wch: 14 }, // NISS
+      { wch: 16 }, // Cartão de Cidadão
+    ];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Alunos');
+    
+    XLSX.writeFile(wb, 'modelo_importacao_alunos.xlsx');
     toast.success('Modelo baixado com sucesso!');
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const parseXlsxFile = async (file: File): Promise<string[][]> => {
+    const data = await file.arrayBuffer();
+    const workbook = XLSX.read(data);
+    const sheetName = workbook.SheetNames[0];
+    const worksheet = workbook.Sheets[sheetName];
+    const jsonData = XLSX.utils.sheet_to_json<string[]>(worksheet, { header: 1 });
+    return jsonData.map(row => row.map(cell => String(cell ?? '').trim()));
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (!selectedFile) return;
 
-    if (!selectedFile.name.endsWith('.csv') && !selectedFile.name.endsWith('.xlsx')) {
+    if (!selectedFile.name.endsWith('.csv') && !selectedFile.name.endsWith('.xlsx') && !selectedFile.name.endsWith('.xls')) {
       toast.error('Por favor, selecione um arquivo CSV ou Excel');
       return;
     }
@@ -98,32 +118,46 @@ export function ImportStudentsDialog({
     setDuplicates([]);
     setParsedStudents([]);
 
-    if (selectedFile.name.endsWith('.csv')) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const text = event.target?.result as string;
-        const lines = text.split('\n').filter(line => line.trim()).slice(0, 6);
-        const delimiter = lines[0]?.includes(';') ? ';' : ',';
-        const rows = lines.map(line => line.split(delimiter).map(cell => cell.trim().replace(/^["']|["']$/g, '')));
-        setPreview(rows);
-      };
-      reader.readAsText(selectedFile, 'UTF-8');
+    try {
+      if (selectedFile.name.endsWith('.xlsx') || selectedFile.name.endsWith('.xls')) {
+        const rows = await parseXlsxFile(selectedFile);
+        setPreview(rows.slice(0, 6));
+      } else {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const text = event.target?.result as string;
+          const lines = text.split('\n').filter(line => line.trim()).slice(0, 6);
+          const delimiter = lines[0]?.includes(';') ? ';' : ',';
+          const rows = lines.map(line => line.split(delimiter).map(cell => cell.trim().replace(/^["']|["']$/g, '')));
+          setPreview(rows);
+        };
+        reader.readAsText(selectedFile, 'UTF-8');
+      }
+    } catch (error) {
+      console.error('Error reading file:', error);
+      toast.error('Erro ao ler o arquivo');
     }
   };
 
   const parseFile = async (): Promise<ParsedStudent[]> => {
     if (!file) return [];
     
-    const text = await file.text();
-    const lines = text.split('\n').filter(line => line.trim());
+    let rows: string[][] = [];
     
-    if (lines.length < 2) return [];
+    if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+      rows = await parseXlsxFile(file);
+    } else {
+      const text = await file.text();
+      const lines = text.split('\n').filter(line => line.trim());
+      const delimiter = lines[0]?.includes(';') ? ';' : ',';
+      rows = lines.map(line => line.split(delimiter).map(cell => cell.trim().replace(/^["']|["']$/g, '')));
+    }
     
-    const delimiter = lines[0]?.includes(';') ? ';' : ',';
-    const dataLines = lines.slice(1);
+    if (rows.length < 2) return [];
     
-    return dataLines.map(line => {
-      const cells = line.split(delimiter).map(cell => cell.trim().replace(/^["']|["']$/g, ''));
+    const dataRows = rows.slice(1);
+    
+    return dataRows.map(cells => {
       const [fullName, email, phone, birthDate, gender, nif, niss, citizenCard] = cells;
       return {
         company_id: companyId,
@@ -320,7 +354,7 @@ export function ImportStudentsDialog({
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".csv,.xlsx"
+                accept=".csv,.xlsx,.xls"
                 className="hidden"
                 onChange={handleFileChange}
               />
