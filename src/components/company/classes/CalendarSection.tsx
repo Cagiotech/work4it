@@ -269,7 +269,7 @@ export function CalendarSection({
           </div>
 
           <Tabs defaultValue="seg" className="w-full">
-            <TabsList className="w-full grid grid-cols-7">
+            <TabsList className="w-full grid grid-cols-7 h-auto p-1">
               {weekDays.map((day) => {
                 const dayDate = addDays(currentWeekStart, day.dayOffset);
                 const isToday = isSameDay(dayDate, new Date());
@@ -278,13 +278,16 @@ export function CalendarSection({
                   <TabsTrigger 
                     key={day.key} 
                     value={day.key} 
-                    className={cn("flex-col gap-0.5 py-2", isToday && "ring-2 ring-primary ring-inset")}
+                    className={cn(
+                      "py-2 px-1 text-xs font-medium",
+                      isToday && "ring-2 ring-primary ring-inset"
+                    )}
                   >
-                    <span className="text-xs font-medium">{day.shortLabel}</span>
+                    {day.shortLabel}
                     {count > 0 && (
-                      <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                      <span className="ml-1 text-[10px] bg-muted-foreground/20 rounded-full px-1.5">
                         {count}
-                      </Badge>
+                      </span>
                     )}
                   </TabsTrigger>
                 );
