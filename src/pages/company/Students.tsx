@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { Plus, Search, LayoutGrid, List, ArrowUpAZ, ArrowDownAZ, Download, Trash2, Loader2, User, Calendar, CreditCard, Clock, Upload, Users, Filter, CheckCircle, Clock as ClockIcon } from "lucide-react";
+import { Plus, Search, LayoutGrid, List, ArrowUpAZ, ArrowDownAZ, Download, Trash2, Loader2, User, Calendar, CreditCard, Clock, Upload, Users, Filter, CheckCircle, Clock as ClockIcon, X, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -216,11 +216,11 @@ export default function Students() {
 
   // Separate active and pending students
   const activeStudents = useMemo(() => {
-    return students.filter(s => s.status !== 'pending_approval');
+    return students.filter(s => s.status !== 'pending_approval' && s.status !== 'pending');
   }, [students]);
 
   const pendingStudents = useMemo(() => {
-    return students.filter(s => s.status === 'pending_approval');
+    return students.filter(s => s.status === 'pending_approval' || s.status === 'pending');
   }, [students]);
 
   const filteredStudents = useMemo(() => {
@@ -380,6 +380,42 @@ export default function Students() {
   const confirmDelete = (student: Student) => {
     setStudentToDelete(student);
     setDeleteDialogOpen(true);
+  };
+
+  const handleApproveStudent = async (student: Student) => {
+    try {
+      const { error } = await supabase
+        .from('students')
+        .update({ status: 'active' })
+        .eq('id', student.id);
+
+      if (error) throw error;
+      
+      toast.success(`${student.full_name} foi aprovado!`);
+      fetchStudents();
+    } catch (error: any) {
+      console.error('Error approving student:', error);
+      toast.error('Erro ao aprovar aluno');
+    }
+  };
+
+  const handleRejectStudent = async (student: Student) => {
+    try {
+      // Delete the student record and associated auth user could be done here
+      // For now, just delete the student record
+      const { error } = await supabase
+        .from('students')
+        .delete()
+        .eq('id', student.id);
+
+      if (error) throw error;
+      
+      toast.success(`Registo de ${student.full_name} foi rejeitado.`);
+      fetchStudents();
+    } catch (error: any) {
+      console.error('Error rejecting student:', error);
+      toast.error('Erro ao rejeitar aluno');
+    }
   };
 
   const getInitials = (name: string) => {
@@ -640,8 +676,8 @@ export default function Students() {
           {filteredStudents.map((student) => (
             <Card
               key={student.id}
-              className="cursor-pointer hover:shadow-md transition-shadow"
-              onClick={() => handleStudentClick(student)}
+              className={`cursor-pointer hover:shadow-md transition-shadow ${activeTab === 'pending' ? 'border-amber-500/50' : ''}`}
+              onClick={() => activeTab !== 'pending' && handleStudentClick(student)}
             >
               <CardContent className="p-4 space-y-3">
                 <div className="flex items-center gap-3">
@@ -656,35 +692,81 @@ export default function Students() {
                   </div>
                 </div>
 
-                {/* Status and Payment Row */}
-                <div className="flex items-center gap-2 flex-wrap">
-                  {getStatusBadge(student.status)}
-                  {getPaymentStatusBadge(student.activeSubscription?.payment_status)}
-                  {getExpiryBadge(student.activeSubscription?.end_date)}
-                </div>
+                {activeTab === 'pending' ? (
+                  <>
+                    {/* Pending Status Info */}
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="border-amber-500 text-amber-600">
+                        {student.status === 'pending_approval' ? 'Aguarda Aprovação' : 'A completar perfil'}
+                      </Badge>
+                    </div>
+                    
+                    <div className="text-sm text-muted-foreground">
+                      <p>Registado em: {new Date(student.created_at).toLocaleDateString('pt-BR')}</p>
+                      {student.phone && <p>Telefone: {student.phone}</p>}
+                    </div>
 
-                {/* Info Grid */}
-                <div className="grid grid-cols-2 gap-2 text-sm">
-                  {/* Trainer */}
-                  <div className="flex items-center gap-1.5 text-muted-foreground">
-                    <User className="h-3.5 w-3.5" />
-                    <span className="truncate">{student.trainer?.full_name || 'Sem PT'}</span>
-                  </div>
+                    {/* Action Buttons */}
+                    {student.status === 'pending_approval' && (
+                      <div className="flex gap-2 pt-2">
+                        <Button
+                          size="sm"
+                          className="flex-1 gap-1.5"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleApproveStudent(student);
+                          }}
+                        >
+                          <CheckCircle className="h-4 w-4" />
+                          Aprovar
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          className="gap-1.5"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRejectStudent(student);
+                          }}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    {/* Status and Payment Row */}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {getStatusBadge(student.status)}
+                      {getPaymentStatusBadge(student.activeSubscription?.payment_status)}
+                      {getExpiryBadge(student.activeSubscription?.end_date)}
+                    </div>
 
-                  {/* Plan */}
-                  <div className="flex items-center gap-1.5 text-muted-foreground">
-                    <CreditCard className="h-3.5 w-3.5" />
-                    <span className="truncate">{student.activeSubscription?.plan?.name || 'Sem plano'}</span>
-                  </div>
+                    {/* Info Grid */}
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      {/* Trainer */}
+                      <div className="flex items-center gap-1.5 text-muted-foreground">
+                        <User className="h-3.5 w-3.5" />
+                        <span className="truncate">{student.trainer?.full_name || 'Sem PT'}</span>
+                      </div>
 
-                  {/* Last Activity */}
-                  <div className="flex items-center gap-1.5 text-muted-foreground col-span-2">
-                    <Clock className="h-3.5 w-3.5" />
-                    <span className="truncate">
-                      Atualizado: {new Date(student.updated_at).toLocaleDateString('pt-BR')}
-                    </span>
-                  </div>
-                </div>
+                      {/* Plan */}
+                      <div className="flex items-center gap-1.5 text-muted-foreground">
+                        <CreditCard className="h-3.5 w-3.5" />
+                        <span className="truncate">{student.activeSubscription?.plan?.name || 'Sem plano'}</span>
+                      </div>
+
+                      {/* Last Activity */}
+                      <div className="flex items-center gap-1.5 text-muted-foreground col-span-2">
+                        <Clock className="h-3.5 w-3.5" />
+                        <span className="truncate">
+                          Atualizado: {new Date(student.updated_at).toLocaleDateString('pt-BR')}
+                        </span>
+                      </div>
+                    </div>
+                  </>
+                )}
               </CardContent>
             </Card>
           ))}

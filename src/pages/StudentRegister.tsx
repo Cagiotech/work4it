@@ -15,6 +15,7 @@ interface Company {
   id: string;
   name: string | null;
   registration_code: string;
+  require_student_approval: boolean | null;
 }
 
 export default function StudentRegister() {
@@ -46,7 +47,7 @@ export default function StudentRegister() {
       try {
         const { data, error } = await supabase
           .from('companies')
-          .select('id, name, registration_code')
+          .select('id, name, registration_code, require_student_approval')
           .eq('registration_code', code)
           .maybeSingle();
 
@@ -95,6 +96,11 @@ export default function StudentRegister() {
       if (authError) throw authError;
 
       if (authData.user) {
+        // Determine initial status based on company settings
+        // If company requires approval, set to 'pending_approval'
+        // Otherwise, set to 'pending' (pending onboarding completion)
+        const initialStatus = company.require_student_approval ? 'pending_approval' : 'pending';
+        
         // Create student record
         const { error: studentError } = await supabase
           .from('students')
@@ -105,7 +111,7 @@ export default function StudentRegister() {
             user_id: authData.user.id,
             registration_method: 'self_registered',
             password_changed: true, // They set their own password
-            status: 'pending', // Pending until onboarding complete
+            status: initialStatus,
           }]);
 
         if (studentError) {
@@ -114,12 +120,18 @@ export default function StudentRegister() {
         }
 
         setSuccess(true);
-        toast.success("Conta criada com sucesso!");
         
-        // Redirect to onboarding after a moment
-        setTimeout(() => {
-          navigate('/onboarding-new-student');
-        }, 2000);
+        // If requires approval, show different message
+        if (company.require_student_approval) {
+          toast.success("Conta criada! Aguarde aprovação da empresa.");
+          // Don't redirect to onboarding, show pending message
+        } else {
+          toast.success("Conta criada com sucesso!");
+          // Redirect to onboarding after a moment
+          setTimeout(() => {
+            navigate('/onboarding-new-student');
+          }, 2000);
+        }
       }
     } catch (error: any) {
       console.error('Error registering:', error);
@@ -162,17 +174,28 @@ export default function StudentRegister() {
   }
 
   if (success) {
+    const requiresApproval = company?.require_student_approval;
+    
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
         <Card className="w-full max-w-md">
           <CardContent className="pt-6 text-center">
-            <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
-            <h2 className="text-xl font-bold mb-2">Conta Criada!</h2>
+            <CheckCircle className={`h-16 w-16 mx-auto mb-4 ${requiresApproval ? 'text-amber-500' : 'text-green-500'}`} />
+            <h2 className="text-xl font-bold mb-2">
+              {requiresApproval ? 'Registo Submetido!' : 'Conta Criada!'}
+            </h2>
             <p className="text-muted-foreground">
-              A sua conta foi criada com sucesso. 
-              A redirecionar para completar o seu perfil...
+              {requiresApproval 
+                ? 'O seu registo foi submetido e aguarda aprovação da empresa. Receberá um email quando for aprovado.'
+                : 'A sua conta foi criada com sucesso. A redirecionar para completar o seu perfil...'}
             </p>
-            <Loader2 className="h-6 w-6 animate-spin text-primary mx-auto mt-4" />
+            {requiresApproval ? (
+              <Button className="mt-4" onClick={() => navigate('/login')}>
+                Voltar ao Login
+              </Button>
+            ) : (
+              <Loader2 className="h-6 w-6 animate-spin text-primary mx-auto mt-4" />
+            )}
           </CardContent>
         </Card>
       </div>
