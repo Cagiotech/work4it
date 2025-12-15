@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 const Onboarding = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     fullName: '',
@@ -19,6 +20,33 @@ const Onboarding = () => {
     companyName: '',
     address: '',
   });
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session?.user) {
+        navigate('/login');
+        return;
+      }
+
+      // Check if onboarding is already completed
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('onboarding_completed')
+        .eq('user_id', session.user.id)
+        .maybeSingle();
+
+      if (profile?.onboarding_completed) {
+        navigate('/company');
+        return;
+      }
+
+      setCheckingAuth(false);
+    };
+
+    checkAuth();
+  }, [navigate]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -127,6 +155,17 @@ const Onboarding = () => {
 
   const currentStep = steps[step - 1];
   const Icon = currentStep.icon;
+
+  if (checkingAuth) {
+    return (
+      <div className="min-h-screen bg-gradient-hero flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">Carregando...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-hero flex flex-col">
