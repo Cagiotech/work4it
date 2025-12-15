@@ -144,7 +144,8 @@ export default function Students() {
           body: {
             email: data.email,
             fullName: data.name,
-            studentId: newStudent.id,
+            recordId: newStudent.id,
+            recordType: 'student',
           }
         });
 
