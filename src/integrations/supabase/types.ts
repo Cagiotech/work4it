@@ -252,11 +252,216 @@ export type Database = {
           },
         ]
       }
+      student_anamnesis: {
+        Row: {
+          additional_notes: string | null
+          alcohol_consumption: string | null
+          allergies_description: string | null
+          available_days_per_week: number | null
+          body_fat_percentage: number | null
+          created_at: string
+          current_activity_level: string | null
+          current_medications: string | null
+          doctor_clearance: boolean | null
+          doctor_contact: string | null
+          doctor_name: string | null
+          fitness_goals: string | null
+          has_allergies: boolean | null
+          has_back_problems: boolean | null
+          has_diabetes: boolean | null
+          has_heart_condition: boolean | null
+          has_hypertension: boolean | null
+          has_joint_problems: boolean | null
+          has_respiratory_issues: boolean | null
+          height_cm: number | null
+          id: string
+          injuries_history: string | null
+          is_smoker: boolean | null
+          preferred_training_time: string | null
+          previous_exercise_experience: string | null
+          previous_surgeries: string | null
+          sleep_hours_avg: number | null
+          stress_level: string | null
+          student_id: string
+          updated_at: string
+          weight_kg: number | null
+        }
+        Insert: {
+          additional_notes?: string | null
+          alcohol_consumption?: string | null
+          allergies_description?: string | null
+          available_days_per_week?: number | null
+          body_fat_percentage?: number | null
+          created_at?: string
+          current_activity_level?: string | null
+          current_medications?: string | null
+          doctor_clearance?: boolean | null
+          doctor_contact?: string | null
+          doctor_name?: string | null
+          fitness_goals?: string | null
+          has_allergies?: boolean | null
+          has_back_problems?: boolean | null
+          has_diabetes?: boolean | null
+          has_heart_condition?: boolean | null
+          has_hypertension?: boolean | null
+          has_joint_problems?: boolean | null
+          has_respiratory_issues?: boolean | null
+          height_cm?: number | null
+          id?: string
+          injuries_history?: string | null
+          is_smoker?: boolean | null
+          preferred_training_time?: string | null
+          previous_exercise_experience?: string | null
+          previous_surgeries?: string | null
+          sleep_hours_avg?: number | null
+          stress_level?: string | null
+          student_id: string
+          updated_at?: string
+          weight_kg?: number | null
+        }
+        Update: {
+          additional_notes?: string | null
+          alcohol_consumption?: string | null
+          allergies_description?: string | null
+          available_days_per_week?: number | null
+          body_fat_percentage?: number | null
+          created_at?: string
+          current_activity_level?: string | null
+          current_medications?: string | null
+          doctor_clearance?: boolean | null
+          doctor_contact?: string | null
+          doctor_name?: string | null
+          fitness_goals?: string | null
+          has_allergies?: boolean | null
+          has_back_problems?: boolean | null
+          has_diabetes?: boolean | null
+          has_heart_condition?: boolean | null
+          has_hypertension?: boolean | null
+          has_joint_problems?: boolean | null
+          has_respiratory_issues?: boolean | null
+          height_cm?: number | null
+          id?: string
+          injuries_history?: string | null
+          is_smoker?: boolean | null
+          preferred_training_time?: string | null
+          previous_exercise_experience?: string | null
+          previous_surgeries?: string | null
+          sleep_hours_avg?: number | null
+          stress_level?: string | null
+          student_id?: string
+          updated_at?: string
+          weight_kg?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_anamnesis_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: true
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_notes: {
+        Row: {
+          content: string
+          created_at: string
+          created_by: string
+          id: string
+          is_private: boolean | null
+          student_id: string
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          created_by: string
+          id?: string
+          is_private?: boolean | null
+          student_id: string
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          is_private?: boolean | null
+          student_id?: string
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_notes_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_subscriptions: {
+        Row: {
+          created_at: string
+          end_date: string
+          id: string
+          payment_status: string | null
+          plan_id: string
+          start_date: string
+          status: string | null
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          end_date: string
+          id?: string
+          payment_status?: string | null
+          plan_id: string
+          start_date?: string
+          status?: string | null
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          end_date?: string
+          id?: string
+          payment_status?: string | null
+          plan_id?: string
+          start_date?: string
+          status?: string | null
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_subscriptions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_subscriptions_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       students: {
         Row: {
           address: string | null
           birth_date: string | null
+          citizen_card: string | null
+          city: string | null
           company_id: string
+          country: string | null
           created_at: string
           email: string | null
           emergency_contact: string | null
@@ -266,7 +471,14 @@ export type Database = {
           gender: string | null
           health_notes: string | null
           id: string
+          nationality: string | null
+          nif: string | null
+          niss: string | null
+          password_changed: boolean | null
+          personal_trainer_id: string | null
           phone: string | null
+          postal_code: string | null
+          profile_photo_url: string | null
           status: string | null
           updated_at: string
           user_id: string | null
@@ -274,7 +486,10 @@ export type Database = {
         Insert: {
           address?: string | null
           birth_date?: string | null
+          citizen_card?: string | null
+          city?: string | null
           company_id: string
+          country?: string | null
           created_at?: string
           email?: string | null
           emergency_contact?: string | null
@@ -284,7 +499,14 @@ export type Database = {
           gender?: string | null
           health_notes?: string | null
           id?: string
+          nationality?: string | null
+          nif?: string | null
+          niss?: string | null
+          password_changed?: boolean | null
+          personal_trainer_id?: string | null
           phone?: string | null
+          postal_code?: string | null
+          profile_photo_url?: string | null
           status?: string | null
           updated_at?: string
           user_id?: string | null
@@ -292,7 +514,10 @@ export type Database = {
         Update: {
           address?: string | null
           birth_date?: string | null
+          citizen_card?: string | null
+          city?: string | null
           company_id?: string
+          country?: string | null
           created_at?: string
           email?: string | null
           emergency_contact?: string | null
@@ -302,7 +527,14 @@ export type Database = {
           gender?: string | null
           health_notes?: string | null
           id?: string
+          nationality?: string | null
+          nif?: string | null
+          niss?: string | null
+          password_changed?: boolean | null
+          personal_trainer_id?: string | null
           phone?: string | null
+          postal_code?: string | null
+          profile_photo_url?: string | null
           status?: string | null
           updated_at?: string
           user_id?: string | null
@@ -310,6 +542,57 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "students_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "students_personal_trainer_id_fkey"
+            columns: ["personal_trainer_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscription_plans: {
+        Row: {
+          company_id: string
+          created_at: string
+          description: string | null
+          duration_days: number
+          id: string
+          is_active: boolean | null
+          name: string
+          price: number
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          description?: string | null
+          duration_days?: number
+          id?: string
+          is_active?: boolean | null
+          name: string
+          price?: number
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          description?: string | null
+          duration_days?: number
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          price?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_plans_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"

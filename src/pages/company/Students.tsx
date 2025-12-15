@@ -33,12 +33,21 @@ interface Student {
   birth_date: string | null;
   gender: string | null;
   address: string | null;
+  postal_code: string | null;
+  city: string | null;
+  country: string | null;
+  nationality: string | null;
+  nif: string | null;
+  niss: string | null;
+  citizen_card: string | null;
   emergency_contact: string | null;
   emergency_phone: string | null;
   health_notes: string | null;
   enrollment_date: string | null;
-  status: string;
+  status: string | null;
   created_at: string;
+  company_id: string;
+  personal_trainer_id: string | null;
 }
 
 export default function Students() {
@@ -211,7 +220,7 @@ export default function Students() {
     return name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
   };
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: string | null) => {
     switch (status) {
       case 'active':
         return <Badge variant="outline" className="border-green-500 text-green-600">Ativo</Badge>;
@@ -220,7 +229,7 @@ export default function Students() {
       case 'suspended':
         return <Badge variant="outline" className="border-red-500 text-red-600">Suspenso</Badge>;
       default:
-        return <Badge variant="outline">{status}</Badge>;
+        return <Badge variant="outline" className="border-green-500 text-green-600">Ativo</Badge>;
     }
   };
 
@@ -417,31 +426,11 @@ export default function Students() {
       />
       
       <StudentProfileDialog
-        student={selectedStudent ? {
-          id: parseInt(selectedStudent.id.slice(0, 8), 16),
-          name: selectedStudent.full_name,
-          email: selectedStudent.email || '',
-          phone: selectedStudent.phone || '',
-          birthDate: selectedStudent.birth_date || '',
-          plan: 'Basic',
-          status: selectedStudent.status,
-          trainer: '',
-          documents: [],
-          classes: [],
-        } : null}
+        student={selectedStudent}
         open={profileDialogOpen}
         onOpenChange={setProfileDialogOpen}
-        onUpdate={(updated) => {
-          if (selectedStudent) {
-            handleUpdateStudent({
-              ...selectedStudent,
-              full_name: updated.name,
-              email: updated.email,
-              phone: updated.phone,
-              birth_date: updated.birthDate,
-              status: updated.status,
-            });
-          }
+        onUpdate={() => {
+          fetchStudents();
         }}
         onDelete={canDelete('students') ? () => {
           if (selectedStudent) {
