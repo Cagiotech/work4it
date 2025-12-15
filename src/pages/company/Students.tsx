@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { Plus, Search, LayoutGrid, List, ArrowUpAZ, ArrowDownAZ, Download, Trash2, Loader2, User, Calendar, CreditCard, Clock } from "lucide-react";
+import { Plus, Search, LayoutGrid, List, ArrowUpAZ, ArrowDownAZ, Download, Trash2, Loader2, User, Calendar, CreditCard, Clock, Upload, Users, Filter, CheckCircle, Clock as ClockIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -8,8 +8,12 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { AddStudentDialog } from "@/components/company/students/AddStudentDialog";
 import { StudentProfileDialog } from "@/components/company/students/StudentProfileDialog";
+import { ImportStudentsDialog } from "@/components/company/students/ImportStudentsDialog";
+import { StudentGroupsDialog } from "@/components/company/students/StudentGroupsDialog";
 import { useAuth } from "@/hooks/useAuth";
 import { usePermissions } from "@/hooks/usePermissions";
 import { supabase } from "@/integrations/supabase/client";
@@ -94,10 +98,13 @@ export default function Students() {
   const [filterPaymentStatus, setFilterPaymentStatus] = useState<string>("all");
   const [filterPlan, setFilterPlan] = useState<string>("all");
   const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [groupsDialogOpen, setGroupsDialogOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [profileDialogOpen, setProfileDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [studentToDelete, setStudentToDelete] = useState<Student | null>(null);
+  const [activeTab, setActiveTab] = useState<'active' | 'pending'>('active');
 
   const fetchStudents = async () => {
     if (!company?.id) return;
@@ -207,8 +214,19 @@ export default function Students() {
     fetchFiltersData();
   }, [company?.id]);
 
+  // Separate active and pending students
+  const activeStudents = useMemo(() => {
+    return students.filter(s => s.status !== 'pending_approval');
+  }, [students]);
+
+  const pendingStudents = useMemo(() => {
+    return students.filter(s => s.status === 'pending_approval');
+  }, [students]);
+
   const filteredStudents = useMemo(() => {
-    return students
+    const baseStudents = activeTab === 'pending' ? pendingStudents : activeStudents;
+    
+    return baseStudents
       .filter((student) => {
         const matchesSearch = 
           student.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -224,7 +242,7 @@ export default function Students() {
         const comparison = a.full_name.localeCompare(b.full_name);
         return sortOrder === "asc" ? comparison : -comparison;
       });
-  }, [students, searchTerm, sortOrder, filterStatus, filterTrainer, filterPaymentStatus, filterPlan]);
+  }, [students, searchTerm, sortOrder, filterStatus, filterTrainer, filterPaymentStatus, filterPlan, activeTab, activeStudents, pendingStudents]);
 
   const handleAddStudent = async (data: { name: string; email: string; phone: string; birthDate: string; createAccount: boolean }) => {
     if (!company?.id) return;
@@ -436,131 +454,175 @@ export default function Students() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header */}
       <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
         <div>
           <h1 className="text-2xl font-bold">{t("dashboard.students")}</h1>
-          <p className="text-muted-foreground">{students.length} alunos cadastrados</p>
+          <p className="text-muted-foreground text-sm">{activeStudents.length} ativos • {pendingStudents.length} pendentes</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setGroupsDialogOpen(true)}>
+            <Users className="h-4 w-4" />
+            <span className="hidden sm:inline">Grupos</span>
+          </Button>
           {canExport('students') && (
-            <Button variant="outline" className="gap-2" onClick={handleExport}>
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={handleExport}>
               <Download className="h-4 w-4" />
-              Exportar
+              <span className="hidden sm:inline">Exportar</span>
             </Button>
           )}
           {canCreate('students') && (
-            <Button className="gap-2" onClick={() => setAddDialogOpen(true)}>
-              <Plus className="h-4 w-4" />
-              {t("students.addStudent")}
-            </Button>
+            <>
+              <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setImportDialogOpen(true)}>
+                <Upload className="h-4 w-4" />
+                <span className="hidden sm:inline">Importar</span>
+              </Button>
+              <Button size="sm" className="gap-1.5" onClick={() => setAddDialogOpen(true)}>
+                <Plus className="h-4 w-4" />
+                {t("students.addStudent")}
+              </Button>
+            </>
           )}
         </div>
       </div>
 
-      {/* Filters */}
-      <Card>
-        <CardContent className="p-4 space-y-4">
-          {/* Search and View Controls */}
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+      {/* Tabs for Active/Pending */}
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'active' | 'pending')}>
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <TabsList className="h-9">
+            <TabsTrigger value="active" className="gap-1.5 px-3">
+              <CheckCircle className="h-3.5 w-3.5" />
+              Ativos
+              {activeStudents.length > 0 && (
+                <Badge variant="secondary" className="ml-1 text-xs px-1.5">{activeStudents.length}</Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="pending" className="gap-1.5 px-3">
+              <ClockIcon className="h-3.5 w-3.5" />
+              Pendentes
+              {pendingStudents.length > 0 && (
+                <Badge variant="destructive" className="ml-1 text-xs px-1.5">{pendingStudents.length}</Badge>
+              )}
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Search and Controls */}
+          <div className="flex items-center gap-2 flex-1 justify-end">
+            <div className="relative w-full max-w-xs">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Buscar por nome ou email..."
-                className="pl-10"
+                placeholder="Buscar..."
+                className="pl-8 h-9"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
-                title={sortOrder === "asc" ? "A-Z" : "Z-A"}
-              >
-                {sortOrder === "asc" ? <ArrowUpAZ className="h-4 w-4" /> : <ArrowDownAZ className="h-4 w-4" />}
-              </Button>
-              <Button
-                variant={viewMode === "grid" ? "default" : "outline"}
-                size="icon"
-                onClick={() => setViewMode("grid")}
-              >
-                <LayoutGrid className="h-4 w-4" />
-              </Button>
-              <Button
-                variant={viewMode === "list" ? "default" : "outline"}
-                size="icon"
-                onClick={() => setViewMode("list")}
-              >
-                <List className="h-4 w-4" />
-              </Button>
-            </div>
+            
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-1.5">
+                  <Filter className="h-4 w-4" />
+                  {hasActiveFilters && <Badge variant="secondary" className="text-xs px-1">!</Badge>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-72 p-3" align="end">
+                <div className="space-y-3">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium">Status</label>
+                    <Select value={filterStatus} onValueChange={setFilterStatus}>
+                      <SelectTrigger className="h-8 text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos</SelectItem>
+                        <SelectItem value="active">Ativo</SelectItem>
+                        <SelectItem value="inactive">Inativo</SelectItem>
+                        <SelectItem value="suspended">Suspenso</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium">Pagamento</label>
+                    <Select value={filterPaymentStatus} onValueChange={setFilterPaymentStatus}>
+                      <SelectTrigger className="h-8 text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos</SelectItem>
+                        <SelectItem value="paid">Em dia</SelectItem>
+                        <SelectItem value="pending">Pendente</SelectItem>
+                        <SelectItem value="overdue">Atrasado</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium">Personal</label>
+                    <Select value={filterTrainer} onValueChange={setFilterTrainer}>
+                      <SelectTrigger className="h-8 text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos</SelectItem>
+                        {trainers.map(trainer => (
+                          <SelectItem key={trainer.id} value={trainer.id}>{trainer.full_name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium">Plano</label>
+                    <Select value={filterPlan} onValueChange={setFilterPlan}>
+                      <SelectTrigger className="h-8 text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos</SelectItem>
+                        {plans.map(plan => (
+                          <SelectItem key={plan.id} value={plan.id}>{plan.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {hasActiveFilters && (
+                    <Button variant="ghost" size="sm" onClick={clearFilters} className="w-full">
+                      Limpar filtros
+                    </Button>
+                  )}
+                </div>
+              </PopoverContent>
+            </Popover>
+
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-9 w-9"
+              onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
+            >
+              {sortOrder === "asc" ? <ArrowUpAZ className="h-4 w-4" /> : <ArrowDownAZ className="h-4 w-4" />}
+            </Button>
+            <Button
+              variant={viewMode === "grid" ? "default" : "outline"}
+              size="icon"
+              className="h-9 w-9"
+              onClick={() => setViewMode("grid")}
+            >
+              <LayoutGrid className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={viewMode === "list" ? "default" : "outline"}
+              size="icon"
+              className="h-9 w-9"
+              onClick={() => setViewMode("list")}
+            >
+              <List className="h-4 w-4" />
+            </Button>
           </div>
+        </div>
 
-          {/* Filter Row */}
-          <div className="flex flex-wrap gap-3">
-            <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger className="w-full sm:w-36">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos Status</SelectItem>
-                <SelectItem value="active">Ativo</SelectItem>
-                <SelectItem value="inactive">Inativo</SelectItem>
-                <SelectItem value="suspended">Suspenso</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select value={filterPaymentStatus} onValueChange={setFilterPaymentStatus}>
-              <SelectTrigger className="w-full sm:w-40">
-                <SelectValue placeholder="Pagamento" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos Pagamentos</SelectItem>
-                <SelectItem value="paid">Em dia</SelectItem>
-                <SelectItem value="pending">Pendente</SelectItem>
-                <SelectItem value="overdue">Atrasado</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select value={filterTrainer} onValueChange={setFilterTrainer}>
-              <SelectTrigger className="w-full sm:w-44">
-                <SelectValue placeholder="Personal Trainer" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos Trainers</SelectItem>
-                {trainers.map(trainer => (
-                  <SelectItem key={trainer.id} value={trainer.id}>
-                    {trainer.full_name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select value={filterPlan} onValueChange={setFilterPlan}>
-              <SelectTrigger className="w-full sm:w-40">
-                <SelectValue placeholder="Plano" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos Planos</SelectItem>
-                {plans.map(plan => (
-                  <SelectItem key={plan.id} value={plan.id}>
-                    {plan.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            {hasActiveFilters && (
-              <Button variant="ghost" size="sm" onClick={clearFilters}>
-                Limpar filtros
-              </Button>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+        <TabsContent value="active" className="mt-0" />
+        <TabsContent value="pending" className="mt-0" />
+      </Tabs>
 
       {/* Students Display */}
       {filteredStudents.length === 0 ? (
@@ -736,6 +798,26 @@ export default function Students() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Import Students Dialog */}
+      {company?.id && (
+        <ImportStudentsDialog
+          open={importDialogOpen}
+          onOpenChange={setImportDialogOpen}
+          companyId={company.id}
+          onSuccess={fetchStudents}
+        />
+      )}
+
+      {/* Student Groups Dialog */}
+      {company?.id && (
+        <StudentGroupsDialog
+          open={groupsDialogOpen}
+          onOpenChange={setGroupsDialogOpen}
+          companyId={company.id}
+          students={students.map(s => ({ id: s.id, full_name: s.full_name, email: s.email }))}
+        />
+      )}
     </div>
   );
 }
