@@ -150,7 +150,8 @@ export function StudentProfileDialog({
                 </div>
               </div>
               <div className="flex gap-1">
-                {canEdit && isEditing && (
+                {/* Save button only for tabs that use SaveTriggerContext (profile, anamnesis) */}
+                {canEdit && isEditing && (activeTab === "profile" || activeTab === "anamnesis") && (
                   <Button 
                     variant="default"
                     size="icon"
