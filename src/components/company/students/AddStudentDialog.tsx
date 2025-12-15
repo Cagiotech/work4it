@@ -4,14 +4,17 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Loader2 } from "lucide-react";
 
 interface AddStudentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onAdd: (student: { name: string; email: string; phone: string; birthDate: string }) => void;
+  onAdd: (student: { name: string; email: string; phone: string; birthDate: string; createAccount: boolean }) => void;
+  isLoading?: boolean;
 }
 
-export function AddStudentDialog({ open, onOpenChange, onAdd }: AddStudentDialogProps) {
+export function AddStudentDialog({ open, onOpenChange, onAdd, isLoading }: AddStudentDialogProps) {
   const { t } = useTranslation();
   const [formData, setFormData] = useState({
     name: "",
@@ -19,12 +22,13 @@ export function AddStudentDialog({ open, onOpenChange, onAdd }: AddStudentDialog
     phone: "",
     birthDate: "",
   });
+  const [createAccount, setCreateAccount] = useState(true);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onAdd(formData);
+    onAdd({ ...formData, createAccount });
     setFormData({ name: "", email: "", phone: "", birthDate: "" });
-    onOpenChange(false);
+    setCreateAccount(true);
   };
 
   return (
@@ -42,6 +46,7 @@ export function AddStudentDialog({ open, onOpenChange, onAdd }: AddStudentDialog
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               placeholder={t("students.fullNamePlaceholder")}
               required
+              disabled={isLoading}
             />
           </div>
           <div className="space-y-2">
@@ -53,6 +58,7 @@ export function AddStudentDialog({ open, onOpenChange, onAdd }: AddStudentDialog
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               placeholder={t("students.emailPlaceholder")}
               required
+              disabled={isLoading}
             />
           </div>
           <div className="space-y-2">
@@ -63,6 +69,7 @@ export function AddStudentDialog({ open, onOpenChange, onAdd }: AddStudentDialog
               value={formData.birthDate}
               onChange={(e) => setFormData({ ...formData, birthDate: e.target.value })}
               required
+              disabled={isLoading}
             />
           </div>
           <div className="space-y-2">
@@ -74,13 +81,39 @@ export function AddStudentDialog({ open, onOpenChange, onAdd }: AddStudentDialog
               onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
               placeholder={t("students.phonePlaceholder")}
               required
+              disabled={isLoading}
             />
           </div>
+          
+          <div className="flex items-center space-x-2 pt-2">
+            <Checkbox 
+              id="createAccount" 
+              checked={createAccount}
+              onCheckedChange={(checked) => setCreateAccount(checked as boolean)}
+              disabled={isLoading}
+            />
+            <Label 
+              htmlFor="createAccount" 
+              className="text-sm font-normal cursor-pointer"
+            >
+              Criar conta de acesso (senha temporária: 12345678)
+            </Label>
+          </div>
+
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading}>
               {t("common.cancel")}
             </Button>
-            <Button type="submit">{t("students.addStudent")}</Button>
+            <Button type="submit" disabled={isLoading}>
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  A criar...
+                </>
+              ) : (
+                t("students.addStudent")
+              )}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

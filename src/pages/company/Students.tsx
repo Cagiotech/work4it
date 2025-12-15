@@ -57,6 +57,7 @@ export default function Students() {
   
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
+  const [addingStudent, setAddingStudent] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
@@ -115,10 +116,12 @@ export default function Students() {
       });
   }, [students, searchTerm, sortOrder, filterStatus]);
 
-  const handleAddStudent = async (data: { name: string; email: string; phone: string; birthDate: string }) => {
+  const handleAddStudent = async (data: { name: string; email: string; phone: string; birthDate: string; createAccount: boolean }) => {
     if (!company?.id) return;
     
+    setAddingStudent(true);
     try {
+      // First create the student record
       const { data: newStudent, error } = await supabase
         .from('students')
         .insert([{
@@ -128,17 +131,44 @@ export default function Students() {
           phone: data.phone || null,
           birth_date: data.birthDate || null,
           status: 'active',
+          password_changed: !data.createAccount, // If not creating account, mark as changed
         }])
         .select()
         .single();
 
       if (error) throw error;
       
+      // If createAccount is true and email exists, create the auth user
+      if (data.createAccount && data.email) {
+        const { data: accountData, error: accountError } = await supabase.functions.invoke('create-student-account', {
+          body: {
+            email: data.email,
+            fullName: data.name,
+            studentId: newStudent.id,
+          }
+        });
+
+        if (accountError) {
+          console.error('Error creating account:', accountError);
+          toast.error('Aluno criado, mas erro ao criar conta: ' + accountError.message);
+        } else if (accountData?.error) {
+          toast.error('Aluno criado, mas erro ao criar conta: ' + accountData.error);
+        } else {
+          toast.success('Aluno adicionado com conta criada! Senha temporária: 12345678');
+          setAddDialogOpen(false);
+          setStudents([...students, newStudent]);
+          return;
+        }
+      }
+      
       setStudents([...students, newStudent]);
+      setAddDialogOpen(false);
       toast.success('Aluno adicionado com sucesso!');
     } catch (error: any) {
       console.error('Error adding student:', error);
       toast.error(error.message || 'Erro ao adicionar aluno');
+    } finally {
+      setAddingStudent(false);
     }
   };
 
@@ -430,7 +460,8 @@ export default function Students() {
       <AddStudentDialog 
         open={addDialogOpen} 
         onOpenChange={setAddDialogOpen} 
-        onAdd={handleAddStudent} 
+        onAdd={handleAddStudent}
+        isLoading={addingStudent}
       />
       
       <StudentProfileDialog
