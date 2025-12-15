@@ -1,22 +1,36 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { User, Lock, Building, Save, LogOut } from "lucide-react";
+import { User, Lock, Building, Save, LogOut, Link, FileText, Copy, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+
+interface ExtendedCompany {
+  id: string;
+  name: string | null;
+  address: string | null;
+  registration_code?: string;
+  terms_text?: string | null;
+  regulations_text?: string | null;
+  anamnesis_filled_by?: string;
+}
 
 export default function Settings() {
   const { t } = useTranslation();
   const { profile, company, signOut, refreshProfile } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [extendedCompany, setExtendedCompany] = useState<ExtendedCompany | null>(null);
   
   const [profileData, setProfileData] = useState({
     fullName: '',
@@ -26,6 +40,12 @@ export default function Settings() {
   const [companyData, setCompanyData] = useState({
     name: '',
     address: '',
+  });
+
+  const [regulationsData, setRegulationsData] = useState({
+    termsText: '',
+    regulationsText: '',
+    anamnesisFilledBy: 'trainer',
   });
 
   const [passwordData, setPasswordData] = useState({
@@ -45,12 +65,46 @@ export default function Settings() {
         name: company.name || '',
         address: company.address || '',
       });
+      // Fetch extended company data
+      fetchExtendedCompanyData(company.id);
     }
   }, [profile, company]);
+
+  const fetchExtendedCompanyData = async (companyId: string) => {
+    const { data, error } = await supabase
+      .from('companies')
+      .select('id, name, address, registration_code, terms_text, regulations_text, anamnesis_filled_by')
+      .eq('id', companyId)
+      .single();
+
+    if (data) {
+      setExtendedCompany(data);
+      setRegulationsData({
+        termsText: data.terms_text || '',
+        regulationsText: data.regulations_text || '',
+        anamnesisFilledBy: data.anamnesis_filled_by || 'trainer',
+      });
+    }
+  };
 
   const getInitials = (name: string) => {
     if (!name) return 'U';
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  };
+
+  const getRegistrationLink = () => {
+    if (!extendedCompany?.registration_code) return '';
+    return `${window.location.origin}/registro?code=${extendedCompany.registration_code}`;
+  };
+
+  const handleCopyLink = async () => {
+    const link = getRegistrationLink();
+    if (link) {
+      await navigator.clipboard.writeText(link);
+      setCopied(true);
+      toast.success('Link copiado!');
+      setTimeout(() => setCopied(false), 2000);
+    }
   };
 
   const handleSaveProfile = async () => {
@@ -92,6 +146,28 @@ export default function Settings() {
       toast.success('Dados da empresa atualizados!');
     } catch (error: any) {
       toast.error(error.message || 'Erro ao atualizar empresa');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSaveRegulations = async () => {
+    if (!company) return;
+    setLoading(true);
+    try {
+      const { error } = await supabase
+        .from('companies')
+        .update({
+          terms_text: regulationsData.termsText.trim() || null,
+          regulations_text: regulationsData.regulationsText.trim() || null,
+          anamnesis_filled_by: regulationsData.anamnesisFilledBy,
+        })
+        .eq('id', company.id);
+
+      if (error) throw error;
+      toast.success('Regulamentos atualizados!');
+    } catch (error: any) {
+      toast.error(error.message || 'Erro ao atualizar regulamentos');
     } finally {
       setLoading(false);
     }
@@ -139,7 +215,7 @@ export default function Settings() {
       </div>
 
       <Tabs defaultValue="profile" className="w-full">
-        <TabsList className="mb-6">
+        <TabsList className="mb-6 flex-wrap">
           <TabsTrigger value="profile">
             <User className="h-4 w-4 mr-2" />
             Perfil
@@ -147,6 +223,14 @@ export default function Settings() {
           <TabsTrigger value="company">
             <Building className="h-4 w-4 mr-2" />
             Empresa
+          </TabsTrigger>
+          <TabsTrigger value="registration">
+            <Link className="h-4 w-4 mr-2" />
+            Registo
+          </TabsTrigger>
+          <TabsTrigger value="regulations">
+            <FileText className="h-4 w-4 mr-2" />
+            Regulamento
           </TabsTrigger>
           <TabsTrigger value="security">
             <Lock className="h-4 w-4 mr-2" />
@@ -234,6 +318,108 @@ export default function Settings() {
               </Button>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="registration">
+          <Card>
+            <CardHeader>
+              <CardTitle>Link de Registo para Alunos</CardTitle>
+              <CardDescription>
+                Partilhe este link para os alunos se registarem na sua empresa.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label>Link de Registo</Label>
+                <div className="flex gap-2">
+                  <Input
+                    value={getRegistrationLink()}
+                    readOnly
+                    className="bg-muted"
+                  />
+                  <Button onClick={handleCopyLink} variant="outline">
+                    {copied ? (
+                      <Check className="h-4 w-4" />
+                    ) : (
+                      <Copy className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Os alunos que se registarem por este link irão preencher os seus dados e aceitar os termos automaticamente.
+                </p>
+              </div>
+
+              <div className="space-y-2 pt-4 border-t">
+                <Label>Quem preenche a Anamnese?</Label>
+                <Select 
+                  value={regulationsData.anamnesisFilledBy} 
+                  onValueChange={(value) => setRegulationsData({ ...regulationsData, anamnesisFilledBy: value })}
+                >
+                  <SelectTrigger className="w-full md:w-64">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="trainer">Personal Trainer responsável</SelectItem>
+                    <SelectItem value="student">O próprio aluno</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Define quem é responsável por preencher a avaliação de saúde (anamnese) do aluno.
+                </p>
+              </div>
+
+              <Button onClick={handleSaveRegulations} disabled={loading}>
+                <Save className="h-4 w-4 mr-2" />
+                {loading ? 'Salvando...' : 'Salvar'}
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="regulations">
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Termos e Condições</CardTitle>
+                <CardDescription>
+                  Defina os termos e condições que os alunos devem aceitar.
+                  Deixe em branco para usar os termos padrão.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Textarea
+                  value={regulationsData.termsText}
+                  onChange={(e) => setRegulationsData({ ...regulationsData, termsText: e.target.value })}
+                  placeholder="Escreva aqui os termos e condições da sua empresa..."
+                  className="min-h-[200px]"
+                />
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Regulamento Interno</CardTitle>
+                <CardDescription>
+                  Defina o regulamento interno que os alunos devem aceitar.
+                  Deixe em branco para usar o regulamento padrão.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Textarea
+                  value={regulationsData.regulationsText}
+                  onChange={(e) => setRegulationsData({ ...regulationsData, regulationsText: e.target.value })}
+                  placeholder="Escreva aqui o regulamento interno da sua empresa..."
+                  className="min-h-[200px]"
+                />
+                
+                <Button onClick={handleSaveRegulations} disabled={loading}>
+                  <Save className="h-4 w-4 mr-2" />
+                  {loading ? 'Salvando...' : 'Salvar Regulamentos'}
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         <TabsContent value="security">

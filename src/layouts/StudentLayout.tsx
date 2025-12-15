@@ -1,13 +1,22 @@
+import { useState } from "react";
 import { Outlet } from "react-router-dom";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { StudentSidebar } from "@/components/student/StudentSidebar";
 import { StudentHeader } from "@/components/student/StudentHeader";
 import { DeveloperFooter } from "@/components/DeveloperFooter";
-import { useStudentPasswordCheck } from "@/hooks/useStudentPasswordCheck";
+import { useStudentAccessCheck } from "@/hooks/useStudentAccessCheck";
+import { TermsAcceptanceDialog } from "@/components/student/TermsAcceptanceDialog";
 import { Loader2 } from "lucide-react";
 
 export function StudentLayout() {
-  const { checking } = useStudentPasswordCheck();
+  const { 
+    checking, 
+    mustAcceptTerms, 
+    student, 
+    company 
+  } = useStudentAccessCheck();
+  
+  const [termsAccepted, setTermsAccepted] = useState(false);
 
   if (checking) {
     return (
@@ -16,6 +25,8 @@ export function StudentLayout() {
       </div>
     );
   }
+
+  const showTermsDialog = mustAcceptTerms && !termsAccepted && student && company;
 
   return (
     <SidebarProvider>
@@ -29,6 +40,19 @@ export function StudentLayout() {
           <DeveloperFooter />
         </div>
       </div>
+
+      {/* Terms Acceptance Dialog */}
+      {showTermsDialog && (
+        <TermsAcceptanceDialog
+          open={true}
+          studentId={student.id}
+          companyId={company.id}
+          companyName={company.name || "a empresa"}
+          termsText={company.terms_text}
+          regulationsText={company.regulations_text}
+          onAccepted={() => setTermsAccepted(true)}
+        />
+      )}
     </SidebarProvider>
   );
 }
