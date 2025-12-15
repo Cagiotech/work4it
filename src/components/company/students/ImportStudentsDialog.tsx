@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { Upload, Download, FileSpreadsheet, X, Loader2 } from "lucide-react";
+import { Upload, Download, FileSpreadsheet, X, Loader2, AlertTriangle, Key } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -9,6 +9,17 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -17,6 +28,26 @@ interface ImportStudentsDialogProps {
   onOpenChange: (open: boolean) => void;
   companyId: string;
   onSuccess: () => void;
+}
+
+interface ParsedStudent {
+  company_id: string;
+  full_name: string;
+  email: string | null;
+  phone: string | null;
+  birth_date: string | null;
+  gender: string | null;
+  nif: string | null;
+  niss: string | null;
+  citizen_card: string | null;
+  status: string;
+}
+
+interface DuplicateInfo {
+  email: string;
+  existingName: string;
+  newName: string;
+  existingId: string;
 }
 
 export function ImportStudentsDialog({
@@ -28,10 +59,13 @@ export function ImportStudentsDialog({
   const [isLoading, setIsLoading] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string[][]>([]);
+  const [parsedStudents, setParsedStudents] = useState<ParsedStudent[]>([]);
+  const [duplicates, setDuplicates] = useState<DuplicateInfo[]>([]);
+  const [showDuplicateDialog, setShowDuplicateDialog] = useState(false);
+  const [overwriteDuplicates, setOverwriteDuplicates] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleDownloadTemplate = () => {
-    // BOM for UTF-8 to ensure Excel opens correctly with accents
     const BOM = '\uFEFF';
     const csvContent = BOM + [
       'Nome Completo;Email;Telefone;Data de Nascimento;Género;NIF;NISS;Cartão de Cidadão',
@@ -61,14 +95,14 @@ export function ImportStudentsDialog({
     }
 
     setFile(selectedFile);
+    setDuplicates([]);
+    setParsedStudents([]);
 
-    // Read and preview CSV (supports both ; and , as delimiter)
     if (selectedFile.name.endsWith('.csv')) {
       const reader = new FileReader();
       reader.onload = (event) => {
         const text = event.target?.result as string;
         const lines = text.split('\n').filter(line => line.trim()).slice(0, 6);
-        // Detect delimiter (semicolon or comma)
         const delimiter = lines[0]?.includes(';') ? ';' : ',';
         const rows = lines.map(line => line.split(delimiter).map(cell => cell.trim().replace(/^["']|["']$/g, '')));
         setPreview(rows);
@@ -77,58 +111,143 @@ export function ImportStudentsDialog({
     }
   };
 
+  const parseFile = async (): Promise<ParsedStudent[]> => {
+    if (!file) return [];
+    
+    const text = await file.text();
+    const lines = text.split('\n').filter(line => line.trim());
+    
+    if (lines.length < 2) return [];
+    
+    const delimiter = lines[0]?.includes(';') ? ';' : ',';
+    const dataLines = lines.slice(1);
+    
+    return dataLines.map(line => {
+      const cells = line.split(delimiter).map(cell => cell.trim().replace(/^["']|["']$/g, ''));
+      const [fullName, email, phone, birthDate, gender, nif, niss, citizenCard] = cells;
+      return {
+        company_id: companyId,
+        full_name: fullName || '',
+        email: email || null,
+        phone: phone || null,
+        birth_date: birthDate && birthDate.match(/^\d{4}-\d{2}-\d{2}$/) ? birthDate : null,
+        gender: gender || null,
+        nif: nif || null,
+        niss: niss || null,
+        citizen_card: citizenCard || null,
+        status: 'active'
+      };
+    }).filter(s => s.full_name.length > 0);
+  };
+
+  const checkDuplicates = async (students: ParsedStudent[]): Promise<DuplicateInfo[]> => {
+    const emails = students.map(s => s.email).filter(Boolean) as string[];
+    if (emails.length === 0) return [];
+
+    const { data: existingStudents } = await supabase
+      .from('students')
+      .select('id, email, full_name')
+      .eq('company_id', companyId)
+      .in('email', emails);
+
+    if (!existingStudents || existingStudents.length === 0) return [];
+
+    return existingStudents.map(existing => {
+      const newStudent = students.find(s => s.email?.toLowerCase() === existing.email?.toLowerCase());
+      return {
+        email: existing.email!,
+        existingName: existing.full_name,
+        newName: newStudent?.full_name || '',
+        existingId: existing.id
+      };
+    });
+  };
+
   const handleImport = async () => {
     if (!file) return;
 
     setIsLoading(true);
     try {
-      const text = await file.text();
-      const lines = text.split('\n').filter(line => line.trim());
+      const students = await parseFile();
       
-      if (lines.length < 2) {
-        toast.error('O arquivo está vazio ou só contém cabeçalho');
-        setIsLoading(false);
-        return;
-      }
-      
-      // Detect delimiter (semicolon or comma)
-      const delimiter = lines[0]?.includes(';') ? ';' : ',';
-      const dataLines = lines.slice(1);
-      
-      const students = dataLines.map(line => {
-        const cells = line.split(delimiter).map(cell => cell.trim().replace(/^["']|["']$/g, ''));
-        const [fullName, email, phone, birthDate, gender, nif, niss, citizenCard] = cells;
-        return {
-          company_id: companyId,
-          full_name: fullName || '',
-          email: email || null,
-          phone: phone || null,
-          birth_date: birthDate && birthDate.match(/^\d{4}-\d{2}-\d{2}$/) ? birthDate : null,
-          gender: gender || null,
-          nif: nif || null,
-          niss: niss || null,
-          citizen_card: citizenCard || null,
-          status: 'active'
-        };
-      }).filter(s => s.full_name.length > 0);
-
       if (students.length === 0) {
         toast.error('Nenhum aluno válido encontrado no arquivo');
         setIsLoading(false);
         return;
       }
 
-      const { error } = await supabase
-        .from('students')
-        .insert(students);
+      setParsedStudents(students);
+      
+      const foundDuplicates = await checkDuplicates(students);
+      
+      if (foundDuplicates.length > 0) {
+        setDuplicates(foundDuplicates);
+        setShowDuplicateDialog(true);
+        setIsLoading(false);
+        return;
+      }
 
-      if (error) throw error;
+      await executeImport(students, []);
+    } catch (error) {
+      console.error('Error importing students:', error);
+      toast.error('Erro ao importar alunos');
+      setIsLoading(false);
+    }
+  };
 
-      toast.success(`${students.length} alunos importados com sucesso!`);
+  const executeImport = async (students: ParsedStudent[], duplicatesToUpdate: DuplicateInfo[]) => {
+    setIsLoading(true);
+    try {
+      const duplicateEmails = duplicatesToUpdate.map(d => d.email.toLowerCase());
+      
+      // Filter out duplicates if not overwriting
+      const studentsToInsert = overwriteDuplicates 
+        ? students.filter(s => !duplicateEmails.includes(s.email?.toLowerCase() || ''))
+        : students.filter(s => !duplicateEmails.includes(s.email?.toLowerCase() || ''));
+
+      // Update existing students if overwriting
+      if (overwriteDuplicates && duplicatesToUpdate.length > 0) {
+        for (const dup of duplicatesToUpdate) {
+          const newData = students.find(s => s.email?.toLowerCase() === dup.email.toLowerCase());
+          if (newData) {
+            await supabase
+              .from('students')
+              .update({
+                full_name: newData.full_name,
+                phone: newData.phone,
+                birth_date: newData.birth_date,
+                gender: newData.gender,
+                nif: newData.nif,
+                niss: newData.niss,
+                citizen_card: newData.citizen_card,
+              })
+              .eq('id', dup.existingId);
+          }
+        }
+      }
+
+      // Insert new students
+      if (studentsToInsert.length > 0) {
+        const { error } = await supabase
+          .from('students')
+          .insert(studentsToInsert);
+
+        if (error) throw error;
+      }
+
+      const updatedCount = overwriteDuplicates ? duplicatesToUpdate.length : 0;
+      const insertedCount = studentsToInsert.length;
+      
+      if (updatedCount > 0 && insertedCount > 0) {
+        toast.success(`${insertedCount} alunos criados e ${updatedCount} atualizados!`);
+      } else if (updatedCount > 0) {
+        toast.success(`${updatedCount} alunos atualizados!`);
+      } else {
+        toast.success(`${insertedCount} alunos importados com sucesso!`);
+      }
+
       onSuccess();
-      onOpenChange(false);
-      setFile(null);
-      setPreview([]);
+      handleClose();
     } catch (error) {
       console.error('Error importing students:', error);
       toast.error('Erro ao importar alunos');
@@ -137,123 +256,197 @@ export function ImportStudentsDialog({
     }
   };
 
+  const handleDuplicateConfirm = () => {
+    setShowDuplicateDialog(false);
+    executeImport(parsedStudents, overwriteDuplicates ? duplicates : []);
+  };
+
   const handleClose = () => {
     setFile(null);
     setPreview([]);
+    setParsedStudents([]);
+    setDuplicates([]);
+    setOverwriteDuplicates(false);
     onOpenChange(false);
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <FileSpreadsheet className="h-5 w-5" />
-            Importar Alunos
-          </DialogTitle>
-          <DialogDescription>
-            Importe alunos em massa através de uma planilha CSV
-          </DialogDescription>
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={handleClose}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileSpreadsheet className="h-5 w-5" />
+              Importar Alunos
+            </DialogTitle>
+            <DialogDescription>
+              Importe alunos em massa através de uma planilha CSV
+            </DialogDescription>
+          </DialogHeader>
 
-        <div className="space-y-4 py-4">
-          {/* Download Template */}
-          <div className="p-4 border rounded-lg bg-muted/30">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium text-sm">Modelo de Planilha</p>
-                <p className="text-xs text-muted-foreground">Baixe o modelo para preencher os dados</p>
-              </div>
-              <Button variant="outline" size="sm" onClick={handleDownloadTemplate}>
-                <Download className="h-4 w-4 mr-2" />
-                Baixar
-              </Button>
-            </div>
-          </div>
-
-          {/* Upload Area */}
-          <div 
-            className="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer hover:border-primary transition-colors"
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".csv,.xlsx"
-              className="hidden"
-              onChange={handleFileChange}
-            />
-            {file ? (
-              <div className="flex items-center justify-center gap-2">
-                <FileSpreadsheet className="h-8 w-8 text-primary" />
-                <div className="text-left">
-                  <p className="font-medium">{file.name}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {(file.size / 1024).toFixed(1)} KB
+          <div className="space-y-4 py-4">
+            {/* Password Warning */}
+            <div className="p-3 border rounded-lg bg-amber-500/10 border-amber-500/30">
+              <div className="flex items-start gap-2">
+                <Key className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-sm font-medium text-amber-700 dark:text-amber-400">Senha Temporária</p>
+                  <p className="text-xs text-amber-600 dark:text-amber-500">
+                    Alunos importados com email receberão a senha temporária <strong>12345678</strong> que deverá ser alterada no primeiro acesso.
                   </p>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="ml-2"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setFile(null);
-                    setPreview([]);
-                  }}
-                >
-                  <X className="h-4 w-4" />
+              </div>
+            </div>
+
+            {/* Download Template */}
+            <div className="p-4 border rounded-lg bg-muted/30">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium text-sm">Modelo de Planilha</p>
+                  <p className="text-xs text-muted-foreground">Baixe o modelo para preencher os dados</p>
+                </div>
+                <Button variant="outline" size="sm" onClick={handleDownloadTemplate}>
+                  <Download className="h-4 w-4 mr-2" />
+                  Baixar
                 </Button>
               </div>
-            ) : (
-              <>
-                <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                <p className="font-medium">Clique para selecionar</p>
-                <p className="text-sm text-muted-foreground">ou arraste o arquivo aqui</p>
-              </>
+            </div>
+
+            {/* Upload Area */}
+            <div 
+              className="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer hover:border-primary transition-colors"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".csv,.xlsx"
+                className="hidden"
+                onChange={handleFileChange}
+              />
+              {file ? (
+                <div className="flex items-center justify-center gap-2">
+                  <FileSpreadsheet className="h-8 w-8 text-primary" />
+                  <div className="text-left">
+                    <p className="font-medium">{file.name}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {(file.size / 1024).toFixed(1)} KB
+                    </p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="ml-2"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setFile(null);
+                      setPreview([]);
+                    }}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                  <p className="font-medium">Clique para selecionar</p>
+                  <p className="text-sm text-muted-foreground">ou arraste o arquivo aqui</p>
+                </>
+              )}
+            </div>
+
+            {/* Preview */}
+            {preview.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Pré-visualização</p>
+                <div className="overflow-x-auto border rounded-lg">
+                  <table className="w-full text-xs">
+                    <tbody>
+                      {preview.slice(0, 4).map((row, i) => (
+                        <tr key={i} className={i === 0 ? 'bg-muted font-medium' : ''}>
+                          {row.slice(0, 4).map((cell, j) => (
+                            <td key={j} className="px-2 py-1 border-b truncate max-w-[100px]">
+                              {cell || '-'}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {preview.length - 1} alunos serão importados
+                </p>
+              </div>
             )}
           </div>
 
-          {/* Preview */}
-          {preview.length > 0 && (
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Pré-visualização</p>
-              <div className="overflow-x-auto border rounded-lg">
-                <table className="w-full text-xs">
-                  <tbody>
-                    {preview.slice(0, 4).map((row, i) => (
-                      <tr key={i} className={i === 0 ? 'bg-muted font-medium' : ''}>
-                        {row.slice(0, 4).map((cell, j) => (
-                          <td key={j} className="px-2 py-1 border-b truncate max-w-[100px]">
-                            {cell || '-'}
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {preview.length - 1} alunos serão importados
-              </p>
-            </div>
-          )}
-        </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={handleClose}>Cancelar</Button>
+            <Button onClick={handleImport} disabled={!file || isLoading}>
+              {isLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Importando...
+                </>
+              ) : (
+                'Importar'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={handleClose}>Cancelar</Button>
-          <Button onClick={handleImport} disabled={!file || isLoading}>
-            {isLoading ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Importando...
-              </>
-            ) : (
-              'Importar'
-            )}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      {/* Duplicate Warning Dialog */}
+      <AlertDialog open={showDuplicateDialog} onOpenChange={setShowDuplicateDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              Alunos Duplicados Encontrados
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                <p>
+                  Foram encontrados {duplicates.length} aluno(s) com emails já cadastrados:
+                </p>
+                <div className="max-h-32 overflow-y-auto space-y-1">
+                  {duplicates.map((dup, i) => (
+                    <div key={i} className="text-xs p-2 bg-muted rounded">
+                      <strong>{dup.email}</strong>
+                      <br />
+                      <span className="text-muted-foreground">
+                        Existente: {dup.existingName} → Novo: {dup.newName}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex items-center space-x-2 pt-2">
+                  <Checkbox
+                    id="overwrite"
+                    checked={overwriteDuplicates}
+                    onCheckedChange={(checked) => setOverwriteDuplicates(checked === true)}
+                  />
+                  <label htmlFor="overwrite" className="text-sm cursor-pointer">
+                    Sobrescrever dados dos alunos duplicados
+                  </label>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Se não marcar, os alunos duplicados serão ignorados.
+                </p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setShowDuplicateDialog(false)}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={handleDuplicateConfirm}>
+              Continuar Importação
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
