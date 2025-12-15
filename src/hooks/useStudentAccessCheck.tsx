@@ -8,6 +8,7 @@ interface StudentCheckResult {
   mustChangePassword: boolean;
   mustAcceptTerms: boolean;
   needsOnboarding: boolean;
+  pendingApproval: boolean;
   student: any | null;
   company: any | null;
 }
@@ -20,6 +21,7 @@ export function useStudentAccessCheck(): StudentCheckResult {
   const [mustChangePassword, setMustChangePassword] = useState(false);
   const [mustAcceptTerms, setMustAcceptTerms] = useState(false);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
+  const [pendingApproval, setPendingApproval] = useState(false);
   const [student, setStudent] = useState<any>(null);
   const [company, setCompany] = useState<any>(null);
 
@@ -53,6 +55,16 @@ export function useStudentAccessCheck(): StudentCheckResult {
         const isSelfRegistered = studentData.registration_method === 'self_registered';
         const isCompanyAdded = studentData.registration_method === 'company_added';
         
+        // Check if pending approval
+        if (studentData.status === 'pending_approval') {
+          setPendingApproval(true);
+          if (!location.pathname.includes('/pending-approval')) {
+            navigate('/pending-approval');
+          }
+          setChecking(false);
+          return;
+        }
+
         // Self-registered students with pending status need onboarding
         if (isSelfRegistered && studentData.status === 'pending') {
           setNeedsOnboarding(true);
@@ -90,6 +102,7 @@ export function useStudentAccessCheck(): StudentCheckResult {
     mustChangePassword, 
     mustAcceptTerms, 
     needsOnboarding,
+    pendingApproval,
     student,
     company,
   };
