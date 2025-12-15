@@ -202,6 +202,7 @@ export type Database = {
           name: string | null
           registration_code: string | null
           regulations_text: string | null
+          require_student_approval: boolean | null
           terms_text: string | null
           updated_at: string
         }
@@ -214,6 +215,7 @@ export type Database = {
           name?: string | null
           registration_code?: string | null
           regulations_text?: string | null
+          require_student_approval?: boolean | null
           terms_text?: string | null
           updated_at?: string
         }
@@ -226,6 +228,7 @@ export type Database = {
           name?: string | null
           registration_code?: string | null
           regulations_text?: string | null
+          require_student_approval?: boolean | null
           terms_text?: string | null
           updated_at?: string
         }
