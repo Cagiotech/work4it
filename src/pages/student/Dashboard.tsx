@@ -1,200 +1,284 @@
-import { Calendar, Dumbbell, Clock, TrendingUp, Target, Award, CreditCard, MessageCircle, Apple } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Calendar, Dumbbell, Apple, CreditCard, MessageCircle, User, FileText, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { StatCard } from "@/components/dashboard/StatCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
+
+interface StudentData {
+  id: string;
+  full_name: string;
+  email: string | null;
+  status: string | null;
+  enrollment_date: string | null;
+  company_id: string;
+  companies?: {
+    name: string | null;
+  };
+}
+
+interface SubscriptionData {
+  id: string;
+  status: string | null;
+  end_date: string;
+  subscription_plans: {
+    name: string;
+  };
+}
+
+interface NutritionPlan {
+  id: string;
+  title: string;
+  is_active: boolean | null;
+}
 
 export default function StudentDashboard() {
-  const upcomingClasses = [
-    { name: "Treino Funcional", time: "10:00", trainer: "João Silva", date: "Hoje" },
-    { name: "Yoga", time: "18:00", trainer: "Ana Costa", date: "Amanhã" },
-    { name: "Musculação", time: "09:00", trainer: "Pedro Martins", date: "Quarta" },
-  ];
+  const [loading, setLoading] = useState(true);
+  const [student, setStudent] = useState<StudentData | null>(null);
+  const [subscription, setSubscription] = useState<SubscriptionData | null>(null);
+  const [nutritionPlan, setNutritionPlan] = useState<NutritionPlan | null>(null);
 
-  const recentProgress = [
-    { exercise: "Supino", previous: "60kg", current: "65kg", improvement: "+8%" },
-    { exercise: "Agachamento", previous: "80kg", current: "90kg", improvement: "+12%" },
-    { exercise: "Peso Morto", previous: "100kg", current: "110kg", improvement: "+10%" },
-  ];
+  useEffect(() => {
+    const fetchData = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      try {
+        // Fetch student data with company info
+        const { data: studentData } = await supabase
+          .from('students')
+          .select('*, companies(name)')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        if (studentData) {
+          setStudent(studentData);
+
+          // Fetch active subscription
+          const { data: subData } = await supabase
+            .from('student_subscriptions')
+            .select('*, subscription_plans(name)')
+            .eq('student_id', studentData.id)
+            .eq('status', 'active')
+            .maybeSingle();
+
+          if (subData) {
+            setSubscription(subData);
+          }
+
+          // Fetch active nutrition plan
+          const { data: nutritionData } = await supabase
+            .from('student_nutrition_plans')
+            .select('id, title, is_active')
+            .eq('student_id', studentData.id)
+            .eq('is_active', true)
+            .maybeSingle();
+
+          if (nutritionData) {
+            setNutritionPlan(nutritionData);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
 
   const quickActions = [
-    { icon: Calendar, label: "Ver Aulas", href: "/student/classes", color: "bg-blue-500/10 text-blue-500" },
+    { icon: Calendar, label: "Aulas", href: "/student/classes", color: "bg-blue-500/10 text-blue-500" },
     { icon: Apple, label: "Nutrição", href: "/student/nutrition", color: "bg-green-500/10 text-green-500" },
     { icon: CreditCard, label: "Pagamentos", href: "/student/payments", color: "bg-purple-500/10 text-purple-500" },
-    { icon: MessageCircle, label: "Mensagens", href: "/student/chat", color: "bg-orange-500/10 text-orange-500" },
+    { icon: MessageCircle, label: "Chat", href: "/student/chat", color: "bg-orange-500/10 text-orange-500" },
   ];
+
+  const getFirstName = (fullName: string) => {
+    return fullName?.split(' ')[0] || 'Aluno';
+  };
+
+  const formatDate = (dateStr: string | null) => {
+    if (!dateStr) return '-';
+    return new Date(dateStr).toLocaleDateString('pt-PT');
+  };
+
+  const getDaysRemaining = (endDate: string) => {
+    const end = new Date(endDate);
+    const now = new Date();
+    const diff = Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    return diff > 0 ? diff : 0;
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-        {/* Welcome Message */}
-        <div className="bg-gradient-primary rounded-2xl p-4 md:p-6 text-primary-foreground">
-          <h2 className="font-heading text-xl md:text-2xl font-bold mb-2">
-            Olá, Maria! 👋
-          </h2>
-          <p className="opacity-90 text-sm md:text-base">
-            Tens uma aula agendada para hoje às 10:00. Continua o bom trabalho!
-          </p>
-        </div>
+      {/* Welcome Message */}
+      <div className="bg-gradient-primary rounded-2xl p-4 md:p-6 text-primary-foreground">
+        <h2 className="font-heading text-xl md:text-2xl font-bold mb-2">
+          Olá, {student ? getFirstName(student.full_name) : 'Aluno'}! 👋
+        </h2>
+        <p className="opacity-90 text-sm md:text-base">
+          {student?.companies?.name ? `Bem-vindo ao ${student.companies.name}` : 'Bem-vindo ao seu painel'}
+        </p>
+      </div>
 
-        {/* Quick Actions - Mobile Only */}
-        <div className="grid grid-cols-4 gap-2 md:hidden">
-          {quickActions.map((action, index) => (
-            <Link key={index} to={action.href}>
-              <div className="flex flex-col items-center gap-1 p-3 rounded-xl bg-card border border-border hover:border-primary/50 transition-colors">
-                <div className={`h-10 w-10 rounded-lg ${action.color} flex items-center justify-center`}>
-                  <action.icon className="h-5 w-5" />
-                </div>
-                <span className="text-xs font-medium text-foreground">{action.label}</span>
+      {/* Quick Actions */}
+      <div className="grid grid-cols-4 gap-2 md:gap-4">
+        {quickActions.map((action, index) => (
+          <Link key={index} to={action.href}>
+            <div className="flex flex-col items-center gap-1 md:gap-2 p-3 md:p-4 rounded-xl bg-card border border-border hover:border-primary/50 transition-colors">
+              <div className={`h-10 w-10 md:h-12 md:w-12 rounded-lg ${action.color} flex items-center justify-center`}>
+                <action.icon className="h-5 w-5 md:h-6 md:w-6" />
               </div>
-            </Link>
-          ))}
-        </div>
+              <span className="text-xs md:text-sm font-medium text-foreground">{action.label}</span>
+            </div>
+          </Link>
+        ))}
+      </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
-          <StatCard
-            title="Aulas Este Mês"
-            value={12}
-            icon={Calendar}
-            trend="up"
-            trendValue="+3 vs. mês passado"
-          />
-          <StatCard
-            title="Treinos Completos"
-            value={45}
-            icon={Dumbbell}
-            trend="up"
-            trendValue="Meta: 50"
-          />
-          <StatCard
-            title="Horas de Treino"
-            value="18h"
-            icon={Clock}
-          />
-          <StatCard
-            title="Sequência Atual"
-            value="8 dias"
-            icon={Award}
-            className="border-l-4 border-l-primary"
-          />
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
-          {/* Upcoming Classes */}
-          <Card className="lg:col-span-2">
-            <CardHeader className="pb-2 md:pb-4">
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2 text-base md:text-lg">
-                  <Calendar className="h-5 w-5 text-primary" />
-                  Próximas Aulas
-                </CardTitle>
-                <Button variant="ghost" size="sm" asChild className="hidden md:flex">
-                  <Link to="/student/classes">Ver todas</Link>
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {upcomingClasses.map((classItem, index) => (
-                  <div 
-                    key={index} 
-                    className="flex items-center justify-between p-3 md:p-4 bg-muted/30 rounded-xl border border-border hover:border-primary/50 transition-colors"
-                  >
-                    <div className="flex items-center gap-3 md:gap-4">
-                      <div className="h-10 w-10 md:h-12 md:w-12 rounded-xl bg-primary/10 flex items-center justify-center">
-                        <Dumbbell className="h-5 w-5 md:h-6 md:w-6 text-primary" />
-                      </div>
-                      <div>
-                        <h4 className="font-semibold text-foreground text-sm md:text-base">{classItem.name}</h4>
-                        <p className="text-xs md:text-sm text-muted-foreground">
-                          com {classItem.trainer}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <Badge variant="outline" className="border-primary text-primary text-xs">
-                        {classItem.date}
-                      </Badge>
-                      <p className="text-xs md:text-sm font-medium text-foreground mt-1">{classItem.time}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <Button variant="outline" className="w-full mt-3 md:hidden" asChild>
-                <Link to="/student/classes">Ver todas as aulas</Link>
-              </Button>
-            </CardContent>
-          </Card>
-
-          {/* Weekly Goal */}
-          <Card>
-            <CardHeader className="pb-2 md:pb-4">
-              <CardTitle className="flex items-center gap-2 text-base md:text-lg">
-                <Target className="h-5 w-5 text-primary" />
-                Objetivo Semanal
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4 md:space-y-6">
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Treinos</span>
-                  <span className="font-medium text-foreground">4/5</span>
-                </div>
-                <Progress value={80} className="h-2" />
-              </div>
-              
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Calorias</span>
-                  <span className="font-medium text-foreground">2800/3500</span>
-                </div>
-                <Progress value={80} className="h-2" />
-              </div>
-              
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Água (L)</span>
-                  <span className="font-medium text-foreground">2.5/3</span>
-                </div>
-                <Progress value={83} className="h-2" />
-              </div>
-              
-              <div className="pt-3 md:pt-4 border-t border-border">
-                <p className="text-xs md:text-sm text-muted-foreground text-center">
-                  Estás a 1 treino de atingir o objetivo! 💪
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Progress Card */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+        {/* Profile Info Card */}
         <Card>
           <CardHeader className="pb-2 md:pb-4">
             <CardTitle className="flex items-center gap-2 text-base md:text-lg">
-              <TrendingUp className="h-5 w-5 text-primary" />
-              Evolução Recente
+              <User className="h-5 w-5 text-primary" />
+              Meus Dados
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex justify-between items-center py-2 border-b border-border">
+              <span className="text-muted-foreground text-sm">Nome</span>
+              <span className="font-medium text-sm">{student?.full_name || '-'}</span>
+            </div>
+            <div className="flex justify-between items-center py-2 border-b border-border">
+              <span className="text-muted-foreground text-sm">Email</span>
+              <span className="font-medium text-sm">{student?.email || '-'}</span>
+            </div>
+            <div className="flex justify-between items-center py-2 border-b border-border">
+              <span className="text-muted-foreground text-sm">Status</span>
+              <Badge variant="outline" className={
+                student?.status === 'active' 
+                  ? "border-green-500 text-green-600" 
+                  : "border-gray-500 text-gray-600"
+              }>
+                {student?.status === 'active' ? 'Ativo' : student?.status || '-'}
+              </Badge>
+            </div>
+            <div className="flex justify-between items-center py-2">
+              <span className="text-muted-foreground text-sm">Membro desde</span>
+              <span className="font-medium text-sm">{formatDate(student?.enrollment_date || null)}</span>
+            </div>
+            <Button variant="outline" className="w-full mt-2" asChild>
+              <Link to="/student/settings">Editar Perfil</Link>
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Subscription Card */}
+        <Card>
+          <CardHeader className="pb-2 md:pb-4">
+            <CardTitle className="flex items-center gap-2 text-base md:text-lg">
+              <CreditCard className="h-5 w-5 text-primary" />
+              Meu Plano
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
-              {recentProgress.map((item, index) => (
-                <div key={index} className="p-3 md:p-4 bg-muted/30 rounded-xl border border-border">
-                  <h4 className="font-semibold text-foreground text-sm md:text-base">{item.exercise}</h4>
-                  <div className="flex items-center gap-2 mt-2">
-                    <span className="text-muted-foreground line-through text-sm">{item.previous}</span>
-                    <span className="text-lg font-bold text-primary">{item.current}</span>
-                  </div>
-                  <Badge variant="outline" className="mt-2 border-success text-success text-xs">
-                    {item.improvement}
+            {subscription ? (
+              <div className="space-y-3">
+                <div className="p-4 bg-primary/5 rounded-xl border border-primary/20">
+                  <h3 className="font-semibold text-lg text-primary">
+                    {subscription.subscription_plans?.name || 'Plano Ativo'}
+                  </h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Válido até {formatDate(subscription.end_date)}
+                  </p>
+                </div>
+                <div className="flex justify-between items-center py-2">
+                  <span className="text-muted-foreground text-sm">Dias restantes</span>
+                  <Badge variant="outline" className="border-primary text-primary">
+                    {getDaysRemaining(subscription.end_date)} dias
                   </Badge>
                 </div>
-              ))}
+                <Button variant="outline" className="w-full" asChild>
+                  <Link to="/student/payments">Ver Pagamentos</Link>
+                </Button>
+              </div>
+            ) : (
+              <div className="text-center py-6">
+                <CreditCard className="h-12 w-12 text-muted-foreground/50 mx-auto mb-3" />
+                <p className="text-muted-foreground text-sm">Nenhum plano ativo</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Contacte a receção para ativar um plano
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Nutrition Plan Card */}
+        <Card>
+          <CardHeader className="pb-2 md:pb-4">
+            <CardTitle className="flex items-center gap-2 text-base md:text-lg">
+              <Apple className="h-5 w-5 text-primary" />
+              Plano Nutricional
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {nutritionPlan ? (
+              <div className="space-y-3">
+                <div className="p-4 bg-green-500/5 rounded-xl border border-green-500/20">
+                  <h3 className="font-semibold text-green-600">{nutritionPlan.title}</h3>
+                  <Badge variant="outline" className="border-green-500 text-green-600 mt-2">
+                    Ativo
+                  </Badge>
+                </div>
+                <Button variant="outline" className="w-full" asChild>
+                  <Link to="/student/nutrition">Ver Detalhes</Link>
+                </Button>
+              </div>
+            ) : (
+              <div className="text-center py-6">
+                <Apple className="h-12 w-12 text-muted-foreground/50 mx-auto mb-3" />
+                <p className="text-muted-foreground text-sm">Sem plano nutricional</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  O seu personal trainer pode criar um plano para si
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Documents Card */}
+        <Card>
+          <CardHeader className="pb-2 md:pb-4">
+            <CardTitle className="flex items-center gap-2 text-base md:text-lg">
+              <FileText className="h-5 w-5 text-primary" />
+              Documentos
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-center py-6">
+              <FileText className="h-12 w-12 text-muted-foreground/50 mx-auto mb-3" />
+              <p className="text-muted-foreground text-sm">
+                Os seus documentos e termos assinados
+              </p>
+              <Button variant="outline" className="w-full mt-4" asChild>
+                <Link to="/student/settings">Ver Documentos</Link>
+              </Button>
             </div>
           </CardContent>
         </Card>
+      </div>
     </div>
   );
 }
