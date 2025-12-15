@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import '@/i18n';
+import { AuthProvider } from "@/hooks/useAuth";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -66,67 +67,69 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/onboarding" element={<Onboarding />} />
-          
-          {/* Company Dashboard Routes */}
-          <Route path="/company" element={<CompanyLayout />}>
-            <Route index element={<CompanyDashboard />} />
-            <Route path="students" element={<Students />} />
-            <Route path="hr" element={<HumanResources />} />
-            <Route path="classes" element={<Classes />} />
-            <Route path="communication" element={<Communication />} />
-            <Route path="financial" element={<Financial />} />
-            <Route path="equipment" element={<Equipment />} />
-            <Route path="shop" element={<Shop />} />
-            <Route path="events" element={<Events />} />
-            <Route path="settings" element={<CompanySettings />} />
-          </Route>
-          
-          {/* Student Dashboard Routes */}
-          <Route path="/student" element={<StudentLayout />}>
-            <Route index element={<StudentDashboard />} />
-            <Route path="classes" element={<StudentClasses />} />
-            <Route path="plans" element={<TrainingPlans />} />
-            <Route path="nutrition" element={<NutritionPlan />} />
-            <Route path="payments" element={<Payments />} />
-            <Route path="chat" element={<StudentChat />} />
-            <Route path="settings" element={<StudentSettings />} />
-          </Route>
+        <AuthProvider>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/onboarding" element={<Onboarding />} />
+            
+            {/* Company Dashboard Routes */}
+            <Route path="/company" element={<CompanyLayout />}>
+              <Route index element={<CompanyDashboard />} />
+              <Route path="students" element={<Students />} />
+              <Route path="hr" element={<HumanResources />} />
+              <Route path="classes" element={<Classes />} />
+              <Route path="communication" element={<Communication />} />
+              <Route path="financial" element={<Financial />} />
+              <Route path="equipment" element={<Equipment />} />
+              <Route path="shop" element={<Shop />} />
+              <Route path="events" element={<Events />} />
+              <Route path="settings" element={<CompanySettings />} />
+            </Route>
+            
+            {/* Student Dashboard Routes */}
+            <Route path="/student" element={<StudentLayout />}>
+              <Route index element={<StudentDashboard />} />
+              <Route path="classes" element={<StudentClasses />} />
+              <Route path="plans" element={<TrainingPlans />} />
+              <Route path="nutrition" element={<NutritionPlan />} />
+              <Route path="payments" element={<Payments />} />
+              <Route path="chat" element={<StudentChat />} />
+              <Route path="settings" element={<StudentSettings />} />
+            </Route>
 
-          {/* Personal Trainer Dashboard Routes */}
-          <Route path="/personal" element={<PersonalLayout />}>
-            <Route index element={<PersonalDashboard />} />
-            <Route path="students" element={<PersonalStudents />} />
-            <Route path="schedule" element={<PersonalSchedule />} />
-            <Route path="training-plans" element={<PersonalTrainingPlans />} />
-            <Route path="nutrition" element={<PersonalNutrition />} />
-            <Route path="financial" element={<PersonalFinancial />} />
-            <Route path="attendance" element={<PersonalAttendance />} />
-            <Route path="chat" element={<PersonalChat />} />
-            <Route path="settings" element={<PersonalSettings />} />
-          </Route>
+            {/* Personal Trainer Dashboard Routes */}
+            <Route path="/personal" element={<PersonalLayout />}>
+              <Route index element={<PersonalDashboard />} />
+              <Route path="students" element={<PersonalStudents />} />
+              <Route path="schedule" element={<PersonalSchedule />} />
+              <Route path="training-plans" element={<PersonalTrainingPlans />} />
+              <Route path="nutrition" element={<PersonalNutrition />} />
+              <Route path="financial" element={<PersonalFinancial />} />
+              <Route path="attendance" element={<PersonalAttendance />} />
+              <Route path="chat" element={<PersonalChat />} />
+              <Route path="settings" element={<PersonalSettings />} />
+            </Route>
 
-          {/* Admin Dashboard Routes */}
-          <Route path="/admin" element={<AdminLayout />}>
-            <Route index element={<AdminDashboard />} />
-            <Route path="users" element={<AdminUsers />} />
-            <Route path="companies" element={<AdminCompanies />} />
-            <Route path="plans" element={<AdminPlans />} />
-            <Route path="permissions" element={<AdminPermissions />} />
-            <Route path="reports" element={<AdminReports />} />
-            <Route path="monitoring" element={<AdminMonitoring />} />
-            <Route path="events" element={<AdminEvents />} />
-            <Route path="roadmap" element={<AdminRoadmap />} />
-            <Route path="settings" element={<AdminSettings />} />
-          </Route>
-          
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+            {/* Admin Dashboard Routes */}
+            <Route path="/admin" element={<AdminLayout />}>
+              <Route index element={<AdminDashboard />} />
+              <Route path="users" element={<AdminUsers />} />
+              <Route path="companies" element={<AdminCompanies />} />
+              <Route path="plans" element={<AdminPlans />} />
+              <Route path="permissions" element={<AdminPermissions />} />
+              <Route path="reports" element={<AdminReports />} />
+              <Route path="monitoring" element={<AdminMonitoring />} />
+              <Route path="events" element={<AdminEvents />} />
+              <Route path="roadmap" element={<AdminRoadmap />} />
+              <Route path="settings" element={<AdminSettings />} />
+            </Route>
+            
+            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
