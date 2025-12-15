@@ -1,20 +1,17 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { Plus, Calendar as CalendarIcon, Clock, Users, Pencil, Trash2, UserPlus, CalendarDays, List, MapPin, User } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Calendar, LayoutGrid, DoorOpen } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
-import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, addDays } from "date-fns";
-import { pt } from "date-fns/locale";
+import { format, startOfWeek, startOfMonth, endOfMonth, addDays } from "date-fns";
 import { CreateClassDialog } from "@/components/company/classes/CreateClassDialog";
 import { ScheduleClassDialog } from "@/components/company/classes/ScheduleClassDialog";
 import { EnrollStudentsDialog } from "@/components/company/classes/EnrollStudentsDialog";
-import { MonthlyCalendarView } from "@/components/company/classes/MonthlyCalendarView";
+import { CalendarSection } from "@/components/company/classes/CalendarSection";
+import { ClassTypesSection } from "@/components/company/classes/ClassTypesSection";
 import { RoomsSection } from "@/components/company/classes/RoomsSection";
+import { cn } from "@/lib/utils";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -77,18 +74,18 @@ interface ClassSchedule {
   enrollments_count: number;
 }
 
-const weekDays = [
-  { key: "seg", label: "Segunda", dayOffset: 0 },
-  { key: "ter", label: "Terça", dayOffset: 1 },
-  { key: "qua", label: "Quarta", dayOffset: 2 },
-  { key: "qui", label: "Quinta", dayOffset: 3 },
-  { key: "sex", label: "Sexta", dayOffset: 4 },
-  { key: "sab", label: "Sábado", dayOffset: 5 },
+type ActiveSection = 'calendar' | 'class-types' | 'rooms';
+
+const sidebarItems = [
+  { key: 'calendar' as const, label: 'Calendário', icon: Calendar },
+  { key: 'class-types' as const, label: 'Tipos de Aula', icon: LayoutGrid },
+  { key: 'rooms' as const, label: 'Salas', icon: DoorOpen },
 ];
 
 export default function Classes() {
   const { t } = useTranslation();
   const { profile } = useAuth();
+  const [activeSection, setActiveSection] = useState<ActiveSection>('calendar');
   const [classTypes, setClassTypes] = useState<ClassType[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [staff, setStaff] = useState<Staff[]>([]);
@@ -101,7 +98,6 @@ export default function Classes() {
   const [selectedClassType, setSelectedClassType] = useState<ClassType | null>(null);
   const [selectedSchedule, setSelectedSchedule] = useState<ClassSchedule | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ type: 'class' | 'schedule', id: string } | null>(null);
-  const [viewMode, setViewMode] = useState<'week' | 'month'>('week');
   
   const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
   const currentMonthStart = startOfMonth(new Date());
@@ -148,8 +144,8 @@ export default function Classes() {
       if (classError) throw classError;
       setClassTypes(classes || []);
 
-      // Fetch schedules for this week
-      const weekEnd = addDays(weekStart, 6);
+      // Fetch schedules for this week (extended range for week navigation)
+      const weekEnd = addDays(weekStart, 13); // 2 weeks ahead
       const { data: weekData, error: weekError } = await supabase
         .from('class_schedules')
         .select(`
@@ -157,7 +153,7 @@ export default function Classes() {
           class:classes(*),
           instructor:staff(full_name)
         `)
-        .gte('scheduled_date', format(weekStart, 'yyyy-MM-dd'))
+        .gte('scheduled_date', format(addDays(weekStart, -7), 'yyyy-MM-dd'))
         .lte('scheduled_date', format(weekEnd, 'yyyy-MM-dd'))
         .order('scheduled_date')
         .order('start_time');
@@ -254,11 +250,6 @@ export default function Classes() {
     }
   };
 
-  const getSchedulesForDay = (dayOffset: number) => {
-    const date = format(addDays(weekStart, dayOffset), 'yyyy-MM-dd');
-    return weekSchedules.filter(s => s.scheduled_date === date);
-  };
-
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-16">
@@ -268,248 +259,80 @@ export default function Classes() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header Actions */}
-      <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
-        <div className="flex items-center gap-4">
-          {/* View Toggle */}
-          <div className="flex items-center gap-1 bg-muted p-1 rounded-lg">
-            <Button
-              variant={viewMode === 'week' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setViewMode('week')}
-              className="gap-1.5"
+    <div className="flex gap-6 min-h-[calc(100vh-12rem)]">
+      {/* Side Navigation */}
+      <div className="w-48 shrink-0 hidden md:block">
+        <nav className="sticky top-4 space-y-1">
+          {sidebarItems.map((item) => (
+            <button
+              key={item.key}
+              onClick={() => setActiveSection(item.key)}
+              className={cn(
+                "w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors text-left",
+                activeSection === item.key
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              )}
             >
-              <List className="h-4 w-4" />
-              Semana
-            </Button>
-            <Button
-              variant={viewMode === 'month' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setViewMode('month')}
-              className="gap-1.5"
+              <item.icon className="h-4 w-4" />
+              {item.label}
+            </button>
+          ))}
+        </nav>
+      </div>
+
+      {/* Mobile Navigation */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-background border-t z-50 p-2">
+        <div className="flex justify-around">
+          {sidebarItems.map((item) => (
+            <button
+              key={item.key}
+              onClick={() => setActiveSection(item.key)}
+              className={cn(
+                "flex flex-col items-center gap-1 px-4 py-2 rounded-lg text-xs transition-colors",
+                activeSection === item.key
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground"
+              )}
             >
-              <CalendarDays className="h-4 w-4" />
-              Mês
-            </Button>
-          </div>
-          {viewMode === 'week' && (
-            <span className="text-sm text-muted-foreground hidden sm:inline">
-              {format(weekStart, "d", { locale: pt })} - {format(addDays(weekStart, 6), "d MMMM yyyy", { locale: pt })}
-            </span>
-          )}
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setShowCreateDialog(true)} className="gap-2">
-            <Plus className="h-4 w-4" />
-            Novo Tipo
-          </Button>
-          <Button onClick={() => setShowScheduleDialog(true)} className="gap-2">
-            <CalendarIcon className="h-4 w-4" />
-            Agendar Aula
-          </Button>
+              <item.icon className="h-5 w-5" />
+              {item.label}
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* Rooms Section */}
-      <RoomsSection rooms={rooms} onRefresh={fetchData} />
+      {/* Main Content */}
+      <div className="flex-1 min-w-0 pb-20 md:pb-0">
+        {activeSection === 'calendar' && (
+          <CalendarSection
+            weekSchedules={weekSchedules}
+            monthSchedules={monthSchedules}
+            onEnroll={(schedule) => {
+              setSelectedSchedule(schedule);
+              setShowEnrollDialog(true);
+            }}
+            onDelete={(id) => setDeleteConfirm({ type: 'schedule', id })}
+            onScheduleClass={() => setShowScheduleDialog(true)}
+          />
+        )}
 
-      {/* Monthly Calendar View */}
-      {viewMode === 'month' && (
-        <Card>
-          <CardContent className="p-4">
-            <MonthlyCalendarView
-              schedules={monthSchedules}
-              onEnroll={(schedule) => {
-                setSelectedSchedule(schedule);
-                setShowEnrollDialog(true);
-              }}
-              onDelete={(id) => setDeleteConfirm({ type: 'schedule', id })}
-            />
-          </CardContent>
-        </Card>
-      )}
+        {activeSection === 'class-types' && (
+          <ClassTypesSection
+            classTypes={classTypes}
+            onEdit={(classType) => {
+              setSelectedClassType(classType);
+              setShowCreateDialog(true);
+            }}
+            onDelete={(id) => setDeleteConfirm({ type: 'class', id })}
+            onCreate={() => setShowCreateDialog(true)}
+          />
+        )}
 
-      {/* Weekly View - Classes by Day */}
-      {viewMode === 'week' && (
-        <Tabs defaultValue="seg" className="w-full">
-          <TabsList className="w-full justify-start overflow-x-auto">
-            {weekDays.map((day) => (
-              <TabsTrigger key={day.key} value={day.key} className="min-w-[100px]">
-                {day.label}
-                <Badge variant="secondary" className="ml-2 text-xs">
-                  {getSchedulesForDay(day.dayOffset).length}
-                </Badge>
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        
-        {weekDays.map((day) => (
-          <TabsContent key={day.key} value={day.key} className="mt-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {getSchedulesForDay(day.dayOffset).map((schedule) => (
-                <Card 
-                  key={schedule.id} 
-                  className="hover:shadow-lg transition-shadow border-l-4"
-                  style={{ borderLeftColor: schedule.class?.color || '#aeca12' }}
-                >
-                  <CardContent className="p-4">
-                    <div className="flex justify-between items-start mb-3">
-                      <h3 className="font-heading font-semibold text-lg text-foreground">
-                        {schedule.class?.name}
-                      </h3>
-                      <Badge 
-                        variant="outline" 
-                        className={
-                          schedule.enrollments_count >= (schedule.class?.capacity || 0)
-                            ? "border-red-500 text-red-500"
-                            : "border-primary text-primary"
-                        }
-                      >
-                        {schedule.enrollments_count}/{schedule.class?.capacity}
-                      </Badge>
-                    </div>
-                    
-                    <div className="space-y-2 text-sm">
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <Clock className="h-4 w-4" />
-                        <span>{schedule.start_time.slice(0, 5)} - {schedule.end_time.slice(0, 5)}</span>
-                      </div>
-                      {schedule.instructor && (
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                          <User className="h-4 w-4" />
-                          <span>{schedule.instructor.full_name}</span>
-                        </div>
-                      )}
-                      {schedule.class?.room && (
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                          <MapPin className="h-4 w-4" />
-                          <span>{schedule.class.room.name}</span>
-                        </div>
-                      )}
-                    </div>
-                    
-                    <div className="mt-4 flex gap-2">
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="flex-1"
-                        onClick={() => {
-                          setSelectedSchedule(schedule);
-                          setShowEnrollDialog(true);
-                        }}
-                      >
-                        <UserPlus className="h-4 w-4 mr-1" />
-                        Inscrever
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        size="icon"
-                        onClick={() => setDeleteConfirm({ type: 'schedule', id: schedule.id })}
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-              {getSchedulesForDay(day.dayOffset).length === 0 && (
-                <div className="col-span-full text-center py-12 text-muted-foreground">
-                  Nenhuma aula agendada para este dia
-                </div>
-              )}
-            </div>
-          </TabsContent>
-        ))}
-        </Tabs>
-      )}
-
-      {/* All Class Types */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Tipos de Aula</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {classTypes.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <p>Nenhum tipo de aula criado</p>
-              <Button 
-                variant="link" 
-                onClick={() => setShowCreateDialog(true)}
-                className="mt-2"
-              >
-                Criar primeiro tipo de aula
-              </Button>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {classTypes.map((classType) => (
-                <div 
-                  key={classType.id} 
-                  className="p-4 rounded-xl hover:shadow-md transition-all cursor-pointer group relative border"
-                  style={{ backgroundColor: `${classType.color}15` }}
-                >
-                  <div className="flex items-start gap-3">
-                    <div 
-                      className="w-3 h-3 rounded-full mt-1.5 shrink-0"
-                      style={{ backgroundColor: classType.color }}
-                    />
-                    <div className="flex-1 min-w-0">
-                      <span className="font-medium text-foreground block">{classType.name}</span>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {classType.duration_minutes} min | {classType.capacity} vagas
-                      </p>
-                      {classType.room && (
-                        <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-                          <MapPin className="h-3 w-3" />
-                          {classType.room.name}
-                        </p>
-                      )}
-                      {classType.default_instructor && (
-                        <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-                          <User className="h-3 w-3" />
-                          {classType.default_instructor.full_name}
-                        </p>
-                      )}
-                      {classType.has_fixed_schedule && classType.default_start_time && (
-                        <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-                          <Clock className="h-3 w-3" />
-                          {classType.default_start_time.slice(0, 5)} - {classType.default_end_time?.slice(0, 5)}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                  <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedClassType(classType);
-                        setShowCreateDialog(true);
-                      }}
-                    >
-                      <Pencil className="h-3 w-3" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6 text-destructive"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setDeleteConfirm({ type: 'class', id: classType.id });
-                      }}
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+        {activeSection === 'rooms' && (
+          <RoomsSection rooms={rooms} onRefresh={fetchData} />
+        )}
+      </div>
 
       {/* Dialogs */}
       <CreateClassDialog
