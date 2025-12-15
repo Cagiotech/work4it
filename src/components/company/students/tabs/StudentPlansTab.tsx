@@ -60,7 +60,7 @@ export function StudentPlansTab({ studentId, personalTrainerId, companyId, canEd
   const [plans, setPlans] = useState<Plan[]>([]);
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [trainers, setTrainers] = useState<Staff[]>([]);
-  const [selectedTrainer, setSelectedTrainer] = useState<string>(personalTrainerId || "");
+  const [selectedTrainer, setSelectedTrainer] = useState<string>(personalTrainerId || "__none__");
   const [selectedPlan, setSelectedPlan] = useState<string>("");
   const [startDate, setStartDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [isAddingPlan, setIsAddingPlan] = useState(false);
@@ -107,7 +107,7 @@ export function StudentPlansTab({ studentId, personalTrainerId, companyId, canEd
     try {
       const { error } = await supabase
         .from('students')
-        .update({ personal_trainer_id: selectedTrainer || null })
+        .update({ personal_trainer_id: selectedTrainer === "__none__" ? null : selectedTrainer })
         .eq('id', studentId);
 
       if (error) throw error;
@@ -228,7 +228,7 @@ export function StudentPlansTab({ studentId, personalTrainerId, companyId, canEd
                     <SelectValue placeholder="Selecionar personal trainer" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Nenhum</SelectItem>
+                    <SelectItem value="__none__">Nenhum</SelectItem>
                     {trainers.map((trainer) => (
                       <SelectItem key={trainer.id} value={trainer.id}>
                         {trainer.full_name} {trainer.position && `(${trainer.position})`}
