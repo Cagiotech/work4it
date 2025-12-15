@@ -31,18 +31,24 @@ export function ImportStudentsDialog({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleDownloadTemplate = () => {
-    const csvContent = [
-      'Nome Completo,Email,Telefone,Data de Nascimento,Género,NIF,NISS,Cartão de Cidadão',
-      'João Silva,joao.silva@email.com,912345678,1990-05-15,Masculino,123456789,12345678901,12345678',
-      'Maria Santos,maria.santos@email.com,913456789,1985-10-20,Feminino,987654321,98765432109,87654321'
+    // BOM for UTF-8 to ensure Excel opens correctly with accents
+    const BOM = '\uFEFF';
+    const csvContent = BOM + [
+      'Nome Completo;Email;Telefone;Data de Nascimento;Género;NIF;NISS;Cartão de Cidadão',
+      'João Silva;joao.silva@email.com;912345678;1990-05-15;Masculino;123456789;12345678901;12345678',
+      'Maria Santos;maria.santos@email.com;913456789;1985-10-20;Feminino;987654321;98765432109;87654321',
+      'Pedro Costa;pedro.costa@email.com;914567890;1995-03-10;Masculino;456789123;45678912345;45678901'
     ].join('\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
     link.download = 'modelo_importacao_alunos.csv';
+    document.body.appendChild(link);
     link.click();
-    toast.success('Modelo baixado!');
+    document.body.removeChild(link);
+    URL.revokeObjectURL(link.href);
+    toast.success('Modelo baixado com sucesso!');
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -56,16 +62,18 @@ export function ImportStudentsDialog({
 
     setFile(selectedFile);
 
-    // Read and preview CSV
+    // Read and preview CSV (supports both ; and , as delimiter)
     if (selectedFile.name.endsWith('.csv')) {
       const reader = new FileReader();
       reader.onload = (event) => {
         const text = event.target?.result as string;
-        const lines = text.split('\n').slice(0, 6);
-        const rows = lines.map(line => line.split(',').map(cell => cell.trim()));
+        const lines = text.split('\n').filter(line => line.trim()).slice(0, 6);
+        // Detect delimiter (semicolon or comma)
+        const delimiter = lines[0]?.includes(';') ? ';' : ',';
+        const rows = lines.map(line => line.split(delimiter).map(cell => cell.trim().replace(/^["']|["']$/g, '')));
         setPreview(rows);
       };
-      reader.readAsText(selectedFile);
+      reader.readAsText(selectedFile, 'UTF-8');
     }
   };
 
@@ -74,48 +82,53 @@ export function ImportStudentsDialog({
 
     setIsLoading(true);
     try {
-      const reader = new FileReader();
+      const text = await file.text();
+      const lines = text.split('\n').filter(line => line.trim());
       
-      reader.onload = async (event) => {
-        const text = event.target?.result as string;
-        const lines = text.split('\n').slice(1).filter(line => line.trim());
-        
-        const students = lines.map(line => {
-          const [fullName, email, phone, birthDate, gender, nif, niss, citizenCard] = line.split(',').map(cell => cell.trim());
-          return {
-            company_id: companyId,
-            full_name: fullName,
-            email: email || null,
-            phone: phone || null,
-            birth_date: birthDate || null,
-            gender: gender || null,
-            nif: nif || null,
-            niss: niss || null,
-            citizen_card: citizenCard || null,
-            status: 'active'
-          };
-        }).filter(s => s.full_name);
+      if (lines.length < 2) {
+        toast.error('O arquivo está vazio ou só contém cabeçalho');
+        setIsLoading(false);
+        return;
+      }
+      
+      // Detect delimiter (semicolon or comma)
+      const delimiter = lines[0]?.includes(';') ? ';' : ',';
+      const dataLines = lines.slice(1);
+      
+      const students = dataLines.map(line => {
+        const cells = line.split(delimiter).map(cell => cell.trim().replace(/^["']|["']$/g, ''));
+        const [fullName, email, phone, birthDate, gender, nif, niss, citizenCard] = cells;
+        return {
+          company_id: companyId,
+          full_name: fullName || '',
+          email: email || null,
+          phone: phone || null,
+          birth_date: birthDate && birthDate.match(/^\d{4}-\d{2}-\d{2}$/) ? birthDate : null,
+          gender: gender || null,
+          nif: nif || null,
+          niss: niss || null,
+          citizen_card: citizenCard || null,
+          status: 'active'
+        };
+      }).filter(s => s.full_name.length > 0);
 
-        if (students.length === 0) {
-          toast.error('Nenhum aluno válido encontrado no arquivo');
-          setIsLoading(false);
-          return;
-        }
+      if (students.length === 0) {
+        toast.error('Nenhum aluno válido encontrado no arquivo');
+        setIsLoading(false);
+        return;
+      }
 
-        const { error } = await supabase
-          .from('students')
-          .insert(students);
+      const { error } = await supabase
+        .from('students')
+        .insert(students);
 
-        if (error) throw error;
+      if (error) throw error;
 
-        toast.success(`${students.length} alunos importados com sucesso!`);
-        onSuccess();
-        onOpenChange(false);
-        setFile(null);
-        setPreview([]);
-      };
-
-      reader.readAsText(file);
+      toast.success(`${students.length} alunos importados com sucesso!`);
+      onSuccess();
+      onOpenChange(false);
+      setFile(null);
+      setPreview([]);
     } catch (error) {
       console.error('Error importing students:', error);
       toast.error('Erro ao importar alunos');
