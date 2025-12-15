@@ -24,6 +24,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
 
 interface Document {
   id: string;
@@ -35,6 +36,13 @@ interface Document {
   created_at: string;
 }
 
+interface SignedDocument {
+  id: string;
+  document_type: string;
+  document_content: string;
+  signed_at: string;
+}
+
 interface StudentDocumentsTabProps {
   studentId: string;
   canEdit: boolean;
@@ -43,6 +51,7 @@ interface StudentDocumentsTabProps {
 export function StudentDocumentsTab({ studentId, canEdit }: StudentDocumentsTabProps) {
   const [loading, setLoading] = useState(true);
   const [documents, setDocuments] = useState<Document[]>([]);
+  const [signedDocuments, setSignedDocuments] = useState<SignedDocument[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [description, setDescription] = useState("");
@@ -51,10 +60,12 @@ export function StudentDocumentsTab({ studentId, canEdit }: StudentDocumentsTabP
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewType, setPreviewType] = useState<string | null>(null);
+  const [signedDocPreview, setSignedDocPreview] = useState<SignedDocument | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetchDocuments();
+    fetchSignedDocuments();
   }, [studentId]);
 
   const fetchDocuments = async () => {
@@ -71,6 +82,21 @@ export function StudentDocumentsTab({ studentId, canEdit }: StudentDocumentsTabP
       console.error('Error fetching documents:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchSignedDocuments = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('signed_documents')
+        .select('*')
+        .eq('student_id', studentId)
+        .order('signed_at', { ascending: false });
+
+      if (error) throw error;
+      setSignedDocuments(data || []);
+    } catch (error: any) {
+      console.error('Error fetching signed documents:', error);
     }
   };
 
@@ -383,6 +409,48 @@ export function StudentDocumentsTab({ studentId, canEdit }: StudentDocumentsTabP
             )}
           </CardContent>
         </Card>
+
+        {/* Signed Documents (Terms & Regulations) */}
+        {signedDocuments.length > 0 && (
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <FileText className="h-4 w-4 text-green-500" />
+                Documentos Assinados
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">Termos e regulamentos aceites pelo aluno</p>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {signedDocuments.map((doc) => (
+                  <div
+                    key={doc.id}
+                    className="flex items-center gap-3 p-3 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
+                    onClick={() => setSignedDocPreview(doc)}
+                  >
+                    <FileText className="h-8 w-8 text-green-500" />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-medium">
+                          {doc.document_type === 'terms' ? 'Termos e Condições' : 'Regulamento Interno'}
+                        </p>
+                        <Badge variant="outline" className="text-xs bg-green-500/10 text-green-600 border-green-500/30">
+                          Assinado
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Assinado em {format(new Date(doc.signed_at), "dd MMM yyyy 'às' HH:mm", { locale: pt })}
+                      </p>
+                    </div>
+                    <Button variant="ghost" size="icon" title="Ver documento">
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Confirm Upload Dialog */}
@@ -442,6 +510,32 @@ export function StudentDocumentsTab({ studentId, canEdit }: StudentDocumentsTabP
                 title="PDF Preview"
               />
             ) : null}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Signed Document Preview Dialog */}
+      <Dialog open={!!signedDocPreview} onOpenChange={() => setSignedDocPreview(null)}>
+        <DialogContent className="max-w-2xl max-h-[90vh]">
+          <DialogHeader>
+            <DialogTitle>
+              {signedDocPreview?.document_type === 'terms' ? 'Termos e Condições' : 'Regulamento Interno'}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/30">
+                Assinado digitalmente
+              </Badge>
+              <span>
+                em {signedDocPreview && format(new Date(signedDocPreview.signed_at), "dd MMM yyyy 'às' HH:mm", { locale: pt })}
+              </span>
+            </div>
+            <div className="max-h-[60vh] overflow-auto p-4 bg-muted/30 rounded-lg border">
+              <pre className="text-sm whitespace-pre-wrap font-sans">
+                {signedDocPreview?.document_content}
+              </pre>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

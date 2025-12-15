@@ -17,26 +17,38 @@ export type Database = {
       companies: {
         Row: {
           address: string | null
+          anamnesis_filled_by: string | null
           created_at: string
           created_by: string
           id: string
           name: string | null
+          registration_code: string | null
+          regulations_text: string | null
+          terms_text: string | null
           updated_at: string
         }
         Insert: {
           address?: string | null
+          anamnesis_filled_by?: string | null
           created_at?: string
           created_by: string
           id?: string
           name?: string | null
+          registration_code?: string | null
+          regulations_text?: string | null
+          terms_text?: string | null
           updated_at?: string
         }
         Update: {
           address?: string | null
+          anamnesis_filled_by?: string | null
           created_at?: string
           created_by?: string
           id?: string
           name?: string | null
+          registration_code?: string | null
+          regulations_text?: string | null
+          terms_text?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -188,6 +200,57 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      signed_documents: {
+        Row: {
+          company_id: string
+          created_at: string
+          document_content: string
+          document_type: string
+          id: string
+          ip_address: string | null
+          signed_at: string
+          student_id: string
+          user_agent: string | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          document_content: string
+          document_type: string
+          id?: string
+          ip_address?: string | null
+          signed_at?: string
+          student_id: string
+          user_agent?: string | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          document_content?: string
+          document_type?: string
+          id?: string
+          ip_address?: string | null
+          signed_at?: string
+          student_id?: string
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "signed_documents_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "signed_documents_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
             referencedColumns: ["id"]
           },
         ]
@@ -582,7 +645,10 @@ export type Database = {
           phone: string | null
           postal_code: string | null
           profile_photo_url: string | null
+          registration_method: string | null
           status: string | null
+          terms_accepted_at: string | null
+          terms_document_id: string | null
           updated_at: string
           user_id: string | null
         }
@@ -610,7 +676,10 @@ export type Database = {
           phone?: string | null
           postal_code?: string | null
           profile_photo_url?: string | null
+          registration_method?: string | null
           status?: string | null
+          terms_accepted_at?: string | null
+          terms_document_id?: string | null
           updated_at?: string
           user_id?: string | null
         }
@@ -638,7 +707,10 @@ export type Database = {
           phone?: string | null
           postal_code?: string | null
           profile_photo_url?: string | null
+          registration_method?: string | null
           status?: string | null
+          terms_accepted_at?: string | null
+          terms_document_id?: string | null
           updated_at?: string
           user_id?: string | null
         }

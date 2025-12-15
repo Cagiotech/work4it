@@ -9,6 +9,8 @@ import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Onboarding from "./pages/Onboarding";
+import StudentRegister from "./pages/StudentRegister";
+import StudentOnboarding from "./pages/StudentOnboarding";
 import NotFound from "./pages/NotFound";
 
 // Company Layout & Pages
@@ -73,6 +75,8 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/onboarding" element={<Onboarding />} />
+            <Route path="/registro" element={<StudentRegister />} />
+            <Route path="/onboarding-new-student" element={<StudentOnboarding />} />
             
             {/* Company Dashboard Routes */}
             <Route path="/company" element={<CompanyLayout />}>
