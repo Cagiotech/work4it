@@ -10,6 +10,16 @@ import { toast } from "sonner";
 import { CreditCard, Calendar, UserCheck, Plus, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { pt } from "date-fns/locale";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface Plan {
   id: string;
@@ -52,6 +62,9 @@ export function StudentPlansTab({ studentId, personalTrainerId, companyId, canEd
   const [selectedPlan, setSelectedPlan] = useState<string>("");
   const [startDate, setStartDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [isAddingPlan, setIsAddingPlan] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [confirmSaveTrainer, setConfirmSaveTrainer] = useState(false);
+  const [confirmAddPlan, setConfirmAddPlan] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -59,21 +72,18 @@ export function StudentPlansTab({ studentId, personalTrainerId, companyId, canEd
 
   const fetchData = async () => {
     try {
-      // Fetch available plans
       const { data: plansData } = await supabase
         .from('subscription_plans')
         .select('*')
         .eq('company_id', companyId)
         .eq('is_active', true);
 
-      // Fetch student subscriptions
       const { data: subsData } = await supabase
         .from('student_subscriptions')
         .select('*, subscription_plans(*)')
         .eq('student_id', studentId)
         .order('created_at', { ascending: false });
 
-      // Fetch trainers (staff that can be personal trainers)
       const { data: trainersData } = await supabase
         .from('staff')
         .select('id, full_name, position')
@@ -91,6 +101,7 @@ export function StudentPlansTab({ studentId, personalTrainerId, companyId, canEd
   };
 
   const handleAssignTrainer = async () => {
+    setConfirmSaveTrainer(false);
     try {
       const { error } = await supabase
         .from('students')
@@ -106,6 +117,7 @@ export function StudentPlansTab({ studentId, personalTrainerId, companyId, canEd
   };
 
   const handleAddSubscription = async () => {
+    setConfirmAddPlan(false);
     if (!selectedPlan) {
       toast.error("Selecione um plano");
       return;
@@ -139,15 +151,17 @@ export function StudentPlansTab({ studentId, personalTrainerId, companyId, canEd
     }
   };
 
-  const handleRemoveSubscription = async (subscriptionId: string) => {
+  const handleRemoveSubscription = async () => {
+    if (!confirmDeleteId) return;
     try {
       const { error } = await supabase
         .from('student_subscriptions')
         .delete()
-        .eq('id', subscriptionId);
+        .eq('id', confirmDeleteId);
 
       if (error) throw error;
       toast.success("Plano removido");
+      setConfirmDeleteId(null);
       fetchData();
     } catch (error: any) {
       toast.error(error.message || "Erro ao remover plano");
@@ -189,151 +203,206 @@ export function StudentPlansTab({ studentId, personalTrainerId, companyId, canEd
   }
 
   return (
-    <div className="space-y-6">
-      {/* Personal Trainer Assignment */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            <UserCheck className="h-4 w-4 text-primary" />
-            Personal Trainer
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex gap-4 items-end">
-            <div className="flex-1 space-y-2">
-              <Label>Personal Atribuído</Label>
-              <Select
-                value={selectedTrainer}
-                onValueChange={setSelectedTrainer}
-                disabled={!canEdit}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecionar personal trainer" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">Nenhum</SelectItem>
-                  {trainers.map((trainer) => (
-                    <SelectItem key={trainer.id} value={trainer.id}>
-                      {trainer.full_name} {trainer.position && `(${trainer.position})`}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            {canEdit && (
-              <Button onClick={handleAssignTrainer}>
-                Guardar
-              </Button>
-            )}
-          </div>
-          {trainers.length === 0 && (
-            <p className="text-sm text-muted-foreground">
-              Nenhum colaborador cadastrado. Adicione colaboradores em Recursos Humanos.
-            </p>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Subscription Plans */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center justify-between">
-            <span className="flex items-center gap-2">
-              <CreditCard className="h-4 w-4 text-primary" />
-              Planos de Assinatura
-            </span>
-            {canEdit && (
-              <Button size="sm" onClick={() => setIsAddingPlan(true)}>
-                <Plus className="h-4 w-4 mr-1" />
-                Adicionar
-              </Button>
-            )}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {isAddingPlan && (
-            <div className="p-4 border rounded-lg bg-muted/30 space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Plano</Label>
-                  <Select value={selectedPlan} onValueChange={setSelectedPlan}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecionar plano" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {plans.map((plan) => (
-                        <SelectItem key={plan.id} value={plan.id}>
-                          {plan.name} - €{plan.price} ({plan.duration_days} dias)
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Data de Início</Label>
-                  <Input
-                    type="date"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                  />
-                </div>
-              </div>
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setIsAddingPlan(false)}>
-                  Cancelar
-                </Button>
-                <Button onClick={handleAddSubscription}>
-                  Adicionar Plano
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {plans.length === 0 && !isAddingPlan && (
-            <p className="text-sm text-muted-foreground text-center py-4">
-              Nenhum plano disponível. Crie planos em Configurações → Planos.
-            </p>
-          )}
-
-          {subscriptions.length === 0 && !isAddingPlan && plans.length > 0 && (
-            <p className="text-sm text-muted-foreground text-center py-4">
-              Nenhum plano atribuído a este aluno.
-            </p>
-          )}
-
-          {subscriptions.map((sub) => (
-            <div
-              key={sub.id}
-              className="flex items-center justify-between p-4 border rounded-lg"
-            >
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">{sub.subscription_plans?.name}</span>
-                  {getStatusBadge(sub.status)}
-                  {getPaymentBadge(sub.payment_status)}
-                </div>
-                <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                  <span className="flex items-center gap-1">
-                    <Calendar className="h-3 w-3" />
-                    {format(new Date(sub.start_date), "dd MMM yyyy", { locale: pt })} - {format(new Date(sub.end_date), "dd MMM yyyy", { locale: pt })}
-                  </span>
-                  <span>€{sub.subscription_plans?.price}</span>
-                </div>
+    <>
+      <div className="space-y-6">
+        {/* Personal Trainer Assignment */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <UserCheck className="h-4 w-4 text-primary" />
+              Personal Trainer
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex gap-4 items-end">
+              <div className="flex-1 space-y-2">
+                <Label>Personal Atribuído</Label>
+                <Select
+                  value={selectedTrainer}
+                  onValueChange={setSelectedTrainer}
+                  disabled={!canEdit}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecionar personal trainer" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Nenhum</SelectItem>
+                    {trainers.map((trainer) => (
+                      <SelectItem key={trainer.id} value={trainer.id}>
+                        {trainer.full_name} {trainer.position && `(${trainer.position})`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               {canEdit && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="text-destructive hover:text-destructive"
-                  onClick={() => handleRemoveSubscription(sub.id)}
-                >
-                  <Trash2 className="h-4 w-4" />
+                <Button onClick={() => setConfirmSaveTrainer(true)}>
+                  Guardar
                 </Button>
               )}
             </div>
-          ))}
-        </CardContent>
-      </Card>
-    </div>
+            {trainers.length === 0 && (
+              <p className="text-sm text-muted-foreground">
+                Nenhum colaborador cadastrado. Adicione colaboradores em Recursos Humanos.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Subscription Plans */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <CreditCard className="h-4 w-4 text-primary" />
+                Planos de Assinatura
+              </span>
+              {canEdit && (
+                <Button size="sm" onClick={() => setIsAddingPlan(true)}>
+                  <Plus className="h-4 w-4 mr-1" />
+                  Adicionar
+                </Button>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {isAddingPlan && (
+              <div className="p-4 border rounded-lg bg-muted/30 space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Plano</Label>
+                    <Select value={selectedPlan} onValueChange={setSelectedPlan}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecionar plano" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {plans.map((plan) => (
+                          <SelectItem key={plan.id} value={plan.id}>
+                            {plan.name} - €{plan.price} ({plan.duration_days} dias)
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Data de Início</Label>
+                    <Input
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" onClick={() => setIsAddingPlan(false)}>
+                    Cancelar
+                  </Button>
+                  <Button onClick={() => setConfirmAddPlan(true)}>
+                    Adicionar Plano
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {plans.length === 0 && !isAddingPlan && (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                Nenhum plano disponível. Crie planos em Configurações → Planos.
+              </p>
+            )}
+
+            {subscriptions.length === 0 && !isAddingPlan && plans.length > 0 && (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                Nenhum plano atribuído a este aluno.
+              </p>
+            )}
+
+            {subscriptions.map((sub) => (
+              <div
+                key={sub.id}
+                className="flex items-center justify-between p-4 border rounded-lg"
+              >
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">{sub.subscription_plans?.name}</span>
+                    {getStatusBadge(sub.status)}
+                    {getPaymentBadge(sub.payment_status)}
+                  </div>
+                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                    <span className="flex items-center gap-1">
+                      <Calendar className="h-3 w-3" />
+                      {format(new Date(sub.start_date), "dd MMM yyyy", { locale: pt })} - {format(new Date(sub.end_date), "dd MMM yyyy", { locale: pt })}
+                    </span>
+                    <span>€{sub.subscription_plans?.price}</span>
+                  </div>
+                </div>
+                {canEdit && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="text-destructive hover:text-destructive"
+                    onClick={() => setConfirmDeleteId(sub.id)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Confirm Save Trainer */}
+      <AlertDialog open={confirmSaveTrainer} onOpenChange={setConfirmSaveTrainer}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Alteração</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja atribuir este personal trainer ao aluno?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleAssignTrainer}>Confirmar</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Confirm Add Plan */}
+      <AlertDialog open={confirmAddPlan} onOpenChange={setConfirmAddPlan}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Adição</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja adicionar este plano ao aluno?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleAddSubscription}>Adicionar</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Confirm Delete Plan */}
+      <AlertDialog open={!!confirmDeleteId} onOpenChange={(open) => !open && setConfirmDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Remoção</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja remover este plano do aluno? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleRemoveSubscription}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Remover
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

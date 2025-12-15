@@ -10,6 +10,16 @@ import { toast } from "sonner";
 import { StickyNote, Plus, Trash2, Lock, Unlock } from "lucide-react";
 import { format } from "date-fns";
 import { pt } from "date-fns/locale";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface Note {
   id: string;
@@ -31,6 +41,8 @@ export function StudentNotesTab({ studentId, canEdit }: StudentNotesTabProps) {
   const [isAdding, setIsAdding] = useState(false);
   const [newNote, setNewNote] = useState({ title: "", content: "", is_private: false });
   const [saving, setSaving] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [confirmAddNote, setConfirmAddNote] = useState(false);
 
   useEffect(() => {
     fetchNotes();
@@ -54,6 +66,7 @@ export function StudentNotesTab({ studentId, canEdit }: StudentNotesTabProps) {
   };
 
   const handleAddNote = async () => {
+    setConfirmAddNote(false);
     if (!newNote.content.trim()) {
       toast.error("O conteúdo da nota é obrigatório");
       return;
@@ -86,15 +99,17 @@ export function StudentNotesTab({ studentId, canEdit }: StudentNotesTabProps) {
     }
   };
 
-  const handleDeleteNote = async (noteId: string) => {
+  const handleDeleteNote = async () => {
+    if (!confirmDeleteId) return;
     try {
       const { error } = await supabase
         .from('student_notes')
         .delete()
-        .eq('id', noteId);
+        .eq('id', confirmDeleteId);
 
       if (error) throw error;
       toast.success("Nota removida");
+      setConfirmDeleteId(null);
       fetchNotes();
     } catch (error: any) {
       toast.error(error.message || "Erro ao remover nota");
@@ -106,100 +121,139 @@ export function StudentNotesTab({ studentId, canEdit }: StudentNotesTabProps) {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide flex items-center gap-2">
-          <StickyNote className="h-4 w-4" />
-          Notas do Aluno
-        </h3>
-        {canEdit && !isAdding && (
-          <Button size="sm" onClick={() => setIsAdding(true)}>
-            <Plus className="h-4 w-4 mr-1" />
-            Nova Nota
-          </Button>
+    <>
+      <div className="space-y-4">
+        <div className="flex justify-between items-center">
+          <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide flex items-center gap-2">
+            <StickyNote className="h-4 w-4" />
+            Notas do Aluno
+          </h3>
+          {canEdit && !isAdding && (
+            <Button size="sm" onClick={() => setIsAdding(true)}>
+              <Plus className="h-4 w-4 mr-1" />
+              Nova Nota
+            </Button>
+          )}
+        </div>
+
+        {isAdding && (
+          <Card>
+            <CardContent className="pt-4 space-y-4">
+              <div className="space-y-2">
+                <Label>Título (opcional)</Label>
+                <Input
+                  value={newNote.title}
+                  onChange={(e) => setNewNote({ ...newNote, title: e.target.value })}
+                  placeholder="Título da nota..."
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Conteúdo</Label>
+                <Textarea
+                  value={newNote.content}
+                  onChange={(e) => setNewNote({ ...newNote, content: e.target.value })}
+                  placeholder="Escreva a nota aqui..."
+                  rows={4}
+                />
+              </div>
+              <div className="flex items-center justify-between p-2 rounded-lg bg-muted/50">
+                <div className="flex items-center gap-2">
+                  {newNote.is_private ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
+                  <Label className="text-sm">Nota privada</Label>
+                </div>
+                <Switch
+                  checked={newNote.is_private}
+                  onCheckedChange={(checked) => setNewNote({ ...newNote, is_private: checked })}
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setIsAdding(false)}>
+                  Cancelar
+                </Button>
+                <Button onClick={() => setConfirmAddNote(true)} disabled={saving}>
+                  {saving ? "A guardar..." : "Guardar Nota"}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         )}
+
+        {notes.length === 0 && !isAdding && (
+          <Card>
+            <CardContent className="py-8 text-center text-muted-foreground">
+              Nenhuma nota registada para este aluno.
+            </CardContent>
+          </Card>
+        )}
+
+        {notes.map((note) => (
+          <Card key={note.id}>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm flex items-center justify-between">
+                <span className="flex items-center gap-2">
+                  {note.is_private && <Lock className="h-3 w-3 text-muted-foreground" />}
+                  {note.title || "Sem título"}
+                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground font-normal">
+                    {format(new Date(note.created_at), "dd MMM yyyy, HH:mm", { locale: pt })}
+                  </span>
+                  {canEdit && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 text-destructive hover:text-destructive"
+                      onClick={() => setConfirmDeleteId(note.id)}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  )}
+                </div>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm whitespace-pre-wrap">{note.content}</p>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
-      {isAdding && (
-        <Card>
-          <CardContent className="pt-4 space-y-4">
-            <div className="space-y-2">
-              <Label>Título (opcional)</Label>
-              <Input
-                value={newNote.title}
-                onChange={(e) => setNewNote({ ...newNote, title: e.target.value })}
-                placeholder="Título da nota..."
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Conteúdo</Label>
-              <Textarea
-                value={newNote.content}
-                onChange={(e) => setNewNote({ ...newNote, content: e.target.value })}
-                placeholder="Escreva a nota aqui..."
-                rows={4}
-              />
-            </div>
-            <div className="flex items-center justify-between p-2 rounded-lg bg-muted/50">
-              <div className="flex items-center gap-2">
-                {newNote.is_private ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
-                <Label className="text-sm">Nota privada</Label>
-              </div>
-              <Switch
-                checked={newNote.is_private}
-                onCheckedChange={(checked) => setNewNote({ ...newNote, is_private: checked })}
-              />
-            </div>
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setIsAdding(false)}>
-                Cancelar
-              </Button>
-              <Button onClick={handleAddNote} disabled={saving}>
-                {saving ? "A guardar..." : "Guardar Nota"}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      {/* Confirm Add Note */}
+      <AlertDialog open={confirmAddNote} onOpenChange={setConfirmAddNote}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Adição</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja adicionar esta nota?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleAddNote}>Adicionar</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
-      {notes.length === 0 && !isAdding && (
-        <Card>
-          <CardContent className="py-8 text-center text-muted-foreground">
-            Nenhuma nota registada para este aluno.
-          </CardContent>
-        </Card>
-      )}
-
-      {notes.map((note) => (
-        <Card key={note.id}>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm flex items-center justify-between">
-              <span className="flex items-center gap-2">
-                {note.is_private && <Lock className="h-3 w-3 text-muted-foreground" />}
-                {note.title || "Sem título"}
-              </span>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground font-normal">
-                  {format(new Date(note.created_at), "dd MMM yyyy, HH:mm", { locale: pt })}
-                </span>
-                {canEdit && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6 text-destructive hover:text-destructive"
-                    onClick={() => handleDeleteNote(note.id)}
-                  >
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
-                )}
-              </div>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm whitespace-pre-wrap">{note.content}</p>
-          </CardContent>
-        </Card>
-      ))}
-    </div>
+      {/* Confirm Delete Note */}
+      <AlertDialog open={!!confirmDeleteId} onOpenChange={(open) => !open && setConfirmDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Remoção</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja remover esta nota? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteNote}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Remover
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
