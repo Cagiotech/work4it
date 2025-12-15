@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { Plus, Calendar as CalendarIcon, Clock, Users, Pencil, Trash2, UserPlus } from "lucide-react";
+import { Plus, Calendar as CalendarIcon, Clock, Users, Pencil, Trash2, UserPlus, CalendarDays, List } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -8,11 +8,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
-import { format, startOfWeek, addDays } from "date-fns";
+import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, addDays } from "date-fns";
 import { pt } from "date-fns/locale";
 import { CreateClassDialog } from "@/components/company/classes/CreateClassDialog";
 import { ScheduleClassDialog } from "@/components/company/classes/ScheduleClassDialog";
 import { EnrollStudentsDialog } from "@/components/company/classes/EnrollStudentsDialog";
+import { MonthlyCalendarView } from "@/components/company/classes/MonthlyCalendarView";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -61,7 +62,8 @@ export default function Classes() {
   const { t } = useTranslation();
   const { profile } = useAuth();
   const [classTypes, setClassTypes] = useState<ClassType[]>([]);
-  const [schedules, setSchedules] = useState<ClassSchedule[]>([]);
+  const [weekSchedules, setWeekSchedules] = useState<ClassSchedule[]>([]);
+  const [monthSchedules, setMonthSchedules] = useState<ClassSchedule[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showScheduleDialog, setShowScheduleDialog] = useState(false);
@@ -69,8 +71,11 @@ export default function Classes() {
   const [selectedClassType, setSelectedClassType] = useState<ClassType | null>(null);
   const [selectedSchedule, setSelectedSchedule] = useState<ClassSchedule | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ type: 'class' | 'schedule', id: string } | null>(null);
+  const [viewMode, setViewMode] = useState<'week' | 'month'>('week');
   
   const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
+  const currentMonthStart = startOfMonth(new Date());
+  const currentMonthEnd = endOfMonth(new Date());
 
   const fetchData = async () => {
     if (!profile?.company_id) return;
@@ -87,9 +92,9 @@ export default function Classes() {
       if (classError) throw classError;
       setClassTypes(classes || []);
 
-      // Fetch schedules for this week with enrollment counts
+      // Fetch schedules for this week
       const weekEnd = addDays(weekStart, 6);
-      const { data: schedulesData, error: scheduleError } = await supabase
+      const { data: weekData, error: weekError } = await supabase
         .from('class_schedules')
         .select(`
           *,
@@ -101,25 +106,46 @@ export default function Classes() {
         .order('scheduled_date')
         .order('start_time');
 
-      if (scheduleError) throw scheduleError;
+      if (weekError) throw weekError;
 
-      // Get enrollment counts for each schedule
-      const schedulesWithCounts = await Promise.all(
-        (schedulesData || []).map(async (schedule) => {
-          const { count } = await supabase
-            .from('class_enrollments')
-            .select('*', { count: 'exact', head: true })
-            .eq('class_schedule_id', schedule.id)
-            .neq('status', 'cancelled');
-          
-          return {
-            ...schedule,
-            enrollments_count: count || 0
-          };
-        })
-      );
+      // Fetch schedules for current month (for calendar view)
+      const { data: monthData, error: monthError } = await supabase
+        .from('class_schedules')
+        .select(`
+          *,
+          class:classes(*),
+          instructor:staff(full_name)
+        `)
+        .gte('scheduled_date', format(currentMonthStart, 'yyyy-MM-dd'))
+        .lte('scheduled_date', format(currentMonthEnd, 'yyyy-MM-dd'))
+        .order('scheduled_date')
+        .order('start_time');
 
-      setSchedules(schedulesWithCounts);
+      if (monthError) throw monthError;
+
+      // Helper to add enrollment counts
+      const addEnrollmentCounts = async (schedulesData: any[]) => {
+        return Promise.all(
+          (schedulesData || []).map(async (schedule) => {
+            const { count } = await supabase
+              .from('class_enrollments')
+              .select('*', { count: 'exact', head: true })
+              .eq('class_schedule_id', schedule.id)
+              .neq('status', 'cancelled');
+            
+            return {
+              ...schedule,
+              enrollments_count: count || 0
+            };
+          })
+        );
+      };
+
+      const weekWithCounts = await addEnrollmentCounts(weekData || []);
+      const monthWithCounts = await addEnrollmentCounts(monthData || []);
+
+      setWeekSchedules(weekWithCounts);
+      setMonthSchedules(monthWithCounts);
     } catch (error) {
       console.error('Error fetching classes:', error);
       toast.error('Erro ao carregar aulas');
@@ -174,7 +200,7 @@ export default function Classes() {
 
   const getSchedulesForDay = (dayOffset: number) => {
     const date = format(addDays(weekStart, dayOffset), 'yyyy-MM-dd');
-    return schedules.filter(s => s.scheduled_date === date);
+    return weekSchedules.filter(s => s.scheduled_date === date);
   };
 
   if (isLoading) {
@@ -189,11 +215,33 @@ export default function Classes() {
     <div className="space-y-6">
       {/* Header Actions */}
       <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
-        <div className="flex items-center gap-2">
-          <CalendarIcon className="h-5 w-5 text-primary" />
-          <span className="text-muted-foreground">
-            Semana: {format(weekStart, "d", { locale: pt })} - {format(addDays(weekStart, 6), "d MMMM yyyy", { locale: pt })}
-          </span>
+        <div className="flex items-center gap-4">
+          {/* View Toggle */}
+          <div className="flex items-center gap-1 bg-muted p-1 rounded-lg">
+            <Button
+              variant={viewMode === 'week' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('week')}
+              className="gap-1.5"
+            >
+              <List className="h-4 w-4" />
+              Semana
+            </Button>
+            <Button
+              variant={viewMode === 'month' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('month')}
+              className="gap-1.5"
+            >
+              <CalendarDays className="h-4 w-4" />
+              Mês
+            </Button>
+          </div>
+          {viewMode === 'week' && (
+            <span className="text-sm text-muted-foreground hidden sm:inline">
+              {format(weekStart, "d", { locale: pt })} - {format(addDays(weekStart, 6), "d MMMM yyyy", { locale: pt })}
+            </span>
+          )}
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => setShowCreateDialog(true)} className="gap-2">
@@ -207,18 +255,35 @@ export default function Classes() {
         </div>
       </div>
 
-      {/* Classes by Day */}
-      <Tabs defaultValue="seg" className="w-full">
-        <TabsList className="w-full justify-start overflow-x-auto">
-          {weekDays.map((day) => (
-            <TabsTrigger key={day.key} value={day.key} className="min-w-[100px]">
-              {day.label}
-              <Badge variant="secondary" className="ml-2 text-xs">
-                {getSchedulesForDay(day.dayOffset).length}
-              </Badge>
-            </TabsTrigger>
-          ))}
-        </TabsList>
+      {/* Monthly Calendar View */}
+      {viewMode === 'month' && (
+        <Card>
+          <CardContent className="p-4">
+            <MonthlyCalendarView
+              schedules={monthSchedules}
+              onEnroll={(schedule) => {
+                setSelectedSchedule(schedule);
+                setShowEnrollDialog(true);
+              }}
+              onDelete={(id) => setDeleteConfirm({ type: 'schedule', id })}
+            />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Weekly View - Classes by Day */}
+      {viewMode === 'week' && (
+        <Tabs defaultValue="seg" className="w-full">
+          <TabsList className="w-full justify-start overflow-x-auto">
+            {weekDays.map((day) => (
+              <TabsTrigger key={day.key} value={day.key} className="min-w-[100px]">
+                {day.label}
+                <Badge variant="secondary" className="ml-2 text-xs">
+                  {getSchedulesForDay(day.dayOffset).length}
+                </Badge>
+              </TabsTrigger>
+            ))}
+          </TabsList>
         
         {weekDays.map((day) => (
           <TabsContent key={day.key} value={day.key} className="mt-6">
@@ -291,7 +356,8 @@ export default function Classes() {
             </div>
           </TabsContent>
         ))}
-      </Tabs>
+        </Tabs>
+      )}
 
       {/* All Class Types */}
       <Card>
