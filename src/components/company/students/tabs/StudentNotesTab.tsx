@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { StickyNote, Plus, Trash2, Lock, Unlock } from "lucide-react";
+import { StickyNote, Plus, Trash2, Lock, Unlock, Pencil } from "lucide-react";
 import { format } from "date-fns";
 import { pt } from "date-fns/locale";
 import {
@@ -39,10 +39,11 @@ export function StudentNotesTab({ studentId, canEdit }: StudentNotesTabProps) {
   const [loading, setLoading] = useState(true);
   const [notes, setNotes] = useState<Note[]>([]);
   const [isAdding, setIsAdding] = useState(false);
-  const [newNote, setNewNote] = useState({ title: "", content: "", is_private: false });
+  const [editingNote, setEditingNote] = useState<Note | null>(null);
+  const [formData, setFormData] = useState({ title: "", content: "", is_private: false });
   const [saving, setSaving] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
-  const [confirmAddNote, setConfirmAddNote] = useState(false);
+  const [confirmSave, setConfirmSave] = useState(false);
 
   useEffect(() => {
     fetchNotes();
@@ -65,9 +66,25 @@ export function StudentNotesTab({ studentId, canEdit }: StudentNotesTabProps) {
     }
   };
 
-  const handleAddNote = async () => {
-    setConfirmAddNote(false);
-    if (!newNote.content.trim()) {
+  const resetForm = () => {
+    setFormData({ title: "", content: "", is_private: false });
+    setIsAdding(false);
+    setEditingNote(null);
+  };
+
+  const handleEdit = (note: Note) => {
+    setEditingNote(note);
+    setFormData({
+      title: note.title || "",
+      content: note.content,
+      is_private: note.is_private
+    });
+    setIsAdding(true);
+  };
+
+  const handleSave = async () => {
+    setConfirmSave(false);
+    if (!formData.content.trim()) {
       toast.error("O conteúdo da nota é obrigatório");
       return;
     }
@@ -77,23 +94,37 @@ export function StudentNotesTab({ studentId, canEdit }: StudentNotesTabProps) {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Não autenticado");
 
-      const { error } = await supabase
-        .from('student_notes')
-        .insert({
-          student_id: studentId,
-          created_by: user.id,
-          title: newNote.title || null,
-          content: newNote.content,
-          is_private: newNote.is_private
-        });
+      if (editingNote) {
+        const { error } = await supabase
+          .from('student_notes')
+          .update({
+            title: formData.title || null,
+            content: formData.content,
+            is_private: formData.is_private
+          })
+          .eq('id', editingNote.id);
 
-      if (error) throw error;
-      toast.success("Nota adicionada");
-      setNewNote({ title: "", content: "", is_private: false });
-      setIsAdding(false);
+        if (error) throw error;
+        toast.success("Nota atualizada");
+      } else {
+        const { error } = await supabase
+          .from('student_notes')
+          .insert({
+            student_id: studentId,
+            created_by: user.id,
+            title: formData.title || null,
+            content: formData.content,
+            is_private: formData.is_private
+          });
+
+        if (error) throw error;
+        toast.success("Nota adicionada");
+      }
+
+      resetForm();
       fetchNotes();
     } catch (error: any) {
-      toast.error(error.message || "Erro ao adicionar nota");
+      toast.error(error.message || "Erro ao guardar nota");
     } finally {
       setSaving(false);
     }
@@ -142,36 +173,36 @@ export function StudentNotesTab({ studentId, canEdit }: StudentNotesTabProps) {
               <div className="space-y-2">
                 <Label>Título (opcional)</Label>
                 <Input
-                  value={newNote.title}
-                  onChange={(e) => setNewNote({ ...newNote, title: e.target.value })}
+                  value={formData.title}
+                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                   placeholder="Título da nota..."
                 />
               </div>
               <div className="space-y-2">
-                <Label>Conteúdo</Label>
+                <Label>Conteúdo *</Label>
                 <Textarea
-                  value={newNote.content}
-                  onChange={(e) => setNewNote({ ...newNote, content: e.target.value })}
+                  value={formData.content}
+                  onChange={(e) => setFormData({ ...formData, content: e.target.value })}
                   placeholder="Escreva a nota aqui..."
                   rows={4}
                 />
               </div>
               <div className="flex items-center justify-between p-2 rounded-lg bg-muted/50">
                 <div className="flex items-center gap-2">
-                  {newNote.is_private ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
+                  {formData.is_private ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
                   <Label className="text-sm">Nota privada</Label>
                 </div>
                 <Switch
-                  checked={newNote.is_private}
-                  onCheckedChange={(checked) => setNewNote({ ...newNote, is_private: checked })}
+                  checked={formData.is_private}
+                  onCheckedChange={(checked) => setFormData({ ...formData, is_private: checked })}
                 />
               </div>
               <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setIsAdding(false)}>
+                <Button variant="outline" onClick={resetForm}>
                   Cancelar
                 </Button>
-                <Button onClick={() => setConfirmAddNote(true)} disabled={saving}>
-                  {saving ? "A guardar..." : "Guardar Nota"}
+                <Button onClick={() => setConfirmSave(true)} disabled={saving}>
+                  {saving ? "A guardar..." : editingNote ? "Atualizar Nota" : "Guardar Nota"}
                 </Button>
               </div>
             </CardContent>
@@ -180,8 +211,17 @@ export function StudentNotesTab({ studentId, canEdit }: StudentNotesTabProps) {
 
         {notes.length === 0 && !isAdding && (
           <Card>
-            <CardContent className="py-8 text-center text-muted-foreground">
-              Nenhuma nota registada para este aluno.
+            <CardContent className="py-8 text-center">
+              <StickyNote className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+              <p className="text-sm text-muted-foreground mb-4">
+                Nenhuma nota registada para este aluno.
+              </p>
+              {canEdit && (
+                <Button onClick={() => setIsAdding(true)}>
+                  <Plus className="h-4 w-4 mr-1" />
+                  Criar Primeira Nota
+                </Button>
+              )}
             </CardContent>
           </Card>
         )}
@@ -199,14 +239,24 @@ export function StudentNotesTab({ studentId, canEdit }: StudentNotesTabProps) {
                     {format(new Date(note.created_at), "dd MMM yyyy, HH:mm", { locale: pt })}
                   </span>
                   {canEdit && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6 text-destructive hover:text-destructive"
-                      onClick={() => setConfirmDeleteId(note.id)}
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
+                    <>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={() => handleEdit(note)}
+                      >
+                        <Pencil className="h-3 w-3" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 text-destructive hover:text-destructive"
+                        onClick={() => setConfirmDeleteId(note.id)}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </>
                   )}
                 </div>
               </CardTitle>
@@ -218,18 +268,20 @@ export function StudentNotesTab({ studentId, canEdit }: StudentNotesTabProps) {
         ))}
       </div>
 
-      {/* Confirm Add Note */}
-      <AlertDialog open={confirmAddNote} onOpenChange={setConfirmAddNote}>
+      {/* Confirm Save Note */}
+      <AlertDialog open={confirmSave} onOpenChange={setConfirmSave}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Confirmar Adição</AlertDialogTitle>
+            <AlertDialogTitle>Confirmar {editingNote ? "Atualização" : "Adição"}</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja adicionar esta nota?
+              Tem certeza que deseja {editingNote ? "atualizar" : "adicionar"} esta nota?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleAddNote}>Adicionar</AlertDialogAction>
+            <AlertDialogAction onClick={handleSave}>
+              {editingNote ? "Atualizar" : "Adicionar"}
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
