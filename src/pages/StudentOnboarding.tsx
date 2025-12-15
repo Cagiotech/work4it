@@ -82,8 +82,10 @@ export default function StudentOnboarding() {
         
         if (data) {
           // Check if student actually needs onboarding
-          if (data.registration_method !== 'self_registered' || data.status !== 'pending') {
-            // Already completed onboarding or company-added student
+          // Only self-registered students with 'pending' status need onboarding
+          // 'pending_approval' means waiting for company approval, not onboarding
+          if (data.registration_method !== 'self_registered' || (data.status !== 'pending' && data.status !== 'active')) {
+            // Already completed onboarding, company-added student, or waiting for approval
             navigate('/student');
             return;
           }
