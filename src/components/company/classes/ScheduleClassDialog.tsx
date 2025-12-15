@@ -19,7 +19,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { format, addMinutes, parse } from "date-fns";
 
@@ -28,6 +27,18 @@ interface ClassType {
   name: string;
   duration_minutes: number;
   capacity: number;
+  room_id?: string | null;
+  default_instructor_id?: string | null;
+  has_fixed_schedule?: boolean;
+  default_start_time?: string | null;
+  default_end_time?: string | null;
+}
+
+interface Room {
+  id: string;
+  name: string;
+  capacity: number;
+  location: string | null;
 }
 
 interface Staff {
@@ -39,13 +50,20 @@ interface ScheduleClassDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   classTypes: ClassType[];
+  rooms: Room[];
+  staff: Staff[];
   onSuccess: () => void;
 }
 
-export function ScheduleClassDialog({ open, onOpenChange, classTypes, onSuccess }: ScheduleClassDialogProps) {
-  const { profile } = useAuth();
+export function ScheduleClassDialog({ 
+  open, 
+  onOpenChange, 
+  classTypes, 
+  rooms, 
+  staff, 
+  onSuccess 
+}: ScheduleClassDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
-  const [staff, setStaff] = useState<Staff[]>([]);
   const [formData, setFormData] = useState({
     class_id: "",
     instructor_id: "",
@@ -54,26 +72,21 @@ export function ScheduleClassDialog({ open, onOpenChange, classTypes, onSuccess 
     notes: ""
   });
 
+  // Auto-fill when class type changes
   useEffect(() => {
-    if (open && profile?.company_id) {
-      fetchStaff();
+    if (formData.class_id) {
+      const selectedClass = classTypes.find(c => c.id === formData.class_id);
+      if (selectedClass) {
+        setFormData(prev => ({
+          ...prev,
+          instructor_id: selectedClass.default_instructor_id || prev.instructor_id,
+          start_time: selectedClass.has_fixed_schedule && selectedClass.default_start_time 
+            ? selectedClass.default_start_time.slice(0, 5) 
+            : prev.start_time
+        }));
+      }
     }
-  }, [open, profile?.company_id]);
-
-  const fetchStaff = async () => {
-    if (!profile?.company_id) return;
-    
-    const { data, error } = await supabase
-      .from('staff')
-      .select('id, full_name')
-      .eq('company_id', profile.company_id)
-      .eq('is_active', true)
-      .order('full_name');
-
-    if (!error && data) {
-      setStaff(data);
-    }
-  };
+  }, [formData.class_id, classTypes]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -122,6 +135,9 @@ export function ScheduleClassDialog({ open, onOpenChange, classTypes, onSuccess 
   };
 
   const selectedClass = classTypes.find(c => c.id === formData.class_id);
+  const selectedRoom = selectedClass?.room_id 
+    ? rooms.find(r => r.id === selectedClass.room_id) 
+    : null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -163,6 +179,7 @@ export function ScheduleClassDialog({ open, onOpenChange, classTypes, onSuccess 
                   <SelectValue placeholder="Selecione um instrutor (opcional)" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="">Nenhum</SelectItem>
                   {staff.map((member) => (
                     <SelectItem key={member.id} value={member.id}>
                       {member.full_name}
@@ -196,9 +213,12 @@ export function ScheduleClassDialog({ open, onOpenChange, classTypes, onSuccess 
             </div>
 
             {selectedClass && (
-              <div className="text-sm text-muted-foreground bg-muted/50 p-3 rounded-lg">
+              <div className="text-sm text-muted-foreground bg-muted/50 p-3 rounded-lg space-y-1">
                 <p>Duração: {selectedClass.duration_minutes} minutos</p>
                 <p>Capacidade: {selectedClass.capacity} alunos</p>
+                {selectedRoom && (
+                  <p>Sala: {selectedRoom.name} {selectedRoom.location ? `(${selectedRoom.location})` : ''}</p>
+                )}
               </div>
             )}
 
