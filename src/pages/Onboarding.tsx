@@ -98,13 +98,15 @@ const Onboarding = () => {
   const handleSubmit = async () => {
     setLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session } } = await supabase.auth.getSession();
       
-      if (!user) {
+      if (!session?.user) {
         toast.error('Sessão expirada. Por favor, faça login novamente.');
         navigate('/login');
         return;
       }
+
+      const user = session.user;
 
       // Create company
       const { data: company, error: companyError } = await supabase
