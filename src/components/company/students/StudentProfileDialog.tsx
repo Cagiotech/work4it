@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -29,6 +29,9 @@ interface StudentProfileDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onUpdate: (student: Student) => void;
+  onDelete?: () => void;
+  canEdit?: boolean;
+  canDelete?: boolean;
 }
 
 const mockTrainers = [
@@ -43,15 +46,26 @@ const mockPlans = [
   { id: 3, name: "VIP" },
 ];
 
-export function StudentProfileDialog({ student, open, onOpenChange, onUpdate }: StudentProfileDialogProps) {
+export function StudentProfileDialog({ 
+  student, 
+  open, 
+  onOpenChange, 
+  onUpdate,
+  onDelete,
+  canEdit = true,
+  canDelete = true,
+}: StudentProfileDialogProps) {
   const { t } = useTranslation();
   const [editData, setEditData] = useState<Student | null>(null);
   const [isEditing, setIsEditing] = useState(false);
 
-  const handleOpen = (isOpen: boolean) => {
-    if (isOpen && student) {
+  useEffect(() => {
+    if (open && student) {
       setEditData({ ...student });
     }
+  }, [open, student]);
+
+  const handleOpen = (isOpen: boolean) => {
     setIsEditing(false);
     onOpenChange(isOpen);
   };
@@ -65,6 +79,19 @@ export function StudentProfileDialog({ student, open, onOpenChange, onUpdate }: 
 
   if (!student || !editData) return null;
 
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'active':
+        return <Badge variant="outline" className="border-green-500 text-green-600">Ativo</Badge>;
+      case 'inactive':
+        return <Badge variant="outline" className="border-gray-500 text-gray-600">Inativo</Badge>;
+      case 'suspended':
+        return <Badge variant="outline" className="border-red-500 text-red-600">Suspenso</Badge>;
+      default:
+        return <Badge variant="outline">{status}</Badge>;
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={handleOpen}>
       <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -72,54 +99,48 @@ export function StudentProfileDialog({ student, open, onOpenChange, onUpdate }: 
           <div className="flex items-center gap-4">
             <Avatar className="h-16 w-16">
               <AvatarFallback className="bg-primary/10 text-primary text-xl">
-                {student.name.split(" ").map((n) => n[0]).join("")}
+                {student.name.split(" ").map((n) => n[0]).join("").slice(0, 2)}
               </AvatarFallback>
             </Avatar>
-            <div>
+            <div className="flex-1">
               <DialogTitle className="text-xl">{student.name}</DialogTitle>
               <div className="flex gap-2 mt-1">
-                <Badge variant={student.plan === "Premium" ? "default" : "secondary"}>
-                  {student.plan}
-                </Badge>
-                <Badge
-                  variant="outline"
-                  className={
-                    student.status === "active"
-                      ? "border-green-500 text-green-600"
-                      : "border-yellow-500 text-yellow-600"
-                  }
-                >
-                  {student.status === "active" ? t("students.active") : t("students.pending")}
-                </Badge>
+                {getStatusBadge(student.status)}
               </div>
             </div>
+            {canDelete && onDelete && (
+              <Button 
+                variant="outline" 
+                size="icon"
+                className="text-destructive hover:text-destructive"
+                onClick={onDelete}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            )}
           </div>
         </DialogHeader>
 
         <Tabs defaultValue="profile" className="mt-4">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="profile" className="gap-1">
               <User className="h-4 w-4" />
-              <span className="hidden sm:inline">{t("students.profile")}</span>
-            </TabsTrigger>
-            <TabsTrigger value="plan" className="gap-1">
-              <FileText className="h-4 w-4" />
-              <span className="hidden sm:inline">{t("students.planTrainer")}</span>
+              <span className="hidden sm:inline">Perfil</span>
             </TabsTrigger>
             <TabsTrigger value="documents" className="gap-1">
               <Upload className="h-4 w-4" />
-              <span className="hidden sm:inline">{t("students.documents")}</span>
+              <span className="hidden sm:inline">Documentos</span>
             </TabsTrigger>
             <TabsTrigger value="classes" className="gap-1">
               <Calendar className="h-4 w-4" />
-              <span className="hidden sm:inline">{t("students.classes")}</span>
+              <span className="hidden sm:inline">Aulas</span>
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value="profile" className="space-y-4 mt-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>{t("students.fullName")}</Label>
+                <Label>Nome Completo</Label>
                 <Input
                   value={editData.name}
                   onChange={(e) => setEditData({ ...editData, name: e.target.value })}
@@ -127,7 +148,7 @@ export function StudentProfileDialog({ student, open, onOpenChange, onUpdate }: 
                 />
               </div>
               <div className="space-y-2">
-                <Label>{t("common.email")}</Label>
+                <Label>Email</Label>
                 <Input
                   type="email"
                   value={editData.email}
@@ -136,7 +157,7 @@ export function StudentProfileDialog({ student, open, onOpenChange, onUpdate }: 
                 />
               </div>
               <div className="space-y-2">
-                <Label>{t("auth.phone")}</Label>
+                <Label>Telefone</Label>
                 <Input
                   type="tel"
                   value={editData.phone}
@@ -145,7 +166,7 @@ export function StudentProfileDialog({ student, open, onOpenChange, onUpdate }: 
                 />
               </div>
               <div className="space-y-2">
-                <Label>{t("students.birthDate")}</Label>
+                <Label>Data de Nascimento</Label>
                 <Input
                   type="date"
                   value={editData.birthDate}
@@ -153,76 +174,54 @@ export function StudentProfileDialog({ student, open, onOpenChange, onUpdate }: 
                   disabled={!isEditing}
                 />
               </div>
-            </div>
-            <div className="flex justify-end gap-2">
-              {isEditing ? (
-                <>
-                  <Button variant="outline" onClick={() => setIsEditing(false)}>
-                    {t("common.cancel")}
-                  </Button>
-                  <Button onClick={handleSave}>{t("common.save")}</Button>
-                </>
-              ) : (
-                <Button onClick={() => setIsEditing(true)}>{t("common.edit")}</Button>
-              )}
-            </div>
-          </TabsContent>
-
-          <TabsContent value="plan" className="space-y-4 mt-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>{t("students.selectPlan")}</Label>
+                <Label>Status</Label>
                 <Select
-                  value={editData.plan}
-                  onValueChange={(value) => setEditData({ ...editData, plan: value })}
+                  value={editData.status}
+                  onValueChange={(value) => setEditData({ ...editData, status: value })}
+                  disabled={!isEditing}
                 >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {mockPlans.map((plan) => (
-                      <SelectItem key={plan.id} value={plan.name}>
-                        {plan.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>{t("students.assignTrainer")}</Label>
-                <Select
-                  value={editData.trainer}
-                  onValueChange={(value) => setEditData({ ...editData, trainer: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {mockTrainers.map((trainer) => (
-                      <SelectItem key={trainer.id} value={trainer.name}>
-                        {trainer.name}
-                      </SelectItem>
-                    ))}
+                    <SelectItem value="active">Ativo</SelectItem>
+                    <SelectItem value="inactive">Inativo</SelectItem>
+                    <SelectItem value="suspended">Suspenso</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
-            <div className="flex justify-end">
-              <Button onClick={handleSave}>{t("common.save")}</Button>
-            </div>
+            {canEdit && (
+              <div className="flex justify-end gap-2">
+                {isEditing ? (
+                  <>
+                    <Button variant="outline" onClick={() => {
+                      setEditData({ ...student });
+                      setIsEditing(false);
+                    }}>
+                      Cancelar
+                    </Button>
+                    <Button onClick={handleSave}>Salvar</Button>
+                  </>
+                ) : (
+                  <Button onClick={() => setIsEditing(true)}>Editar</Button>
+                )}
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="documents" className="space-y-4 mt-4">
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center justify-between">
-                  {t("students.uploadDocuments")}
+                  Documentos
                   <Button size="sm" className="gap-1">
                     <Upload className="h-4 w-4" />
-                    {t("students.upload")}
+                    Upload
                   </Button>
                 </CardTitle>
-                <p className="text-sm text-muted-foreground">{t("students.maxFileSize")}</p>
+                <p className="text-sm text-muted-foreground">Máximo 10MB por arquivo</p>
               </CardHeader>
               <CardContent>
                 {student.documents && student.documents.length > 0 ? (
@@ -247,7 +246,7 @@ export function StudentProfileDialog({ student, open, onOpenChange, onUpdate }: 
                   </div>
                 ) : (
                   <p className="text-sm text-muted-foreground text-center py-8">
-                    {t("students.noDocuments")}
+                    Nenhum documento anexado
                   </p>
                 )}
               </CardContent>
@@ -257,7 +256,7 @@ export function StudentProfileDialog({ student, open, onOpenChange, onUpdate }: 
           <TabsContent value="classes" className="space-y-4 mt-4">
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-base">{t("students.linkedClasses")}</CardTitle>
+                <CardTitle className="text-base">Aulas Vinculadas</CardTitle>
               </CardHeader>
               <CardContent>
                 {student.classes && student.classes.length > 0 ? (
@@ -281,7 +280,7 @@ export function StudentProfileDialog({ student, open, onOpenChange, onUpdate }: 
                   </div>
                 ) : (
                   <p className="text-sm text-muted-foreground text-center py-8">
-                    {t("students.noClasses")}
+                    Nenhuma aula vinculada
                   </p>
                 )}
               </CardContent>

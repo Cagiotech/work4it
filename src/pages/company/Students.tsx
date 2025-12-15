@@ -1,6 +1,6 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { Plus, Search, LayoutGrid, List, ArrowUpAZ, ArrowDownAZ } from "lucide-react";
+import { Plus, Search, LayoutGrid, List, ArrowUpAZ, ArrowDownAZ, Download, Upload, Trash2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -10,71 +10,191 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AddStudentDialog } from "@/components/company/students/AddStudentDialog";
 import { StudentProfileDialog } from "@/components/company/students/StudentProfileDialog";
+import { useAuth } from "@/hooks/useAuth";
+import { usePermissions } from "@/hooks/usePermissions";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface Student {
-  id: number;
-  name: string;
-  email: string;
-  phone: string;
-  birthDate: string;
-  plan: string;
+  id: string;
+  full_name: string;
+  email: string | null;
+  phone: string | null;
+  birth_date: string | null;
+  gender: string | null;
+  address: string | null;
+  emergency_contact: string | null;
+  emergency_phone: string | null;
+  health_notes: string | null;
+  enrollment_date: string | null;
   status: string;
-  trainer: string;
-  documents?: { name: string; type: string; size: string }[];
-  classes?: { name: string; date: string; time: string }[];
+  created_at: string;
 }
-
-const initialStudents: Student[] = [
-  { id: 1, name: "Maria Santos", email: "maria@email.com", phone: "+351 912 345 678", birthDate: "1995-03-15", plan: "Premium", status: "active", trainer: "João Silva", documents: [{ name: "contrato.pdf", type: "pdf", size: "1.2 MB" }], classes: [{ name: "Musculação", date: "2024-01-15", time: "09:00" }] },
-  { id: 2, name: "Pedro Costa", email: "pedro@email.com", phone: "+351 923 456 789", birthDate: "1990-07-22", plan: "Basic", status: "active", trainer: "Ana Costa", documents: [], classes: [] },
-  { id: 3, name: "Ana Rodrigues", email: "ana@email.com", phone: "+351 934 567 890", birthDate: "1988-11-08", plan: "Premium", status: "pending", trainer: "João Silva", documents: [], classes: [{ name: "Yoga", date: "2024-01-16", time: "18:00" }] },
-  { id: 4, name: "Carlos Oliveira", email: "carlos@email.com", phone: "+351 945 678 901", birthDate: "1992-05-30", plan: "Basic", status: "active", trainer: "Marta Reis", documents: [], classes: [] },
-  { id: 5, name: "Sofia Ferreira", email: "sofia@email.com", phone: "+351 956 789 012", birthDate: "1997-09-12", plan: "VIP", status: "active", trainer: "Ana Costa", documents: [], classes: [] },
-];
 
 export default function Students() {
   const { t } = useTranslation();
-  const [students, setStudents] = useState<Student[]>(initialStudents);
+  const { company } = useAuth();
+  const { canCreate, canEdit, canDelete, canExport, canImport } = usePermissions();
+  
+  const [students, setStudents] = useState<Student[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const [filterPlan, setFilterPlan] = useState<string>("all");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [profileDialogOpen, setProfileDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [studentToDelete, setStudentToDelete] = useState<Student | null>(null);
+
+  const fetchStudents = async () => {
+    if (!company?.id) return;
+    
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('students')
+        .select('*')
+        .eq('company_id', company.id)
+        .order('full_name', { ascending: sortOrder === 'asc' });
+
+      if (error) throw error;
+      setStudents(data || []);
+    } catch (error: any) {
+      console.error('Error fetching students:', error);
+      toast.error('Erro ao carregar alunos');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchStudents();
+  }, [company?.id]);
 
   const filteredStudents = useMemo(() => {
     return students
       .filter((student) => {
-        const matchesSearch = student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          student.email.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesPlan = filterPlan === "all" || student.plan === filterPlan;
+        const matchesSearch = 
+          student.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (student.email?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false);
         const matchesStatus = filterStatus === "all" || student.status === filterStatus;
-        return matchesSearch && matchesPlan && matchesStatus;
+        return matchesSearch && matchesStatus;
       })
       .sort((a, b) => {
-        const comparison = a.name.localeCompare(b.name);
+        const comparison = a.full_name.localeCompare(b.full_name);
         return sortOrder === "asc" ? comparison : -comparison;
       });
-  }, [students, searchTerm, sortOrder, filterPlan, filterStatus]);
+  }, [students, searchTerm, sortOrder, filterStatus]);
 
-  const handleAddStudent = (data: { name: string; email: string; phone: string; birthDate: string }) => {
-    const newStudent: Student = {
-      id: students.length + 1,
-      ...data,
-      plan: "Basic",
-      status: "pending",
-      trainer: "",
-      documents: [],
-      classes: [],
-    };
-    setStudents([...students, newStudent]);
+  const handleAddStudent = async (data: { name: string; email: string; phone: string; birthDate: string }) => {
+    if (!company?.id) return;
+    
+    try {
+      const { data: newStudent, error } = await supabase
+        .from('students')
+        .insert([{
+          company_id: company.id,
+          full_name: data.name,
+          email: data.email || null,
+          phone: data.phone || null,
+          birth_date: data.birthDate || null,
+          status: 'active',
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+      
+      setStudents([...students, newStudent]);
+      toast.success('Aluno adicionado com sucesso!');
+    } catch (error: any) {
+      console.error('Error adding student:', error);
+      toast.error(error.message || 'Erro ao adicionar aluno');
+    }
   };
 
-  const handleUpdateStudent = (updatedStudent: Student) => {
-    setStudents(students.map((s) => (s.id === updatedStudent.id ? updatedStudent : s)));
-    setSelectedStudent(updatedStudent);
+  const handleUpdateStudent = async (updatedStudent: Student) => {
+    try {
+      const { error } = await supabase
+        .from('students')
+        .update({
+          full_name: updatedStudent.full_name,
+          email: updatedStudent.email,
+          phone: updatedStudent.phone,
+          birth_date: updatedStudent.birth_date,
+          gender: updatedStudent.gender,
+          address: updatedStudent.address,
+          emergency_contact: updatedStudent.emergency_contact,
+          emergency_phone: updatedStudent.emergency_phone,
+          health_notes: updatedStudent.health_notes,
+          status: updatedStudent.status,
+        })
+        .eq('id', updatedStudent.id);
+
+      if (error) throw error;
+      
+      setStudents(students.map((s) => (s.id === updatedStudent.id ? updatedStudent : s)));
+      setSelectedStudent(updatedStudent);
+      toast.success('Aluno atualizado com sucesso!');
+    } catch (error: any) {
+      console.error('Error updating student:', error);
+      toast.error(error.message || 'Erro ao atualizar aluno');
+    }
+  };
+
+  const handleDeleteStudent = async () => {
+    if (!studentToDelete) return;
+    
+    try {
+      const { error } = await supabase
+        .from('students')
+        .delete()
+        .eq('id', studentToDelete.id);
+
+      if (error) throw error;
+      
+      setStudents(students.filter((s) => s.id !== studentToDelete.id));
+      toast.success('Aluno excluído com sucesso!');
+      setDeleteDialogOpen(false);
+      setStudentToDelete(null);
+      setProfileDialogOpen(false);
+    } catch (error: any) {
+      console.error('Error deleting student:', error);
+      toast.error(error.message || 'Erro ao excluir aluno');
+    }
+  };
+
+  const handleExport = () => {
+    const csvContent = [
+      ['Nome', 'Email', 'Telefone', 'Data Nascimento', 'Status', 'Data Matrícula'].join(','),
+      ...filteredStudents.map(s => [
+        s.full_name,
+        s.email || '',
+        s.phone || '',
+        s.birth_date || '',
+        s.status,
+        s.enrollment_date || ''
+      ].join(','))
+    ].join('\n');
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'alunos.csv';
+    link.click();
+    toast.success('Exportação concluída!');
   };
 
   const handleStudentClick = (student: Student) => {
@@ -82,15 +202,58 @@ export default function Students() {
     setProfileDialogOpen(true);
   };
 
+  const confirmDelete = (student: Student) => {
+    setStudentToDelete(student);
+    setDeleteDialogOpen(true);
+  };
+
+  const getInitials = (name: string) => {
+    return name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'active':
+        return <Badge variant="outline" className="border-green-500 text-green-600">Ativo</Badge>;
+      case 'inactive':
+        return <Badge variant="outline" className="border-gray-500 text-gray-600">Inativo</Badge>;
+      case 'suspended':
+        return <Badge variant="outline" className="border-red-500 text-red-600">Suspenso</Badge>;
+      default:
+        return <Badge variant="outline">{status}</Badge>;
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
-        <h1 className="text-2xl font-bold">{t("dashboard.students")}</h1>
-        <Button className="gap-2" onClick={() => setAddDialogOpen(true)}>
-          <Plus className="h-4 w-4" />
-          {t("students.addStudent")}
-        </Button>
+        <div>
+          <h1 className="text-2xl font-bold">{t("dashboard.students")}</h1>
+          <p className="text-muted-foreground">{students.length} alunos cadastrados</p>
+        </div>
+        <div className="flex gap-2">
+          {canExport('students') && (
+            <Button variant="outline" className="gap-2" onClick={handleExport}>
+              <Download className="h-4 w-4" />
+              Exportar
+            </Button>
+          )}
+          {canCreate('students') && (
+            <Button className="gap-2" onClick={() => setAddDialogOpen(true)}>
+              <Plus className="h-4 w-4" />
+              {t("students.addStudent")}
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Filters */}
@@ -100,31 +263,21 @@ export default function Students() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder={t("students.searchPlaceholder")}
+                placeholder="Buscar por nome ou email..."
                 className="pl-10"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            <Select value={filterPlan} onValueChange={setFilterPlan}>
-              <SelectTrigger className="w-full sm:w-36">
-                <SelectValue placeholder={t("students.plan")} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t("students.allPlans")}</SelectItem>
-                <SelectItem value="Basic">Basic</SelectItem>
-                <SelectItem value="Premium">Premium</SelectItem>
-                <SelectItem value="VIP">VIP</SelectItem>
-              </SelectContent>
-            </Select>
             <Select value={filterStatus} onValueChange={setFilterStatus}>
               <SelectTrigger className="w-full sm:w-36">
-                <SelectValue placeholder={t("students.status")} />
+                <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">{t("students.allStatus")}</SelectItem>
-                <SelectItem value="active">{t("students.active")}</SelectItem>
-                <SelectItem value="pending">{t("students.pending")}</SelectItem>
+                <SelectItem value="all">Todos</SelectItem>
+                <SelectItem value="active">Ativo</SelectItem>
+                <SelectItem value="inactive">Inativo</SelectItem>
+                <SelectItem value="suspended">Suspenso</SelectItem>
               </SelectContent>
             </Select>
             <div className="flex gap-2">
@@ -156,7 +309,17 @@ export default function Students() {
       </Card>
 
       {/* Students Display */}
-      {viewMode === "grid" ? (
+      {filteredStudents.length === 0 ? (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <p className="text-muted-foreground">
+              {students.length === 0 
+                ? "Nenhum aluno cadastrado ainda. Clique em 'Adicionar Aluno' para começar."
+                : "Nenhum aluno encontrado com os filtros aplicados."}
+            </p>
+          </CardContent>
+        </Card>
+      ) : viewMode === "grid" ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredStudents.map((student) => (
             <Card
@@ -168,32 +331,19 @@ export default function Students() {
                 <div className="flex items-center gap-3">
                   <Avatar>
                     <AvatarFallback className="bg-primary/10 text-primary">
-                      {student.name.split(" ").map((n) => n[0]).join("")}
+                      {getInitials(student.full_name)}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold truncate">{student.name}</h3>
-                    <p className="text-sm text-muted-foreground truncate">{student.email}</p>
+                    <h3 className="font-semibold truncate">{student.full_name}</h3>
+                    <p className="text-sm text-muted-foreground truncate">{student.email || 'Sem email'}</p>
                   </div>
                 </div>
                 <div className="mt-4 flex items-center justify-between">
-                  <Badge variant={student.plan === "Premium" || student.plan === "VIP" ? "default" : "secondary"}>
-                    {student.plan}
-                  </Badge>
-                  <Badge
-                    variant="outline"
-                    className={
-                      student.status === "active"
-                        ? "border-green-500 text-green-600"
-                        : "border-yellow-500 text-yellow-600"
-                    }
-                  >
-                    {student.status === "active" ? t("students.active") : t("students.pending")}
-                  </Badge>
-                </div>
-                <div className="mt-3 text-sm text-muted-foreground">
-                  <span>{t("students.trainer")}: </span>
-                  <span className="font-medium text-foreground">{student.trainer || "-"}</span>
+                  {getStatusBadge(student.status)}
+                  {student.phone && (
+                    <span className="text-sm text-muted-foreground">{student.phone}</span>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -204,12 +354,12 @@ export default function Students() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>{t("common.name")}</TableHead>
-                <TableHead>{t("common.email")}</TableHead>
-                <TableHead>{t("auth.phone")}</TableHead>
-                <TableHead>{t("students.plan")}</TableHead>
-                <TableHead>{t("students.status")}</TableHead>
-                <TableHead>{t("students.trainer")}</TableHead>
+                <TableHead>Nome</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Telefone</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Data Matrícula</TableHead>
+                {canDelete('students') && <TableHead className="w-12"></TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -223,32 +373,35 @@ export default function Students() {
                     <div className="flex items-center gap-2">
                       <Avatar className="h-8 w-8">
                         <AvatarFallback className="bg-primary/10 text-primary text-xs">
-                          {student.name.split(" ").map((n) => n[0]).join("")}
+                          {getInitials(student.full_name)}
                         </AvatarFallback>
                       </Avatar>
-                      <span className="font-medium">{student.name}</span>
+                      <span className="font-medium">{student.full_name}</span>
                     </div>
                   </TableCell>
-                  <TableCell>{student.email}</TableCell>
-                  <TableCell>{student.phone}</TableCell>
+                  <TableCell>{student.email || '-'}</TableCell>
+                  <TableCell>{student.phone || '-'}</TableCell>
+                  <TableCell>{getStatusBadge(student.status)}</TableCell>
                   <TableCell>
-                    <Badge variant={student.plan === "Premium" || student.plan === "VIP" ? "default" : "secondary"}>
-                      {student.plan}
-                    </Badge>
+                    {student.enrollment_date 
+                      ? new Date(student.enrollment_date).toLocaleDateString('pt-BR')
+                      : '-'}
                   </TableCell>
-                  <TableCell>
-                    <Badge
-                      variant="outline"
-                      className={
-                        student.status === "active"
-                          ? "border-green-500 text-green-600"
-                          : "border-yellow-500 text-yellow-600"
-                      }
-                    >
-                      {student.status === "active" ? t("students.active") : t("students.pending")}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>{student.trainer || "-"}</TableCell>
+                  {canDelete('students') && (
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-destructive hover:text-destructive"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          confirmDelete(student);
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))}
             </TableBody>
@@ -256,20 +409,70 @@ export default function Students() {
         </Card>
       )}
 
-      {filteredStudents.length === 0 && (
-        <div className="text-center py-12 text-muted-foreground">
-          {t("students.noStudentsFound")}
-        </div>
-      )}
-
       {/* Dialogs */}
-      <AddStudentDialog open={addDialogOpen} onOpenChange={setAddDialogOpen} onAdd={handleAddStudent} />
+      <AddStudentDialog 
+        open={addDialogOpen} 
+        onOpenChange={setAddDialogOpen} 
+        onAdd={handleAddStudent} 
+      />
+      
       <StudentProfileDialog
-        student={selectedStudent}
+        student={selectedStudent ? {
+          id: parseInt(selectedStudent.id.slice(0, 8), 16),
+          name: selectedStudent.full_name,
+          email: selectedStudent.email || '',
+          phone: selectedStudent.phone || '',
+          birthDate: selectedStudent.birth_date || '',
+          plan: 'Basic',
+          status: selectedStudent.status,
+          trainer: '',
+          documents: [],
+          classes: [],
+        } : null}
         open={profileDialogOpen}
         onOpenChange={setProfileDialogOpen}
-        onUpdate={handleUpdateStudent}
+        onUpdate={(updated) => {
+          if (selectedStudent) {
+            handleUpdateStudent({
+              ...selectedStudent,
+              full_name: updated.name,
+              email: updated.email,
+              phone: updated.phone,
+              birth_date: updated.birthDate,
+              status: updated.status,
+            });
+          }
+        }}
+        onDelete={canDelete('students') ? () => {
+          if (selectedStudent) {
+            confirmDelete(selectedStudent);
+          }
+        } : undefined}
+        canEdit={canEdit('students')}
+        canDelete={canDelete('students')}
       />
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir o aluno "{studentToDelete?.full_name}"? 
+              Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteStudent}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
