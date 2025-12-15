@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
 import logoLight from "@/assets/logo-light.png";
+import { useAuth } from "@/hooks/useAuth";
 
 const menuItems = [
   { key: "dashboard", icon: LayoutDashboard, url: "/company" },
@@ -46,11 +47,8 @@ export function CompanySidebar() {
   const { state } = useSidebar();
   const location = useLocation();
   const navigate = useNavigate();
+  const { profile, company, signOut } = useAuth();
   const collapsed = state === "collapsed";
-
-  // Mock data - will come from backend later
-  const userName = "Javysson Oliveira";
-  const studentsCount = 0;
 
   const isActive = (path: string) => {
     if (path === "/company") {
@@ -59,7 +57,8 @@ export function CompanySidebar() {
     return location.pathname.startsWith(path);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await signOut();
     navigate("/login");
   };
 
@@ -74,8 +73,11 @@ export function CompanySidebar() {
                 <img src={logoLight} alt="Cagiotech" className="h-8" />
                 <span className="text-lg font-bold text-foreground">Cagiotech</span>
               </div>
-              <div className="mt-3">
-                <p className="text-sm font-medium text-foreground">{userName}</p>
+              <div className="mt-3 space-y-1">
+                <p className="text-sm font-medium text-foreground">{profile?.full_name || 'Usuário'}</p>
+                {company?.name && (
+                  <p className="text-xs text-muted-foreground">{company.name}</p>
+                )}
               </div>
             </>
           ) : (
@@ -114,20 +116,9 @@ export function CompanySidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Footer with students count and logout */}
+        {/* Footer with logout */}
         <SidebarFooter className="mt-auto">
           <Separator className="mb-2" />
-          
-          {/* Students count */}
-          <div className="px-4 py-2">
-            <div className="flex items-center justify-between text-sm">
-              <div className="flex items-center gap-2 text-foreground/70">
-                <Users className="h-4 w-4" />
-                {!collapsed && <span>{t("dashboard.students")}</span>}
-              </div>
-              <span className="text-primary font-semibold">{studentsCount}</span>
-            </div>
-          </div>
 
           {/* Logout button */}
           <SidebarMenu>
@@ -135,7 +126,7 @@ export function CompanySidebar() {
               <SidebarMenuButton
                 onClick={handleLogout}
                 tooltip={t("common.logout")}
-                className="flex items-center gap-3 px-4 py-2.5 text-foreground/70 hover:bg-muted hover:text-foreground rounded-lg transition-all duration-200"
+                className="flex items-center gap-3 px-4 py-2.5 text-foreground/70 hover:bg-destructive/10 hover:text-destructive rounded-lg transition-all duration-200"
               >
                 <LogOut className="h-5 w-5 shrink-0" />
                 {!collapsed && <span>{t("common.logout")}</span>}
