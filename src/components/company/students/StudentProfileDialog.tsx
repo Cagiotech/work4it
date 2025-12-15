@@ -1,11 +1,20 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, createContext, useContext } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { User, Heart, CreditCard, FileText, StickyNote, Pencil, Trash2, X, Check } from "lucide-react";
+import { User, Heart, CreditCard, FileText, StickyNote, Pencil, Trash2, X, Save } from "lucide-react";
+
+// Context for save trigger
+export const SaveTriggerContext = createContext<{
+  registerSave: (tabId: string, saveFn: () => Promise<void>) => void;
+  unregisterSave: (tabId: string) => void;
+}>({
+  registerSave: () => {},
+  unregisterSave: () => {},
+});
 import { StudentProfileTab } from "./tabs/StudentProfileTab";
 import { StudentAnamnesisTab } from "./tabs/StudentAnamnesisTab";
 import { StudentPlansTab } from "./tabs/StudentPlansTab";
@@ -67,6 +76,28 @@ export function StudentProfileDialog({
   const [activeTab, setActiveTab] = useState("profile");
   const [isEditing, setIsEditing] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const saveFunctionsRef = useRef<Map<string, () => Promise<void>>>(new Map());
+
+  const registerSave = (tabId: string, saveFn: () => Promise<void>) => {
+    saveFunctionsRef.current.set(tabId, saveFn);
+  };
+
+  const unregisterSave = (tabId: string) => {
+    saveFunctionsRef.current.delete(tabId);
+  };
+
+  const handleSave = async () => {
+    const saveFn = saveFunctionsRef.current.get(activeTab);
+    if (saveFn) {
+      setIsSaving(true);
+      try {
+        await saveFn();
+      } finally {
+        setIsSaving(false);
+      }
+    }
+  };
 
   useEffect(() => {
     if (open) {
@@ -116,12 +147,24 @@ export function StudentProfileDialog({
                 </div>
               </div>
               <div className="flex gap-1">
+                {canEdit && isEditing && (
+                  <Button 
+                    variant="default"
+                    size="icon"
+                    onClick={handleSave}
+                    disabled={isSaving}
+                    title="Guardar alterações"
+                    className="bg-primary hover:bg-primary/90"
+                  >
+                    <Save className="h-4 w-4" />
+                  </Button>
+                )}
                 {canEdit && (
                   <Button 
-                    variant={isEditing ? "default" : "outline"}
+                    variant={isEditing ? "outline" : "outline"}
                     size="icon"
                     onClick={() => setIsEditing(!isEditing)}
-                    title={isEditing ? "Modo de visualização" : "Modo de edição"}
+                    title={isEditing ? "Cancelar edição" : "Modo de edição"}
                   >
                     {isEditing ? <X className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
                   </Button>
@@ -141,73 +184,75 @@ export function StudentProfileDialog({
             </div>
           </DialogHeader>
 
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1">
-            <div className="px-6 pt-2">
-              <TabsList className="grid w-full grid-cols-5">
-                <TabsTrigger value="profile" className="gap-1 text-xs sm:text-sm">
-                  <User className="h-4 w-4" />
-                  <span className="hidden sm:inline">Perfil</span>
-                </TabsTrigger>
-                <TabsTrigger value="anamnesis" className="gap-1 text-xs sm:text-sm">
-                  <Heart className="h-4 w-4" />
-                  <span className="hidden sm:inline">Saúde</span>
-                </TabsTrigger>
-                <TabsTrigger value="plans" className="gap-1 text-xs sm:text-sm">
-                  <CreditCard className="h-4 w-4" />
-                  <span className="hidden sm:inline">Planos</span>
-                </TabsTrigger>
-                <TabsTrigger value="documents" className="gap-1 text-xs sm:text-sm">
-                  <FileText className="h-4 w-4" />
-                  <span className="hidden sm:inline">Docs</span>
-                </TabsTrigger>
-                <TabsTrigger value="notes" className="gap-1 text-xs sm:text-sm">
-                  <StickyNote className="h-4 w-4" />
-                  <span className="hidden sm:inline">Notas</span>
-                </TabsTrigger>
-              </TabsList>
-            </div>
+          <SaveTriggerContext.Provider value={{ registerSave, unregisterSave }}>
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1">
+              <div className="px-6 pt-2">
+                <TabsList className="grid w-full grid-cols-5">
+                  <TabsTrigger value="profile" className="gap-1 text-xs sm:text-sm">
+                    <User className="h-4 w-4" />
+                    <span className="hidden sm:inline">Perfil</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="anamnesis" className="gap-1 text-xs sm:text-sm">
+                    <Heart className="h-4 w-4" />
+                    <span className="hidden sm:inline">Saúde</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="plans" className="gap-1 text-xs sm:text-sm">
+                    <CreditCard className="h-4 w-4" />
+                    <span className="hidden sm:inline">Planos</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="documents" className="gap-1 text-xs sm:text-sm">
+                    <FileText className="h-4 w-4" />
+                    <span className="hidden sm:inline">Docs</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="notes" className="gap-1 text-xs sm:text-sm">
+                    <StickyNote className="h-4 w-4" />
+                    <span className="hidden sm:inline">Notas</span>
+                  </TabsTrigger>
+                </TabsList>
+              </div>
 
-            <ScrollArea className="h-[calc(90vh-200px)] px-6 py-4">
-              <TabsContent value="profile" className="mt-0">
-                <StudentProfileTab 
-                  student={student} 
-                  canEdit={canEdit && isEditing} 
-                  onUpdate={onUpdate} 
-                />
-              </TabsContent>
+              <ScrollArea className="h-[calc(90vh-200px)] px-6 py-4">
+                <TabsContent value="profile" className="mt-0">
+                  <StudentProfileTab 
+                    student={student} 
+                    canEdit={canEdit && isEditing} 
+                    onUpdate={onUpdate} 
+                  />
+                </TabsContent>
 
-              <TabsContent value="anamnesis" className="mt-0">
-                <StudentAnamnesisTab 
-                  studentId={student.id} 
-                  canEdit={canEdit && isEditing} 
-                />
-              </TabsContent>
+                <TabsContent value="anamnesis" className="mt-0">
+                  <StudentAnamnesisTab 
+                    studentId={student.id} 
+                    canEdit={canEdit && isEditing} 
+                  />
+                </TabsContent>
 
-              <TabsContent value="plans" className="mt-0">
-                <StudentPlansTab 
-                  studentId={student.id}
-                  personalTrainerId={student.personal_trainer_id || null}
-                  companyId={student.company_id}
-                  canEdit={canEdit && isEditing}
-                  onUpdate={onUpdate}
-                />
-              </TabsContent>
+                <TabsContent value="plans" className="mt-0">
+                  <StudentPlansTab 
+                    studentId={student.id}
+                    personalTrainerId={student.personal_trainer_id || null}
+                    companyId={student.company_id}
+                    canEdit={canEdit && isEditing}
+                    onUpdate={onUpdate}
+                  />
+                </TabsContent>
 
-              <TabsContent value="documents" className="mt-0">
-                <StudentDocumentsTab 
-                  studentId={student.id} 
-                  canEdit={canEdit && isEditing} 
-                />
-              </TabsContent>
+                <TabsContent value="documents" className="mt-0">
+                  <StudentDocumentsTab 
+                    studentId={student.id} 
+                    canEdit={canEdit && isEditing} 
+                  />
+                </TabsContent>
 
-              <TabsContent value="notes" className="mt-0">
-                <StudentNotesTab 
-                  studentId={student.id} 
-                  canEdit={canEdit && isEditing} 
-                />
-              </TabsContent>
-            </ScrollArea>
-          </Tabs>
+                <TabsContent value="notes" className="mt-0">
+                  <StudentNotesTab 
+                    studentId={student.id} 
+                    canEdit={canEdit && isEditing} 
+                  />
+                </TabsContent>
+              </ScrollArea>
+            </Tabs>
+          </SaveTriggerContext.Provider>
         </DialogContent>
       </Dialog>
 

@@ -1,7 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
@@ -9,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Activity, Heart, Moon, Dumbbell, Stethoscope } from "lucide-react";
+import { SaveTriggerContext } from "../StudentProfileDialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -88,6 +88,7 @@ const defaultAnamnesis: Omit<AnamnesisData, 'student_id'> = {
 };
 
 export function StudentAnamnesisTab({ studentId, canEdit }: StudentAnamnesisTabProps) {
+  const { registerSave, unregisterSave } = useContext(SaveTriggerContext);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [data, setData] = useState<AnamnesisData>({ ...defaultAnamnesis, student_id: studentId });
@@ -116,8 +117,16 @@ export function StudentAnamnesisTab({ studentId, canEdit }: StudentAnamnesisTabP
       setLoading(false);
     }
   };
-
   const hasChanges = JSON.stringify(data) !== originalData;
+
+  // Register save function with parent
+  useEffect(() => {
+    const saveFn = async () => {
+      setConfirmSaveOpen(true);
+    };
+    registerSave("anamnesis", saveFn);
+    return () => unregisterSave("anamnesis");
+  }, [registerSave, unregisterSave]);
 
   const handleSave = async () => {
     setConfirmSaveOpen(false);
@@ -468,15 +477,6 @@ export function StudentAnamnesisTab({ studentId, canEdit }: StudentAnamnesisTabP
             </div>
           </CardContent>
         </Card>
-
-        {/* Save Button */}
-        {canEdit && hasChanges && (
-          <div className="flex justify-end pt-4 border-t">
-            <Button onClick={() => setConfirmSaveOpen(true)} disabled={saving}>
-              {saving ? "A guardar..." : "Guardar Alterações"}
-            </Button>
-          </div>
-        )}
       </div>
 
       {/* Save Confirmation Dialog */}
