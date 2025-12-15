@@ -1,21 +1,23 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { DeveloperFooter } from '@/components/DeveloperFooter';
 import logo from '@/assets/logo-light.png';
-import { Eye, EyeOff, Mail, Lock, Building2, Phone } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 const Register = () => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
-    companyName: '',
     email: '',
-    phone: '',
     password: '',
     confirmPassword: '',
   });
@@ -24,10 +26,50 @@ const Register = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Implement register with Supabase
-    console.log('Register:', formData);
+    
+    if (formData.password !== formData.confirmPassword) {
+      toast.error('As senhas não coincidem');
+      return;
+    }
+
+    if (formData.password.length < 6) {
+      toast.error('A senha deve ter pelo menos 6 caracteres');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const redirectUrl = `${window.location.origin}/`;
+      
+      const { data, error } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+        options: {
+          emailRedirectTo: redirectUrl,
+        },
+      });
+
+      if (error) {
+        if (error.message.includes('already registered')) {
+          toast.error('Este email já está registrado. Por favor, faça login.');
+        } else {
+          throw error;
+        }
+        return;
+      }
+
+      if (data.user) {
+        toast.success('Conta criada com sucesso!');
+        navigate('/onboarding');
+      }
+    } catch (error: any) {
+      console.error('Register error:', error);
+      toast.error(error.message || 'Erro ao criar conta');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -76,23 +118,6 @@ const Register = () => {
 
             <form onSubmit={handleSubmit} className="mt-8 space-y-5">
               <div>
-                <Label htmlFor="companyName">{t('auth.companyName')}</Label>
-                <div className="relative mt-2">
-                  <Building2 className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    id="companyName"
-                    name="companyName"
-                    type="text"
-                    value={formData.companyName}
-                    onChange={handleChange}
-                    placeholder="A sua empresa"
-                    className="pl-10"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div>
                 <Label htmlFor="email">{t('common.email')}</Label>
                 <div className="relative mt-2">
                   <Mail className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
@@ -105,22 +130,7 @@ const Register = () => {
                     placeholder="nome@empresa.pt"
                     className="pl-10"
                     required
-                  />
-                </div>
-              </div>
-
-              <div>
-                <Label htmlFor="phone">{t('auth.phone')}</Label>
-                <div className="relative mt-2">
-                  <Phone className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    id="phone"
-                    name="phone"
-                    type="tel"
-                    value={formData.phone}
-                    onChange={handleChange}
-                    placeholder="+351 900 000 000"
-                    className="pl-10"
+                    disabled={loading}
                   />
                 </div>
               </div>
@@ -138,6 +148,7 @@ const Register = () => {
                     placeholder="••••••••"
                     className="pl-10 pr-10"
                     required
+                    disabled={loading}
                   />
                   <button
                     type="button"
@@ -162,12 +173,13 @@ const Register = () => {
                     placeholder="••••••••"
                     className="pl-10"
                     required
+                    disabled={loading}
                   />
                 </div>
               </div>
 
-              <Button type="submit" variant="hero" className="w-full" size="lg">
-                {t('common.register')}
+              <Button type="submit" variant="hero" className="w-full" size="lg" disabled={loading}>
+                {loading ? 'Criando conta...' : t('common.register')}
               </Button>
             </form>
           </div>
