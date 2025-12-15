@@ -111,10 +111,13 @@ const Onboarding = () => {
       // Create company
       const { data: company, error: companyError } = await supabase
         .from('companies')
-        .insert({
-          name: formData.companyName.trim(),
-          address: formData.address.trim() || null,
-        })
+        .insert([
+          {
+            name: formData.companyName.trim(),
+            address: formData.address.trim() || null,
+            created_by: user.id,
+          },
+        ])
         .select()
         .single();
 
