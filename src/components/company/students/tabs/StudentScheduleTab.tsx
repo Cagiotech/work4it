@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Clock, User, CheckCircle, XCircle, CalendarDays } from "lucide-react";
+import { Calendar, Clock, User, CheckCircle, CalendarDays } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { format, isPast, isFuture, isToday } from "date-fns";
+import { format, isPast } from "date-fns";
 import { pt } from "date-fns/locale";
 
 interface StudentScheduleTabProps {
@@ -12,40 +12,89 @@ interface StudentScheduleTabProps {
 
 interface ClassSession {
   id: string;
-  date: string;
-  time: string;
-  duration_minutes: number;
-  status: string;
-  trainer_name: string;
-  class_type: string;
-  notes?: string;
+  enrollment_status: string;
+  scheduled_date: string;
+  start_time: string;
+  end_time: string;
+  schedule_status: string;
+  class_name: string;
+  instructor_name: string | null;
 }
 
 export function StudentScheduleTab({ studentId }: StudentScheduleTabProps) {
-  const [upcomingClasses, setUpcomingClasses] = useState<ClassSession[]>([]);
-  const [pastClasses, setPastClasses] = useState<ClassSession[]>([]);
+  const [sessions, setSessions] = useState<ClassSession[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // For now, show empty state since classes table doesn't exist yet
-    // This will be connected to real data when the Classes module is implemented
-    setIsLoading(false);
+    fetchSessions();
   }, [studentId]);
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return <Badge className="bg-green-500/10 text-green-600 border-green-500/20">Realizada</Badge>;
-      case 'cancelled':
-        return <Badge className="bg-red-500/10 text-red-600 border-red-500/20">Cancelada</Badge>;
-      case 'scheduled':
-        return <Badge className="bg-blue-500/10 text-blue-600 border-blue-500/20">Agendada</Badge>;
-      case 'no_show':
-        return <Badge className="bg-orange-500/10 text-orange-600 border-orange-500/20">Falta</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
+  const fetchSessions = async () => {
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('class_enrollments')
+        .select(`
+          id,
+          status,
+          class_schedule:class_schedules(
+            id,
+            scheduled_date,
+            start_time,
+            end_time,
+            status,
+            class:classes(name),
+            instructor:staff(full_name)
+          )
+        `)
+        .eq('student_id', studentId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      const formattedSessions: ClassSession[] = (data || [])
+        .filter(item => item.class_schedule)
+        .map(item => ({
+          id: item.id,
+          enrollment_status: item.status,
+          scheduled_date: item.class_schedule.scheduled_date,
+          start_time: item.class_schedule.start_time,
+          end_time: item.class_schedule.end_time,
+          schedule_status: item.class_schedule.status,
+          class_name: item.class_schedule.class?.name || 'Aula',
+          instructor_name: item.class_schedule.instructor?.full_name || null
+        }));
+
+      setSessions(formattedSessions);
+    } catch (error) {
+      console.error('Error fetching sessions:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
+
+  const getStatusBadge = (enrollmentStatus: string, scheduleStatus: string, date: string) => {
+    if (enrollmentStatus === 'cancelled') {
+      return <Badge className="bg-red-500/10 text-red-600 border-red-500/20">Cancelada</Badge>;
+    }
+    if (enrollmentStatus === 'no_show') {
+      return <Badge className="bg-orange-500/10 text-orange-600 border-orange-500/20">Falta</Badge>;
+    }
+    if (enrollmentStatus === 'attended' || scheduleStatus === 'completed') {
+      return <Badge className="bg-green-500/10 text-green-600 border-green-500/20">Realizada</Badge>;
+    }
+    if (isPast(new Date(date))) {
+      return <Badge className="bg-muted text-muted-foreground">Passada</Badge>;
+    }
+    return <Badge className="bg-blue-500/10 text-blue-600 border-blue-500/20">Agendada</Badge>;
+  };
+
+  const upcomingSessions = sessions.filter(
+    s => !isPast(new Date(s.scheduled_date)) && s.enrollment_status !== 'cancelled'
+  );
+  const pastSessions = sessions.filter(
+    s => isPast(new Date(s.scheduled_date)) || s.enrollment_status === 'cancelled'
+  );
 
   if (isLoading) {
     return (
@@ -54,6 +103,42 @@ export function StudentScheduleTab({ studentId }: StudentScheduleTabProps) {
       </div>
     );
   }
+
+  const renderSessionCard = (session: ClassSession, isPastSession: boolean) => (
+    <div 
+      key={session.id}
+      className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${
+        isPastSession ? 'bg-muted/30' : 'bg-card hover:bg-accent/5'
+      }`}
+    >
+      <div className="flex items-center gap-3">
+        <div className={`flex flex-col items-center justify-center w-14 h-14 rounded-lg ${
+          isPastSession ? 'bg-muted text-muted-foreground' : 'bg-primary/10 text-primary'
+        }`}>
+          <span className="text-xs font-medium">
+            {format(new Date(session.scheduled_date), "MMM", { locale: pt }).toUpperCase()}
+          </span>
+          <span className="text-xl font-bold">
+            {format(new Date(session.scheduled_date), "dd")}
+          </span>
+        </div>
+        <div>
+          <p className="font-medium">{session.class_name}</p>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Clock className="h-3 w-3" />
+            <span>{session.start_time.slice(0, 5)} - {session.end_time.slice(0, 5)}</span>
+          </div>
+          {session.instructor_name && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <User className="h-3 w-3" />
+              <span>{session.instructor_name}</span>
+            </div>
+          )}
+        </div>
+      </div>
+      {getStatusBadge(session.enrollment_status, session.schedule_status, session.scheduled_date)}
+    </div>
+  );
 
   return (
     <div className="space-y-6">
@@ -67,43 +152,15 @@ export function StudentScheduleTab({ studentId }: StudentScheduleTabProps) {
           <CardDescription>Aulas agendadas para este aluno</CardDescription>
         </CardHeader>
         <CardContent>
-          {upcomingClasses.length === 0 ? (
+          {upcomingSessions.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <Calendar className="h-12 w-12 mx-auto mb-3 opacity-50" />
               <p>Nenhuma aula agendada</p>
-              <p className="text-sm mt-1">As aulas serão mostradas aqui quando forem agendadas no módulo de Aulas</p>
+              <p className="text-sm mt-1">Inscreva o aluno em aulas através do módulo de Aulas</p>
             </div>
           ) : (
             <div className="space-y-3">
-              {upcomingClasses.map((session) => (
-                <div 
-                  key={session.id}
-                  className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent/5 transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="flex flex-col items-center justify-center w-14 h-14 rounded-lg bg-primary/10 text-primary">
-                      <span className="text-xs font-medium">
-                        {format(new Date(session.date), "MMM", { locale: pt }).toUpperCase()}
-                      </span>
-                      <span className="text-xl font-bold">
-                        {format(new Date(session.date), "dd")}
-                      </span>
-                    </div>
-                    <div>
-                      <p className="font-medium">{session.class_type}</p>
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Clock className="h-3 w-3" />
-                        <span>{session.time} ({session.duration_minutes} min)</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <User className="h-3 w-3" />
-                        <span>{session.trainer_name}</span>
-                      </div>
-                    </div>
-                  </div>
-                  {getStatusBadge(session.status)}
-                </div>
-              ))}
+              {upcomingSessions.map((session) => renderSessionCard(session, false))}
             </div>
           )}
         </CardContent>
@@ -119,7 +176,7 @@ export function StudentScheduleTab({ studentId }: StudentScheduleTabProps) {
           <CardDescription>Aulas realizadas anteriormente</CardDescription>
         </CardHeader>
         <CardContent>
-          {pastClasses.length === 0 ? (
+          {pastSessions.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <Clock className="h-12 w-12 mx-auto mb-3 opacity-50" />
               <p>Nenhuma aula realizada</p>
@@ -127,35 +184,7 @@ export function StudentScheduleTab({ studentId }: StudentScheduleTabProps) {
             </div>
           ) : (
             <div className="space-y-3">
-              {pastClasses.map((session) => (
-                <div 
-                  key={session.id}
-                  className="flex items-center justify-between p-3 rounded-lg border bg-muted/30"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="flex flex-col items-center justify-center w-14 h-14 rounded-lg bg-muted text-muted-foreground">
-                      <span className="text-xs font-medium">
-                        {format(new Date(session.date), "MMM", { locale: pt }).toUpperCase()}
-                      </span>
-                      <span className="text-xl font-bold">
-                        {format(new Date(session.date), "dd")}
-                      </span>
-                    </div>
-                    <div>
-                      <p className="font-medium">{session.class_type}</p>
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Clock className="h-3 w-3" />
-                        <span>{session.time} ({session.duration_minutes} min)</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <User className="h-3 w-3" />
-                        <span>{session.trainer_name}</span>
-                      </div>
-                    </div>
-                  </div>
-                  {getStatusBadge(session.status)}
-                </div>
-              ))}
+              {pastSessions.map((session) => renderSessionCard(session, true))}
             </div>
           )}
         </CardContent>
@@ -165,25 +194,31 @@ export function StudentScheduleTab({ studentId }: StudentScheduleTabProps) {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <Card className="p-4">
           <div className="text-center">
-            <p className="text-2xl font-bold text-primary">{pastClasses.filter(c => c.status === 'completed').length}</p>
+            <p className="text-2xl font-bold text-primary">
+              {sessions.filter(s => s.enrollment_status === 'attended').length}
+            </p>
             <p className="text-xs text-muted-foreground">Aulas Realizadas</p>
           </div>
         </Card>
         <Card className="p-4">
           <div className="text-center">
-            <p className="text-2xl font-bold text-blue-600">{upcomingClasses.length}</p>
+            <p className="text-2xl font-bold text-blue-600">{upcomingSessions.length}</p>
             <p className="text-xs text-muted-foreground">Aulas Agendadas</p>
           </div>
         </Card>
         <Card className="p-4">
           <div className="text-center">
-            <p className="text-2xl font-bold text-orange-600">{pastClasses.filter(c => c.status === 'no_show').length}</p>
+            <p className="text-2xl font-bold text-orange-600">
+              {sessions.filter(s => s.enrollment_status === 'no_show').length}
+            </p>
             <p className="text-xs text-muted-foreground">Faltas</p>
           </div>
         </Card>
         <Card className="p-4">
           <div className="text-center">
-            <p className="text-2xl font-bold text-red-600">{pastClasses.filter(c => c.status === 'cancelled').length}</p>
+            <p className="text-2xl font-bold text-red-600">
+              {sessions.filter(s => s.enrollment_status === 'cancelled').length}
+            </p>
             <p className="text-xs text-muted-foreground">Canceladas</p>
           </div>
         </Card>
