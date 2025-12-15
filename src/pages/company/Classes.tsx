@@ -233,6 +233,7 @@ export default function Classes() {
       <CalendarSection
         weekSchedules={weekSchedules}
         monthSchedules={monthSchedules}
+        hasClassTypes={classTypes.length > 0}
         onEnroll={(schedule) => {
           setSelectedSchedule(schedule);
           setShowEnrollDialog(true);
