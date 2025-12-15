@@ -47,6 +47,36 @@ const Onboarding = () => {
         return;
       }
 
+      // First check if user is a student - redirect them to student area
+      const { data: studentData } = await supabase
+        .from('students')
+        .select('id, status, registration_method')
+        .eq('user_id', session.user.id)
+        .maybeSingle();
+
+      if (studentData) {
+        // User is a student, redirect appropriately
+        if (studentData.registration_method === 'self_registered' && studentData.status === 'pending') {
+          navigate('/onboarding-new-student');
+        } else {
+          navigate('/student');
+        }
+        return;
+      }
+
+      // Check if user is staff - redirect them to company area
+      const { data: staffData } = await supabase
+        .from('staff')
+        .select('id')
+        .eq('user_id', session.user.id)
+        .maybeSingle();
+
+      if (staffData) {
+        navigate('/company');
+        return;
+      }
+
+      // Check company owner profile
       const { data: profile } = await supabase
         .from('profiles')
         .select('onboarding_completed')
