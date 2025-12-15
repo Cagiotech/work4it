@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { Plus, Search, LayoutGrid, List, ArrowUpAZ, ArrowDownAZ, Download, Upload, Trash2, Loader2 } from "lucide-react";
+import { Plus, Search, LayoutGrid, List, ArrowUpAZ, ArrowDownAZ, Download, Trash2, Loader2, User, Calendar, CreditCard, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -25,6 +25,23 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
+interface Subscription {
+  id: string;
+  status: string | null;
+  payment_status: string | null;
+  start_date: string;
+  end_date: string;
+  plan: {
+    id: string;
+    name: string;
+  } | null;
+}
+
+interface Trainer {
+  id: string;
+  full_name: string;
+}
+
 interface Student {
   id: string;
   full_name: string;
@@ -46,22 +63,36 @@ interface Student {
   enrollment_date: string | null;
   status: string | null;
   created_at: string;
+  updated_at: string;
   company_id: string;
   personal_trainer_id: string | null;
+  // Joined data
+  trainer?: Trainer | null;
+  activeSubscription?: Subscription | null;
+}
+
+interface SubscriptionPlan {
+  id: string;
+  name: string;
 }
 
 export default function Students() {
   const { t } = useTranslation();
   const { company } = useAuth();
-  const { canCreate, canEdit, canDelete, canExport, canImport } = usePermissions();
+  const { canCreate, canEdit, canDelete, canExport } = usePermissions();
   
   const [students, setStudents] = useState<Student[]>([]);
+  const [trainers, setTrainers] = useState<Trainer[]>([]);
+  const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [loading, setLoading] = useState(true);
   const [addingStudent, setAddingStudent] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [filterTrainer, setFilterTrainer] = useState<string>("all");
+  const [filterPaymentStatus, setFilterPaymentStatus] = useState<string>("all");
+  const [filterPlan, setFilterPlan] = useState<string>("all");
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [profileDialogOpen, setProfileDialogOpen] = useState(false);
@@ -73,18 +104,66 @@ export default function Students() {
     
     setLoading(true);
     try {
-      const { data, error } = await supabase
+      // Fetch students with trainer info
+      const { data: studentsData, error: studentsError } = await supabase
         .from('students')
-        .select('*')
+        .select(`
+          *,
+          trainer:staff!students_personal_trainer_id_fkey(id, full_name)
+        `)
         .eq('company_id', company.id)
         .order('full_name', { ascending: sortOrder === 'asc' });
 
-      if (error) throw error;
-      setStudents(data || []);
+      if (studentsError) throw studentsError;
+
+      // Fetch active subscriptions for all students
+      const studentIds = studentsData?.map(s => s.id) || [];
       
-      // Update selectedStudent if it exists to reflect any changes
-      if (selectedStudent && data) {
-        const updated = data.find(s => s.id === selectedStudent.id);
+      let subscriptionsMap: Record<string, Subscription> = {};
+      
+      if (studentIds.length > 0) {
+        const { data: subscriptionsData, error: subsError } = await supabase
+          .from('student_subscriptions')
+          .select(`
+            id,
+            student_id,
+            status,
+            payment_status,
+            start_date,
+            end_date,
+            plan:subscription_plans(id, name)
+          `)
+          .in('student_id', studentIds)
+          .eq('status', 'active');
+
+        if (subsError) {
+          console.error('Error fetching subscriptions:', subsError);
+        } else if (subscriptionsData) {
+          subscriptionsData.forEach(sub => {
+            subscriptionsMap[sub.student_id] = {
+              id: sub.id,
+              status: sub.status,
+              payment_status: sub.payment_status,
+              start_date: sub.start_date,
+              end_date: sub.end_date,
+              plan: sub.plan
+            };
+          });
+        }
+      }
+
+      // Combine students with their subscriptions
+      const enrichedStudents = studentsData?.map(student => ({
+        ...student,
+        trainer: student.trainer,
+        activeSubscription: subscriptionsMap[student.id] || null
+      })) || [];
+
+      setStudents(enrichedStudents);
+      
+      // Update selectedStudent if it exists
+      if (selectedStudent) {
+        const updated = enrichedStudents.find(s => s.id === selectedStudent.id);
         if (updated) {
           setSelectedStudent(updated);
         }
@@ -97,8 +176,35 @@ export default function Students() {
     }
   };
 
+  const fetchFiltersData = async () => {
+    if (!company?.id) return;
+
+    try {
+      // Fetch trainers (staff who can be personal trainers)
+      const { data: trainersData } = await supabase
+        .from('staff')
+        .select('id, full_name')
+        .eq('company_id', company.id)
+        .eq('is_active', true);
+
+      setTrainers(trainersData || []);
+
+      // Fetch subscription plans
+      const { data: plansData } = await supabase
+        .from('subscription_plans')
+        .select('id, name')
+        .eq('company_id', company.id)
+        .eq('is_active', true);
+
+      setPlans(plansData || []);
+    } catch (error) {
+      console.error('Error fetching filters data:', error);
+    }
+  };
+
   useEffect(() => {
     fetchStudents();
+    fetchFiltersData();
   }, [company?.id]);
 
   const filteredStudents = useMemo(() => {
@@ -108,20 +214,23 @@ export default function Students() {
           student.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
           (student.email?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false);
         const matchesStatus = filterStatus === "all" || student.status === filterStatus;
-        return matchesSearch && matchesStatus;
+        const matchesTrainer = filterTrainer === "all" || student.personal_trainer_id === filterTrainer;
+        const matchesPayment = filterPaymentStatus === "all" || student.activeSubscription?.payment_status === filterPaymentStatus;
+        const matchesPlan = filterPlan === "all" || student.activeSubscription?.plan?.id === filterPlan;
+        
+        return matchesSearch && matchesStatus && matchesTrainer && matchesPayment && matchesPlan;
       })
       .sort((a, b) => {
         const comparison = a.full_name.localeCompare(b.full_name);
         return sortOrder === "asc" ? comparison : -comparison;
       });
-  }, [students, searchTerm, sortOrder, filterStatus]);
+  }, [students, searchTerm, sortOrder, filterStatus, filterTrainer, filterPaymentStatus, filterPlan]);
 
   const handleAddStudent = async (data: { name: string; email: string; phone: string; birthDate: string; createAccount: boolean }) => {
     if (!company?.id) return;
     
     setAddingStudent(true);
     try {
-      // First create the student record
       const { data: newStudent, error } = await supabase
         .from('students')
         .insert([{
@@ -131,14 +240,13 @@ export default function Students() {
           phone: data.phone || null,
           birth_date: data.birthDate || null,
           status: 'active',
-          password_changed: !data.createAccount, // If not creating account, mark as changed
+          password_changed: !data.createAccount,
         }])
         .select()
         .single();
 
       if (error) throw error;
       
-      // If createAccount is true and email exists, create the auth user
       if (data.createAccount && data.email) {
         const { data: accountData, error: accountError } = await supabase.functions.invoke('create-student-account', {
           body: {
@@ -157,13 +265,13 @@ export default function Students() {
         } else {
           toast.success('Aluno adicionado com conta criada! Senha temporária: 12345678');
           setAddDialogOpen(false);
-          setStudents([...students, newStudent]);
+          fetchStudents();
           return;
         }
       }
       
-      setStudents([...students, newStudent]);
       setAddDialogOpen(false);
+      fetchStudents();
       toast.success('Aluno adicionado com sucesso!');
     } catch (error: any) {
       console.error('Error adding student:', error);
@@ -193,8 +301,7 @@ export default function Students() {
 
       if (error) throw error;
       
-      setStudents(students.map((s) => (s.id === updatedStudent.id ? updatedStudent : s)));
-      setSelectedStudent(updatedStudent);
+      fetchStudents();
       toast.success('Aluno atualizado com sucesso!');
     } catch (error: any) {
       console.error('Error updating student:', error);
@@ -226,13 +333,15 @@ export default function Students() {
 
   const handleExport = () => {
     const csvContent = [
-      ['Nome', 'Email', 'Telefone', 'Data Nascimento', 'Status', 'Data Matrícula'].join(','),
+      ['Nome', 'Email', 'Telefone', 'Status', 'Personal Trainer', 'Plano', 'Status Pagamento', 'Data Matrícula'].join(','),
       ...filteredStudents.map(s => [
         s.full_name,
         s.email || '',
         s.phone || '',
-        s.birth_date || '',
-        s.status,
+        s.status || '',
+        s.trainer?.full_name || '',
+        s.activeSubscription?.plan?.name || '',
+        s.activeSubscription?.payment_status || '',
         s.enrollment_date || ''
       ].join(','))
     ].join('\n');
@@ -272,6 +381,52 @@ export default function Students() {
     }
   };
 
+  const getPaymentStatusBadge = (paymentStatus: string | null | undefined) => {
+    switch (paymentStatus) {
+      case 'paid':
+        return <Badge className="bg-green-500 hover:bg-green-600">Em dia</Badge>;
+      case 'pending':
+        return <Badge className="bg-yellow-500 hover:bg-yellow-600">Pendente</Badge>;
+      case 'overdue':
+        return <Badge className="bg-red-500 hover:bg-red-600">Atrasado</Badge>;
+      default:
+        return <Badge variant="secondary">Sem plano</Badge>;
+    }
+  };
+
+  const getDaysUntilExpiry = (endDate: string | undefined) => {
+    if (!endDate) return null;
+    const end = new Date(endDate);
+    const today = new Date();
+    const diffTime = end.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
+  };
+
+  const getExpiryBadge = (endDate: string | undefined) => {
+    const days = getDaysUntilExpiry(endDate);
+    if (days === null) return null;
+    
+    if (days < 0) {
+      return <Badge variant="destructive">Expirado</Badge>;
+    } else if (days <= 7) {
+      return <Badge className="bg-orange-500 hover:bg-orange-600">{days}d restantes</Badge>;
+    } else if (days <= 30) {
+      return <Badge variant="secondary">{days}d restantes</Badge>;
+    }
+    return null;
+  };
+
+  const clearFilters = () => {
+    setFilterStatus("all");
+    setFilterTrainer("all");
+    setFilterPaymentStatus("all");
+    setFilterPlan("all");
+    setSearchTerm("");
+  };
+
+  const hasActiveFilters = filterStatus !== "all" || filterTrainer !== "all" || filterPaymentStatus !== "all" || filterPlan !== "all" || searchTerm !== "";
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -306,7 +461,8 @@ export default function Students() {
 
       {/* Filters */}
       <Card>
-        <CardContent className="p-4">
+        <CardContent className="p-4 space-y-4">
+          {/* Search and View Controls */}
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -317,17 +473,6 @@ export default function Students() {
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger className="w-full sm:w-36">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                <SelectItem value="active">Ativo</SelectItem>
-                <SelectItem value="inactive">Inativo</SelectItem>
-                <SelectItem value="suspended">Suspenso</SelectItem>
-              </SelectContent>
-            </Select>
             <div className="flex gap-2">
               <Button
                 variant="outline"
@@ -353,6 +498,67 @@ export default function Students() {
               </Button>
             </div>
           </div>
+
+          {/* Filter Row */}
+          <div className="flex flex-wrap gap-3">
+            <Select value={filterStatus} onValueChange={setFilterStatus}>
+              <SelectTrigger className="w-full sm:w-36">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos Status</SelectItem>
+                <SelectItem value="active">Ativo</SelectItem>
+                <SelectItem value="inactive">Inativo</SelectItem>
+                <SelectItem value="suspended">Suspenso</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={filterPaymentStatus} onValueChange={setFilterPaymentStatus}>
+              <SelectTrigger className="w-full sm:w-40">
+                <SelectValue placeholder="Pagamento" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos Pagamentos</SelectItem>
+                <SelectItem value="paid">Em dia</SelectItem>
+                <SelectItem value="pending">Pendente</SelectItem>
+                <SelectItem value="overdue">Atrasado</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={filterTrainer} onValueChange={setFilterTrainer}>
+              <SelectTrigger className="w-full sm:w-44">
+                <SelectValue placeholder="Personal Trainer" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos Trainers</SelectItem>
+                {trainers.map(trainer => (
+                  <SelectItem key={trainer.id} value={trainer.id}>
+                    {trainer.full_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select value={filterPlan} onValueChange={setFilterPlan}>
+              <SelectTrigger className="w-full sm:w-40">
+                <SelectValue placeholder="Plano" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos Planos</SelectItem>
+                {plans.map(plan => (
+                  <SelectItem key={plan.id} value={plan.id}>
+                    {plan.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {hasActiveFilters && (
+              <Button variant="ghost" size="sm" onClick={clearFilters}>
+                Limpar filtros
+              </Button>
+            )}
+          </div>
         </CardContent>
       </Card>
 
@@ -375,7 +581,7 @@ export default function Students() {
               className="cursor-pointer hover:shadow-md transition-shadow"
               onClick={() => handleStudentClick(student)}
             >
-              <CardContent className="p-4">
+              <CardContent className="p-4 space-y-3">
                 <div className="flex items-center gap-3">
                   <Avatar>
                     <AvatarFallback className="bg-primary/10 text-primary">
@@ -387,11 +593,35 @@ export default function Students() {
                     <p className="text-sm text-muted-foreground truncate">{student.email || 'Sem email'}</p>
                   </div>
                 </div>
-                <div className="mt-4 flex items-center justify-between">
+
+                {/* Status and Payment Row */}
+                <div className="flex items-center gap-2 flex-wrap">
                   {getStatusBadge(student.status)}
-                  {student.phone && (
-                    <span className="text-sm text-muted-foreground">{student.phone}</span>
-                  )}
+                  {getPaymentStatusBadge(student.activeSubscription?.payment_status)}
+                  {getExpiryBadge(student.activeSubscription?.end_date)}
+                </div>
+
+                {/* Info Grid */}
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  {/* Trainer */}
+                  <div className="flex items-center gap-1.5 text-muted-foreground">
+                    <User className="h-3.5 w-3.5" />
+                    <span className="truncate">{student.trainer?.full_name || 'Sem PT'}</span>
+                  </div>
+
+                  {/* Plan */}
+                  <div className="flex items-center gap-1.5 text-muted-foreground">
+                    <CreditCard className="h-3.5 w-3.5" />
+                    <span className="truncate">{student.activeSubscription?.plan?.name || 'Sem plano'}</span>
+                  </div>
+
+                  {/* Last Activity */}
+                  <div className="flex items-center gap-1.5 text-muted-foreground col-span-2">
+                    <Clock className="h-3.5 w-3.5" />
+                    <span className="truncate">
+                      Atualizado: {new Date(student.updated_at).toLocaleDateString('pt-BR')}
+                    </span>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -404,9 +634,11 @@ export default function Students() {
               <TableRow>
                 <TableHead>Nome</TableHead>
                 <TableHead>Email</TableHead>
-                <TableHead>Telefone</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Data Matrícula</TableHead>
+                <TableHead>Pagamento</TableHead>
+                <TableHead>Personal Trainer</TableHead>
+                <TableHead>Plano</TableHead>
+                <TableHead>Expira</TableHead>
                 {canDelete('students') && <TableHead className="w-12"></TableHead>}
               </TableRow>
             </TableHeader>
@@ -428,11 +660,13 @@ export default function Students() {
                     </div>
                   </TableCell>
                   <TableCell>{student.email || '-'}</TableCell>
-                  <TableCell>{student.phone || '-'}</TableCell>
                   <TableCell>{getStatusBadge(student.status)}</TableCell>
+                  <TableCell>{getPaymentStatusBadge(student.activeSubscription?.payment_status)}</TableCell>
+                  <TableCell>{student.trainer?.full_name || '-'}</TableCell>
+                  <TableCell>{student.activeSubscription?.plan?.name || '-'}</TableCell>
                   <TableCell>
-                    {student.enrollment_date 
-                      ? new Date(student.enrollment_date).toLocaleDateString('pt-BR')
+                    {student.activeSubscription?.end_date 
+                      ? new Date(student.activeSubscription.end_date).toLocaleDateString('pt-BR')
                       : '-'}
                   </TableCell>
                   {canDelete('students') && (
