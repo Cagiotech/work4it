@@ -269,21 +269,23 @@ export function CalendarSection({
           </div>
 
           <Tabs defaultValue="seg" className="w-full">
-            <TabsList className="w-full justify-start overflow-x-auto">
+            <TabsList className="w-full grid grid-cols-7">
               {weekDays.map((day) => {
                 const dayDate = addDays(currentWeekStart, day.dayOffset);
                 const isToday = isSameDay(dayDate, new Date());
+                const count = getSchedulesForDay(day.dayOffset).length;
                 return (
                   <TabsTrigger 
                     key={day.key} 
                     value={day.key} 
-                    className={cn("min-w-[80px] sm:min-w-[100px]", isToday && "ring-2 ring-primary")}
+                    className={cn("flex-col gap-0.5 py-2", isToday && "ring-2 ring-primary ring-inset")}
                   >
-                    <span className="hidden sm:inline">{day.label}</span>
-                    <span className="sm:hidden">{day.shortLabel}</span>
-                    <Badge variant="secondary" className="ml-1.5 text-xs">
-                      {getSchedulesForDay(day.dayOffset).length}
-                    </Badge>
+                    <span className="text-xs font-medium">{day.shortLabel}</span>
+                    {count > 0 && (
+                      <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                        {count}
+                      </Badge>
+                    )}
                   </TabsTrigger>
                 );
               })}
