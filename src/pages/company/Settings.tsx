@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { User, Lock, Building, Save, LogOut, Link, FileText, Copy, Check, Trash2, AlertTriangle } from "lucide-react";
+import { User, Lock, Building, Save, LogOut, Link, FileText, Copy, Check, Trash2, AlertTriangle, LayoutGrid } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import { ClassesSettingsSection } from "@/components/company/settings/ClassesSettingsSection";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -79,7 +80,6 @@ export default function Settings() {
         name: company.name || '',
         address: company.address || '',
       });
-      // Fetch extended company data
       fetchExtendedCompanyData(company.id);
     }
   }, [profile, company]);
@@ -270,6 +270,10 @@ export default function Settings() {
             <Building className="h-4 w-4 mr-2" />
             Empresa
           </TabsTrigger>
+          <TabsTrigger value="classes">
+            <LayoutGrid className="h-4 w-4 mr-2" />
+            Aulas
+          </TabsTrigger>
           <TabsTrigger value="registration">
             <Link className="h-4 w-4 mr-2" />
             Registo
@@ -362,6 +366,20 @@ export default function Settings() {
                 <Save className="h-4 w-4 mr-2" />
                 {loading ? 'Salvando...' : 'Salvar Alterações'}
               </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="classes">
+          <Card>
+            <CardHeader>
+              <CardTitle>Aulas e Serviços</CardTitle>
+              <CardDescription>
+                Configure os tipos de aula e salas disponíveis na sua empresa.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ClassesSettingsSection />
             </CardContent>
           </Card>
         </TabsContent>
