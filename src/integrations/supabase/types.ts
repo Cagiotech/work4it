@@ -41,6 +41,36 @@ export type Database = {
         }
         Relationships: []
       }
+      modules: {
+        Row: {
+          created_at: string
+          description: string | null
+          icon: string | null
+          id: string
+          key: string
+          name: string
+          sort_order: number | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          key: string
+          name: string
+          sort_order?: number | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          key?: string
+          name?: string
+          sort_order?: number | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           company_id: string | null
@@ -82,15 +112,229 @@ export type Database = {
           },
         ]
       }
+      role_permissions: {
+        Row: {
+          action: Database["public"]["Enums"]["permission_action"]
+          created_at: string
+          id: string
+          module_key: string
+          role_id: string
+        }
+        Insert: {
+          action: Database["public"]["Enums"]["permission_action"]
+          created_at?: string
+          id?: string
+          module_key: string
+          role_id: string
+        }
+        Update: {
+          action?: Database["public"]["Enums"]["permission_action"]
+          created_at?: string
+          id?: string
+          module_key?: string
+          role_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "role_permissions_module_key_fkey"
+            columns: ["module_key"]
+            isOneToOne: false
+            referencedRelation: "modules"
+            referencedColumns: ["key"]
+          },
+          {
+            foreignKeyName: "role_permissions_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      roles: {
+        Row: {
+          company_id: string
+          created_at: string
+          description: string | null
+          id: string
+          is_admin: boolean | null
+          is_default: boolean | null
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_admin?: boolean | null
+          is_default?: boolean | null
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_admin?: boolean | null
+          is_default?: boolean | null
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "roles_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      staff: {
+        Row: {
+          company_id: string
+          created_at: string
+          email: string
+          full_name: string
+          hire_date: string | null
+          id: string
+          is_active: boolean | null
+          phone: string | null
+          position: string | null
+          role_id: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          email: string
+          full_name: string
+          hire_date?: string | null
+          id?: string
+          is_active?: boolean | null
+          phone?: string | null
+          position?: string | null
+          role_id?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          email?: string
+          full_name?: string
+          hire_date?: string | null
+          id?: string
+          is_active?: boolean | null
+          phone?: string | null
+          position?: string | null
+          role_id?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      students: {
+        Row: {
+          address: string | null
+          birth_date: string | null
+          company_id: string
+          created_at: string
+          email: string | null
+          emergency_contact: string | null
+          emergency_phone: string | null
+          enrollment_date: string | null
+          full_name: string
+          gender: string | null
+          health_notes: string | null
+          id: string
+          phone: string | null
+          status: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          address?: string | null
+          birth_date?: string | null
+          company_id: string
+          created_at?: string
+          email?: string | null
+          emergency_contact?: string | null
+          emergency_phone?: string | null
+          enrollment_date?: string | null
+          full_name: string
+          gender?: string | null
+          health_notes?: string | null
+          id?: string
+          phone?: string | null
+          status?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          address?: string | null
+          birth_date?: string | null
+          company_id?: string
+          created_at?: string
+          email?: string | null
+          emergency_contact?: string | null
+          emergency_phone?: string | null
+          enrollment_date?: string | null
+          full_name?: string
+          gender?: string | null
+          health_notes?: string | null
+          id?: string
+          phone?: string | null
+          status?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "students_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      create_default_roles_for_company: {
+        Args: { p_company_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
-      [_ in never]: never
+      permission_action:
+        | "view"
+        | "create"
+        | "edit"
+        | "delete"
+        | "export"
+        | "import"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -217,6 +461,15 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      permission_action: [
+        "view",
+        "create",
+        "edit",
+        "delete",
+        "export",
+        "import",
+      ],
+    },
   },
 } as const
