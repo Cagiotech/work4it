@@ -536,9 +536,9 @@ export function ClassesSettingsSection() {
                   </div>
                   <div className="space-y-2">
                     <Label>Dias da semana</Label>
-                    <div className="flex flex-wrap gap-2">
+                    <div className="grid grid-cols-7 gap-1">
                       {daysOfWeek.map((day) => (
-                        <Button key={day.value} type="button" variant={classFormData.default_days_of_week.includes(day.value) ? "default" : "outline"} size="sm" onClick={() => toggleDay(day.value)} className="min-w-[50px]">
+                        <Button key={day.value} type="button" variant={classFormData.default_days_of_week.includes(day.value) ? "default" : "outline"} size="sm" onClick={() => toggleDay(day.value)} className="px-2">
                           {day.label}
                         </Button>
                       ))}
