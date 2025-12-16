@@ -56,19 +56,6 @@ interface RolePermission {
   action: string;
 }
 
-const colorOptions = [
-  { value: "#aeca12", label: "Verde Lima" },
-  { value: "#ef4444", label: "Vermelho" },
-  { value: "#f97316", label: "Laranja" },
-  { value: "#eab308", label: "Amarelo" },
-  { value: "#22c55e", label: "Verde" },
-  { value: "#14b8a6", label: "Teal" },
-  { value: "#3b82f6", label: "Azul" },
-  { value: "#8b5cf6", label: "Roxo" },
-  { value: "#ec4899", label: "Rosa" },
-  { value: "#6b7280", label: "Cinza" },
-];
-
 const actions = [
   { key: "view", label: "Ver" },
   { key: "create", label: "Criar" },
@@ -385,21 +372,23 @@ export function RolesSettingsSection() {
                   </div>
                   <div className="space-y-2">
                     <Label>Cor</Label>
-                    <div className="flex flex-wrap gap-2">
-                      {colorOptions.map((color) => (
-                        <button
-                          key={color.value}
-                          type="button"
-                          onClick={() => setRoleFormData({ ...roleFormData, color: color.value })}
-                          className={`w-8 h-8 rounded-lg border-2 transition-all ${
-                            roleFormData.color === color.value 
-                              ? 'border-foreground scale-110' 
-                              : 'border-transparent hover:scale-105'
-                          }`}
-                          style={{ backgroundColor: color.value }}
-                          title={color.label}
-                        />
-                      ))}
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="color"
+                        value={roleFormData.color}
+                        onChange={(e) => setRoleFormData({ ...roleFormData, color: e.target.value })}
+                        className="w-12 h-10 rounded cursor-pointer border border-border bg-transparent"
+                      />
+                      <Input
+                        value={roleFormData.color}
+                        onChange={(e) => setRoleFormData({ ...roleFormData, color: e.target.value })}
+                        placeholder="#aeca12"
+                        className="w-28 font-mono text-sm"
+                      />
+                      <div
+                        className="w-10 h-10 rounded-md border border-border"
+                        style={{ backgroundColor: roleFormData.color }}
+                      />
                     </div>
                   </div>
                 </div>
