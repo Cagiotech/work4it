@@ -1,13 +1,5 @@
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
-
-// Extend jsPDF types for autoTable
-declare module 'jspdf' {
-  interface jsPDF {
-    autoTable: (options: any) => jsPDF;
-    lastAutoTable?: { finalY: number };
-  }
-}
+import autoTable from 'jspdf-autotable';
 
 const PRIMARY_COLOR: [number, number, number] = [174, 202, 18]; // #aeca12
 const SECONDARY_COLOR: [number, number, number] = [100, 100, 100];
@@ -100,7 +92,7 @@ const addSummaryBoxes = (doc: jsPDF, summary: { label: string; value: string }[]
 
 const addTable = (doc: jsPDF, data: any[], columns: { header: string; dataKey: string }[], startY: number) => {
   if (data.length > 0) {
-    doc.autoTable({
+    autoTable(doc, {
       startY,
       head: [columns.map(c => c.header)],
       body: data.map(row => columns.map(c => row[c.dataKey] ?? '-')),
