@@ -45,29 +45,54 @@ const Login = () => {
     // Check if user is a student
     const { data: student } = await supabase
       .from('students')
-      .select('id, registration_method, status')
+      .select('id, registration_method, status, password_changed, terms_accepted_at, company_id')
       .eq('user_id', userId)
       .maybeSingle();
 
     if (student) {
-      // User is a student
-      if (student.registration_method === 'self_registered' && student.status === 'pending') {
-        navigate('/onboarding-new-student');
-      } else {
-        navigate('/student');
+      // Pending approval - show waiting page
+      if (student.status === 'pending_approval') {
+        navigate('/pending-approval');
+        return;
       }
+
+      // Self-registered students with 'pending' status need onboarding
+      if (student.registration_method === 'self_registered' && student.status === 'pending') {
+        navigate('/new-student');
+        return;
+      }
+
+      // Company-added students go directly to /student (no onboarding needed)
+      navigate('/student');
       return;
     }
 
     // Check if user is staff
     const { data: staff } = await supabase
       .from('staff')
-      .select('id')
+      .select('id, role_id, company_id')
       .eq('user_id', userId)
       .maybeSingle();
 
     if (staff) {
-      // Staff member - redirect to company panel (they'll see based on permissions)
+      // Check if staff has a "personal trainer" role
+      if (staff.role_id) {
+        const { data: role } = await supabase
+          .from('roles')
+          .select('name')
+          .eq('id', staff.role_id)
+          .single();
+        
+        // If role name contains "personal" or "trainer", redirect to /personal
+        if (role?.name?.toLowerCase().includes('personal') || 
+            role?.name?.toLowerCase().includes('trainer') ||
+            role?.name?.toLowerCase().includes('pt')) {
+          navigate('/personal');
+          return;
+        }
+      }
+      
+      // Other staff go to company panel with their permissions
       navigate('/company');
       return;
     }
