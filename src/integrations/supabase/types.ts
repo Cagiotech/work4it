@@ -617,6 +617,7 @@ export type Database = {
           citizen_card: string | null
           city: string | null
           company_id: string
+          contract_type: string | null
           country: string | null
           created_at: string
           email: string
@@ -633,12 +634,14 @@ export type Database = {
           role_id: string | null
           updated_at: string
           user_id: string | null
+          weekly_hours: number | null
         }
         Insert: {
           address?: string | null
           citizen_card?: string | null
           city?: string | null
           company_id: string
+          contract_type?: string | null
           country?: string | null
           created_at?: string
           email: string
@@ -655,12 +658,14 @@ export type Database = {
           role_id?: string | null
           updated_at?: string
           user_id?: string | null
+          weekly_hours?: number | null
         }
         Update: {
           address?: string | null
           citizen_card?: string | null
           city?: string | null
           company_id?: string
+          contract_type?: string | null
           country?: string | null
           created_at?: string
           email?: string
@@ -677,6 +682,7 @@ export type Database = {
           role_id?: string | null
           updated_at?: string
           user_id?: string | null
+          weekly_hours?: number | null
         }
         Relationships: [
           {
@@ -916,6 +922,63 @@ export type Database = {
           },
         ]
       }
+      staff_leave_balances: {
+        Row: {
+          company_id: string
+          created_at: string
+          id: string
+          personal_days_entitled: number | null
+          personal_days_used: number | null
+          sick_days_used: number | null
+          staff_id: string
+          updated_at: string
+          vacation_days_entitled: number | null
+          vacation_days_used: number | null
+          year: number
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          id?: string
+          personal_days_entitled?: number | null
+          personal_days_used?: number | null
+          sick_days_used?: number | null
+          staff_id: string
+          updated_at?: string
+          vacation_days_entitled?: number | null
+          vacation_days_used?: number | null
+          year: number
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          id?: string
+          personal_days_entitled?: number | null
+          personal_days_used?: number | null
+          sick_days_used?: number | null
+          staff_id?: string
+          updated_at?: string
+          vacation_days_entitled?: number | null
+          vacation_days_used?: number | null
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_leave_balances_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_leave_balances_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       staff_payment_config: {
         Row: {
           bank_iban: string | null
@@ -1113,6 +1176,63 @@ export type Database = {
           },
           {
             foreignKeyName: "staff_trainings_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      staff_work_schedules: {
+        Row: {
+          break_end: string | null
+          break_start: string | null
+          company_id: string
+          created_at: string
+          day_of_week: number
+          end_time: string
+          id: string
+          is_working_day: boolean | null
+          staff_id: string
+          start_time: string
+          updated_at: string
+        }
+        Insert: {
+          break_end?: string | null
+          break_start?: string | null
+          company_id: string
+          created_at?: string
+          day_of_week: number
+          end_time: string
+          id?: string
+          is_working_day?: boolean | null
+          staff_id: string
+          start_time: string
+          updated_at?: string
+        }
+        Update: {
+          break_end?: string | null
+          break_start?: string | null
+          company_id?: string
+          created_at?: string
+          day_of_week?: number
+          end_time?: string
+          id?: string
+          is_working_day?: boolean | null
+          staff_id?: string
+          start_time?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_work_schedules_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_work_schedules_staff_id_fkey"
             columns: ["staff_id"]
             isOneToOne: false
             referencedRelation: "staff"
