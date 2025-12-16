@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Bell, User, Menu, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -64,6 +65,7 @@ export function StudentHeader() {
 
         <div className="flex items-center gap-2 md:gap-4">
           <LanguageSwitcher />
+          <ThemeSwitcher />
           
           <Button variant="ghost" size="icon" className="relative">
             <Bell className="h-5 w-5" />

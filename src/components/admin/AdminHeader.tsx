@@ -12,6 +12,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 
@@ -44,6 +45,7 @@ export function AdminHeader() {
 
         <div className="flex flex-1 md:flex-none items-center justify-end gap-2 md:gap-4">
           <LanguageSwitcher />
+          <ThemeSwitcher />
           
           <Button variant="ghost" size="icon" className="relative">
             <Bell className="h-5 w-5" />
