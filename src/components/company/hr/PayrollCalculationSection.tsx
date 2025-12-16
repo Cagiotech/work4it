@@ -4,8 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Calculator, Download, FileText, Loader2, DollarSign, Users } from "lucide-react";
+import { Calculator, Download, FileText, Loader2, DollarSign, Users, User } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -49,6 +50,7 @@ export function PayrollCalculationSection() {
   const [loading, setLoading] = useState(true);
   const [calculating, setCalculating] = useState(false);
   const [payrollItems, setPayrollItems] = useState<PayrollItem[]>([]);
+  const [selectedStaffId, setSelectedStaffId] = useState<string>("__all__");
   const [dateRange, setDateRange] = useState({
     start: format(startOfMonth(new Date()), 'yyyy-MM-dd'),
     end: format(endOfMonth(new Date()), 'yyyy-MM-dd'),
@@ -81,6 +83,11 @@ export function PayrollCalculationSection() {
     setCalculating(true);
 
     try {
+      // Filter staff based on selection
+      const targetStaff = selectedStaffId === "__all__" 
+        ? staff 
+        : staff.filter(s => s.id === selectedStaffId);
+
       // Fetch time records for the period
       const { data: timeRecords } = await supabase
         .from('staff_time_records')
@@ -98,7 +105,7 @@ export function PayrollCalculationSection() {
         .lte('scheduled_date', dateRange.end)
         .eq('status', 'completed');
 
-      const payroll: PayrollItem[] = staff.map((s) => {
+      const payroll: PayrollItem[] = targetStaff.map((s) => {
         const config = paymentConfigs.find(c => c.staff_id === s.id);
         
         // Calculate hours worked
@@ -228,6 +235,30 @@ export function PayrollCalculationSection() {
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap gap-4 items-end">
+            <div className="space-y-2">
+              <Label>Colaborador</Label>
+              <Select value={selectedStaffId} onValueChange={setSelectedStaffId}>
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="Selecionar" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all__">
+                    <span className="flex items-center gap-2">
+                      <Users className="h-4 w-4" />
+                      Todos os Colaboradores
+                    </span>
+                  </SelectItem>
+                  {staff.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      <span className="flex items-center gap-2">
+                        <User className="h-4 w-4" />
+                        {s.full_name}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <div className="space-y-2">
               <Label>Data Início</Label>
               <Input
