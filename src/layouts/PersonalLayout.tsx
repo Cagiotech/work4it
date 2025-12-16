@@ -7,11 +7,11 @@ import { DeveloperFooter } from "@/components/DeveloperFooter";
 export default function PersonalLayout() {
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-background">
+      <div className="min-h-screen flex w-full">
         <PersonalSidebar />
-        <div className="flex-1 flex flex-col min-w-0">
+        <div className="flex-1 flex flex-col min-w-0 bg-muted/30">
           <PersonalHeader />
-          <main className="flex-1 p-3 md:p-6 overflow-auto">
+          <main className="flex-1 p-4 md:p-6 overflow-auto">
             <Outlet />
           </main>
           <DeveloperFooter />

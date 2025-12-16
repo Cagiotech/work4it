@@ -30,23 +30,23 @@ const Index = () => {
   const { t } = useTranslation();
 
   const features = [
-    { icon: Users, title: 'Gestão de Alunos', description: 'Perfis completos com anamnese, treinos e nutrição.' },
-    { icon: Calendar, title: 'Aulas e Agenda', description: 'Calendário visual com inscrições e presenças.' },
-    { icon: DollarSign, title: 'Financeiro', description: 'Faturação automática e controlo de pagamentos.' },
-    { icon: UserCog, title: 'Recursos Humanos', description: 'Equipa, horários, férias e folha de pagamento.' },
-    { icon: Dumbbell, title: 'Planos de Treino', description: 'Treinos personalizados para cada aluno.' },
-    { icon: Apple, title: 'Nutrição', description: 'Planos alimentares com macros detalhados.' },
-    { icon: BarChart3, title: 'Dashboard', description: 'KPIs em tempo real e relatórios PDF.' },
-    { icon: MessageSquare, title: 'Comunicação', description: 'Chat integrado entre toda a equipa.' },
+    { icon: Users, title: 'Gestão de Alunos', description: 'Perfis completos com anamnese, treinos e nutrição.', gradient: 'from-blue-500 to-cyan-500' },
+    { icon: Calendar, title: 'Aulas e Agenda', description: 'Calendário visual com inscrições e presenças.', gradient: 'from-green-500 to-emerald-500' },
+    { icon: DollarSign, title: 'Financeiro', description: 'Faturação automática e controlo de pagamentos.', gradient: 'from-yellow-500 to-orange-500' },
+    { icon: UserCog, title: 'Recursos Humanos', description: 'Equipa, horários, férias e folha de pagamento.', gradient: 'from-purple-500 to-pink-500' },
+    { icon: Dumbbell, title: 'Planos de Treino', description: 'Treinos personalizados para cada aluno.', gradient: 'from-red-500 to-rose-500' },
+    { icon: Apple, title: 'Nutrição', description: 'Planos alimentares com macros detalhados.', gradient: 'from-lime-500 to-green-500' },
+    { icon: BarChart3, title: 'Dashboard', description: 'KPIs em tempo real e relatórios PDF.', gradient: 'from-indigo-500 to-purple-500' },
+    { icon: MessageSquare, title: 'Comunicação', description: 'Chat integrado entre toda a equipa.', gradient: 'from-pink-500 to-rose-500' },
   ];
 
   const benefits = [
-    { icon: Clock, title: 'Poupe 15h/semana', description: 'Automatize tarefas repetitivas.' },
-    { icon: Shield, title: 'Dados Seguros', description: 'Encriptação e backups diários.' },
-    { icon: Smartphone, title: 'App para Alunos', description: 'Acesso mobile a treinos e aulas.' },
-    { icon: BarChart3, title: 'Relatórios', description: 'Decisões baseadas em dados.' },
-    { icon: Users, title: 'Multi-Utilizador', description: 'Permissões por função.' },
-    { icon: Star, title: 'Suporte Premium', description: 'Ajuda em português.' },
+    { icon: Clock, title: 'Poupe 15h/semana', description: 'Automatize tarefas repetitivas.', color: 'text-blue-500' },
+    { icon: Shield, title: 'Dados Seguros', description: 'Encriptação e backups diários.', color: 'text-green-500' },
+    { icon: Smartphone, title: 'App para Alunos', description: 'Acesso mobile a treinos e aulas.', color: 'text-purple-500' },
+    { icon: BarChart3, title: 'Relatórios', description: 'Decisões baseadas em dados.', color: 'text-orange-500' },
+    { icon: Users, title: 'Multi-Utilizador', description: 'Permissões por função.', color: 'text-cyan-500' },
+    { icon: Star, title: 'Suporte Premium', description: 'Ajuda em português.', color: 'text-yellow-500' },
   ];
 
   const plans = [
@@ -179,13 +179,14 @@ const Index = () => {
 
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               {features.map((feature, index) => (
-                <Card key={index} className="group border-border/50 bg-card hover:border-primary/30 hover:shadow-lg transition-all duration-300">
-                  <CardContent className="p-5">
-                    <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center mb-3 group-hover:bg-primary/20 transition-colors">
-                      <feature.icon className="h-5 w-5 text-primary" />
+                <Card key={index} className="group border-border/50 bg-card hover:shadow-xl hover:-translate-y-1 transition-all duration-300 overflow-hidden">
+                  <CardContent className="p-5 relative">
+                    <div className={`h-11 w-11 rounded-xl bg-gradient-to-br ${feature.gradient} flex items-center justify-center mb-4 shadow-lg group-hover:scale-110 transition-transform`}>
+                      <feature.icon className="h-5 w-5 text-white" />
                     </div>
                     <h3 className="font-heading font-semibold text-foreground">{feature.title}</h3>
                     <p className="mt-1 text-sm text-muted-foreground">{feature.description}</p>
+                    <div className={`absolute -right-8 -bottom-8 h-24 w-24 rounded-full bg-gradient-to-br ${feature.gradient} opacity-10 blur-2xl group-hover:opacity-20 transition-opacity`} />
                   </CardContent>
                 </Card>
               ))}
@@ -205,13 +206,13 @@ const Index = () => {
 
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-4xl mx-auto">
               {benefits.map((benefit, index) => (
-                <div key={index} className="flex items-start gap-3 p-5 rounded-xl bg-muted/30 border border-border/50">
-                  <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                    <benefit.icon className="h-4 w-4 text-primary" />
+                <div key={index} className="flex items-start gap-4 p-5 rounded-xl bg-card border border-border/50 hover:border-primary/20 hover:shadow-md transition-all duration-300">
+                  <div className={`h-10 w-10 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center flex-shrink-0`}>
+                    <benefit.icon className={`h-5 w-5 ${benefit.color}`} />
                   </div>
                   <div>
                     <h3 className="font-semibold text-foreground">{benefit.title}</h3>
-                    <p className="text-sm text-muted-foreground">{benefit.description}</p>
+                    <p className="text-sm text-muted-foreground mt-0.5">{benefit.description}</p>
                   </div>
                 </div>
               ))}
