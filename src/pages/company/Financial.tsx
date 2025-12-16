@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { format, startOfMonth, endOfMonth, isWithinInterval } from "date-fns";
 import { pt } from "date-fns/locale";
-import { DollarSign, TrendingUp, TrendingDown, CreditCard, Receipt, Download, Plus, Trash2, Pencil, Tag, Loader2, RefreshCw, Users } from "lucide-react";
+import { DollarSign, TrendingUp, TrendingDown, CreditCard, Receipt, Download, Plus, Trash2, Pencil, Loader2, RefreshCw, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatCard } from "@/components/dashboard/StatCard";
@@ -12,9 +12,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { DateRangeFilter, DateRange, FilterPreset } from "@/components/company/dashboard/DateRangeFilter";
 import { CategoryDialog } from "@/components/company/financial/CategoryDialog";
 import { TransactionDialog } from "@/components/company/financial/TransactionDialog";
+import { PayrollSection } from "@/components/company/financial/PayrollSection";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { exportFinancialReport } from "@/lib/pdfExport";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -159,7 +161,6 @@ export default function Financial() {
     setSyncing(true);
 
     try {
-      // Get active subscriptions
       const { data: subscriptions } = await supabase
         .from('student_subscriptions')
         .select(`
@@ -169,12 +170,10 @@ export default function Financial() {
         `)
         .eq('status', 'active');
 
-      // Filter by company
       const companySubscriptions = (subscriptions || []).filter(
         (s: any) => s.student?.company_id === company.id
       );
 
-      // Check which are not yet registered as transactions
       const { data: existingTx } = await supabase
         .from('financial_transactions')
         .select('subscription_id')
@@ -215,7 +214,6 @@ export default function Financial() {
     }
   };
 
-  // Category handlers
   const handleSaveCategory = async (data: { name: string; type: string; color: string }) => {
     if (!company?.id) return;
 
@@ -241,7 +239,6 @@ export default function Financial() {
     }
   };
 
-  // Transaction handlers
   const handleSaveTransaction = async (data: Partial<Transaction>) => {
     if (!company?.id) return;
     if (!data.description || !data.type) return;
@@ -306,6 +303,11 @@ export default function Financial() {
       setDeleteDialogOpen(false);
       setItemToDelete(null);
     }
+  };
+
+  const handleExportPDF = async () => {
+    await exportFinancialReport(filteredTransactions, stats, dateRange);
+    toast.success("PDF exportado com sucesso");
   };
 
   const getStatusBadge = (status: string) => {
@@ -379,15 +381,16 @@ export default function Financial() {
           <TabsList>
             <TabsTrigger value="transactions">Transações</TabsTrigger>
             <TabsTrigger value="categories">Categorias</TabsTrigger>
+            <TabsTrigger value="payroll">Folha Salarial</TabsTrigger>
           </TabsList>
           <div className="flex gap-2">
             <Button variant="outline" onClick={handleSyncSubscriptions} disabled={syncing}>
               {syncing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
               Sincronizar Planos
             </Button>
-            <Button variant="outline" className="gap-2">
+            <Button variant="outline" className="gap-2" onClick={handleExportPDF}>
               <Download className="h-4 w-4" />
-              Exportar
+              Exportar PDF
             </Button>
           </div>
         </div>
@@ -486,89 +489,48 @@ export default function Financial() {
             </Button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Income Categories */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-green-600">
-                  <TrendingUp className="h-5 w-5" />
-                  Categorias de Receita
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {categories.filter(c => c.type === 'income').length === 0 ? (
-                  <p className="text-muted-foreground text-center py-4">Sem categorias</p>
-                ) : (
-                  categories.filter(c => c.type === 'income').map((cat) => (
-                    <div key={cat.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
-                      <div className="flex items-center gap-3">
-                        <div className="w-4 h-4 rounded-full" style={{ backgroundColor: cat.color }} />
-                        <span className="font-medium">{cat.name}</span>
-                      </div>
-                      <div className="flex gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => { setSelectedCategory(cat); setCategoryDialogOpen(true); }}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="text-destructive"
-                          onClick={() => { setItemToDelete({ type: 'category', id: cat.id }); setDeleteDialogOpen(true); }}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {categories.map((cat) => (
+              <Card key={cat.id} className="relative overflow-hidden">
+                <div 
+                  className="absolute top-0 left-0 w-1 h-full" 
+                  style={{ backgroundColor: cat.color }}
+                />
+                <CardContent className="p-4 pl-5">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h4 className="font-medium">{cat.name}</h4>
+                      <Badge variant="outline" className="mt-1 text-xs">
+                        {cat.type === 'income' ? 'Receita' : 'Despesa'}
+                      </Badge>
                     </div>
-                  ))
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Expense Categories */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-red-600">
-                  <TrendingDown className="h-5 w-5" />
-                  Categorias de Despesa
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {categories.filter(c => c.type === 'expense').length === 0 ? (
-                  <p className="text-muted-foreground text-center py-4">Sem categorias</p>
-                ) : (
-                  categories.filter(c => c.type === 'expense').map((cat) => (
-                    <div key={cat.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
-                      <div className="flex items-center gap-3">
-                        <div className="w-4 h-4 rounded-full" style={{ backgroundColor: cat.color }} />
-                        <span className="font-medium">{cat.name}</span>
-                      </div>
-                      <div className="flex gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => { setSelectedCategory(cat); setCategoryDialogOpen(true); }}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="text-destructive"
-                          onClick={() => { setItemToDelete({ type: 'category', id: cat.id }); setDeleteDialogOpen(true); }}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => { setSelectedCategory(cat); setCategoryDialogOpen(true); }}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-destructive"
+                        onClick={() => { setItemToDelete({ type: 'category', id: cat.id }); setDeleteDialogOpen(true); }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
-                  ))
-                )}
-              </CardContent>
-            </Card>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
+        </TabsContent>
+
+        <TabsContent value="payroll" className="mt-6">
+          {company?.id && <PayrollSection companyId={company.id} />}
         </TabsContent>
       </Tabs>
 
@@ -593,16 +555,16 @@ export default function Financial() {
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Confirmar eliminação</AlertDialogTitle>
+            <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja eliminar {itemToDelete?.type === 'category' ? 'esta categoria' : 'esta transação'}? 
+              Tem certeza que deseja excluir {itemToDelete?.type === 'category' ? 'esta categoria' : 'esta transação'}?
               Esta ação não pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Eliminar
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground">
+              Excluir
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

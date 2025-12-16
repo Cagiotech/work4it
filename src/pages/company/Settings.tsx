@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { User, Lock, Building, Save, LogOut, Link, FileText, Copy, Check, Trash2, AlertTriangle, LayoutGrid, UserCheck } from "lucide-react";
+import { User, Lock, Building, Save, LogOut, Link, FileText, Copy, Check, Trash2, AlertTriangle, LayoutGrid, UserCheck, Phone, Mail, MapPin, Globe, FileCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -25,6 +25,71 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+
+// Pre-filled templates
+const DEFAULT_TERMS_TEMPLATE = `TERMOS E CONDIÇÕES DE UTILIZAÇÃO
+
+1. ACEITAÇÃO DOS TERMOS
+Ao utilizar os serviços do [NOME DO GINÁSIO], o utilizador aceita integralmente os presentes Termos e Condições.
+
+2. INSCRIÇÃO E MATRÍCULA
+2.1. A inscrição está sujeita à apresentação de documentos de identificação válidos.
+2.2. O pagamento da mensalidade deve ser efetuado até ao dia 8 de cada mês.
+2.3. O incumprimento dos pagamentos poderá resultar na suspensão do acesso às instalações.
+
+3. UTILIZAÇÃO DAS INSTALAÇÕES
+3.1. O acesso às instalações é pessoal e intransmissível.
+3.2. É obrigatório o uso de vestuário e calçado adequado à prática desportiva.
+3.3. É obrigatório o uso de toalha durante os treinos.
+3.4. É proibido o consumo de alimentos nas áreas de treino.
+
+4. CANCELAMENTO
+4.1. O cancelamento da inscrição deve ser comunicado com 30 dias de antecedência.
+4.2. O pedido de cancelamento deve ser feito por escrito.
+
+5. RESPONSABILIDADE
+5.1. O ginásio não se responsabiliza por objetos pessoais perdidos ou roubados.
+5.2. É recomendado o uso de cadeados pessoais nos cacifos.
+
+6. ALTERAÇÕES
+O ginásio reserva-se o direito de alterar estes termos a qualquer momento, mediante comunicação prévia aos utilizadores.
+
+Data de última atualização: [DATA]`;
+
+const DEFAULT_REGULATIONS_TEMPLATE = `REGULAMENTO INTERNO
+
+HORÁRIO DE FUNCIONAMENTO
+• Segunda a Sexta: 07:00 - 22:00
+• Sábado: 09:00 - 18:00
+• Domingo e Feriados: 09:00 - 13:00
+
+NORMAS GERAIS DE CONDUTA
+1. Manter uma conduta respeitosa com todos os utilizadores e funcionários.
+2. Utilizar os equipamentos de forma adequada e segura.
+3. Repor os equipamentos no local apropriado após utilização.
+4. Limpar os equipamentos após utilização.
+5. Respeitar os limites de tempo nos equipamentos cardiovasculares em horário de pico.
+
+VESTUÁRIO E HIGIENE
+• Usar roupa desportiva limpa e apropriada.
+• Usar calçado desportivo fechado e limpo.
+• Usar toalha durante os treinos.
+• Tomar duche antes de utilizar a piscina/sauna (se aplicável).
+
+SEGURANÇA
+• Consultar um médico antes de iniciar a prática desportiva.
+• Informar os instrutores sobre qualquer condição de saúde relevante.
+• Em caso de mal-estar, suspender imediatamente o treino e informar um funcionário.
+• Não é permitido treinar sob efeito de álcool ou substâncias ilícitas.
+
+PROIBIÇÕES
+• Não é permitida a entrada de menores de 16 anos sem acompanhamento de adulto.
+• Não é permitido fumar em nenhuma área das instalações.
+• Não é permitida a utilização de telemóveis nas áreas de treino (exceto para música).
+• Não é permitido dar orientações técnicas a outros utilizadores (função exclusiva dos instrutores).
+
+SANÇÕES
+O não cumprimento do presente regulamento poderá resultar em advertência, suspensão temporária ou cancelamento da inscrição, sem direito a reembolso.`;
 
 interface ExtendedCompany {
   id: string;
@@ -52,11 +117,17 @@ export default function Settings() {
   const [profileData, setProfileData] = useState({
     fullName: '',
     rolePosition: '',
+    email: '',
+    phone: '',
   });
   
   const [companyData, setCompanyData] = useState({
     name: '',
     address: '',
+    phone: '',
+    email: '',
+    website: '',
+    nif: '',
   });
 
   const [regulationsData, setRegulationsData] = useState({
@@ -76,16 +147,30 @@ export default function Settings() {
       setProfileData({
         fullName: profile.full_name || '',
         rolePosition: profile.role_position || '',
+        email: '',
+        phone: '',
       });
+      fetchUserEmail();
     }
     if (company) {
       setCompanyData({
         name: company.name || '',
         address: company.address || '',
+        phone: '',
+        email: '',
+        website: '',
+        nif: '',
       });
       fetchExtendedCompanyData(company.id);
     }
   }, [profile, company]);
+
+  const fetchUserEmail = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user?.email) {
+      setProfileData(prev => ({ ...prev, email: user.email || '' }));
+    }
+  };
 
   const fetchExtendedCompanyData = async (companyId: string) => {
     const { data, error } = await supabase
@@ -255,6 +340,19 @@ export default function Settings() {
     }
   };
 
+  const handleLoadTermsTemplate = () => {
+    const customized = DEFAULT_TERMS_TEMPLATE
+      .replace('[NOME DO GINÁSIO]', companyData.name || 'NOME DO GINÁSIO')
+      .replace('[DATA]', new Date().toLocaleDateString('pt-PT'));
+    setRegulationsData(prev => ({ ...prev, termsText: customized }));
+    toast.success('Modelo de termos carregado! Personalize conforme necessário.');
+  };
+
+  const handleLoadRegulationsTemplate = () => {
+    setRegulationsData(prev => ({ ...prev, regulationsText: DEFAULT_REGULATIONS_TEMPLATE }));
+    toast.success('Modelo de regulamento carregado! Personalize conforme necessário.');
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -297,38 +395,74 @@ export default function Settings() {
           <Card>
             <CardHeader>
               <CardTitle>Informações Pessoais</CardTitle>
+              <CardDescription>Gerencie seus dados pessoais e de acesso</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="flex items-center gap-4">
-                <Avatar className="h-20 w-20">
-                  <AvatarFallback className="bg-primary text-primary-foreground text-xl">
+              <div className="flex items-center gap-6">
+                <Avatar className="h-24 w-24">
+                  <AvatarFallback className="bg-primary text-primary-foreground text-2xl">
                     {getInitials(profileData.fullName)}
                   </AvatarFallback>
                 </Avatar>
-                <div>
-                  <p className="font-medium text-lg">{profileData.fullName || 'Sem nome'}</p>
+                <div className="flex-1">
+                  <p className="font-medium text-xl">{profileData.fullName || 'Sem nome'}</p>
                   <p className="text-muted-foreground">{profileData.rolePosition || 'Sem cargo'}</p>
+                  <p className="text-sm text-muted-foreground mt-1">{profileData.email}</p>
                 </div>
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="fullName">Nome Completo</Label>
-                  <Input
-                    id="fullName"
-                    value={profileData.fullName}
-                    onChange={(e) => setProfileData({ ...profileData, fullName: e.target.value })}
-                    placeholder="Seu nome completo"
-                  />
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="fullName"
+                      value={profileData.fullName}
+                      onChange={(e) => setProfileData({ ...profileData, fullName: e.target.value })}
+                      placeholder="Seu nome completo"
+                      className="pl-10"
+                    />
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="rolePosition">Cargo</Label>
-                  <Input
-                    id="rolePosition"
-                    value={profileData.rolePosition}
-                    onChange={(e) => setProfileData({ ...profileData, rolePosition: e.target.value })}
-                    placeholder="Seu cargo na empresa"
-                  />
+                  <div className="relative">
+                    <Building className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="rolePosition"
+                      value={profileData.rolePosition}
+                      onChange={(e) => setProfileData({ ...profileData, rolePosition: e.target.value })}
+                      placeholder="Seu cargo na empresa"
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="email"
+                      value={profileData.email}
+                      disabled
+                      className="pl-10 bg-muted"
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">O email não pode ser alterado</p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Telefone</Label>
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="phone"
+                      value={profileData.phone}
+                      onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
+                      placeholder="+351 912 345 678"
+                      className="pl-10"
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -344,26 +478,83 @@ export default function Settings() {
           <Card>
             <CardHeader>
               <CardTitle>Dados da Empresa</CardTitle>
+              <CardDescription>Informações do seu ginásio/academia</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="companyName">Nome da Empresa</Label>
-                  <Input
-                    id="companyName"
-                    value={companyData.name}
-                    onChange={(e) => setCompanyData({ ...companyData, name: e.target.value })}
-                    placeholder="Nome do ginásio/academia"
-                  />
+                  <div className="relative">
+                    <Building className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="companyName"
+                      value={companyData.name}
+                      onChange={(e) => setCompanyData({ ...companyData, name: e.target.value })}
+                      placeholder="Nome do ginásio/academia"
+                      className="pl-10"
+                    />
+                  </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="address">Endereço</Label>
+                  <Label htmlFor="nif">NIF</Label>
                   <Input
-                    id="address"
-                    value={companyData.address}
-                    onChange={(e) => setCompanyData({ ...companyData, address: e.target.value })}
-                    placeholder="Endereço completo"
+                    id="nif"
+                    value={companyData.nif}
+                    onChange={(e) => setCompanyData({ ...companyData, nif: e.target.value })}
+                    placeholder="123456789"
                   />
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="address">Endereço</Label>
+                  <div className="relative">
+                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="address"
+                      value={companyData.address}
+                      onChange={(e) => setCompanyData({ ...companyData, address: e.target.value })}
+                      placeholder="Endereço completo"
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="companyPhone">Telefone</Label>
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="companyPhone"
+                      value={companyData.phone}
+                      onChange={(e) => setCompanyData({ ...companyData, phone: e.target.value })}
+                      placeholder="+351 21 123 4567"
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="companyEmail">Email</Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="companyEmail"
+                      value={companyData.email}
+                      onChange={(e) => setCompanyData({ ...companyData, email: e.target.value })}
+                      placeholder="geral@ginasio.pt"
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="website">Website</Label>
+                  <div className="relative">
+                    <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="website"
+                      value={companyData.website}
+                      onChange={(e) => setCompanyData({ ...companyData, website: e.target.value })}
+                      placeholder="https://www.ginasio.pt"
+                      className="pl-10"
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -472,36 +663,50 @@ export default function Settings() {
           <div className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Termos e Condições</CardTitle>
-                <CardDescription>
-                  Defina os termos e condições que os alunos devem aceitar.
-                  Deixe em branco para usar os termos padrão.
-                </CardDescription>
+                <div className="flex justify-between items-start">
+                  <div>
+                    <CardTitle>Termos e Condições</CardTitle>
+                    <CardDescription>
+                      Defina os termos e condições que os alunos devem aceitar.
+                    </CardDescription>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={handleLoadTermsTemplate}>
+                    <FileCheck className="h-4 w-4 mr-2" />
+                    Carregar Modelo
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
                 <Textarea
                   value={regulationsData.termsText}
                   onChange={(e) => setRegulationsData({ ...regulationsData, termsText: e.target.value })}
-                  placeholder="Escreva aqui os termos e condições da sua empresa..."
-                  className="min-h-[200px]"
+                  placeholder="Escreva aqui os termos e condições da sua empresa ou carregue o modelo pré-definido..."
+                  className="min-h-[300px] font-mono text-sm"
                 />
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader>
-                <CardTitle>Regulamento Interno</CardTitle>
-                <CardDescription>
-                  Defina o regulamento interno que os alunos devem aceitar.
-                  Deixe em branco para usar o regulamento padrão.
-                </CardDescription>
+                <div className="flex justify-between items-start">
+                  <div>
+                    <CardTitle>Regulamento Interno</CardTitle>
+                    <CardDescription>
+                      Defina o regulamento interno que os alunos devem aceitar.
+                    </CardDescription>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={handleLoadRegulationsTemplate}>
+                    <FileCheck className="h-4 w-4 mr-2" />
+                    Carregar Modelo
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent className="space-y-4">
                 <Textarea
                   value={regulationsData.regulationsText}
                   onChange={(e) => setRegulationsData({ ...regulationsData, regulationsText: e.target.value })}
-                  placeholder="Escreva aqui o regulamento interno da sua empresa..."
-                  className="min-h-[200px]"
+                  placeholder="Escreva aqui o regulamento interno da sua empresa ou carregue o modelo pré-definido..."
+                  className="min-h-[300px] font-mono text-sm"
                 />
                 
                 <Button onClick={handleSaveRegulations} disabled={loading}>
@@ -518,29 +723,47 @@ export default function Settings() {
             <Card>
               <CardHeader>
                 <CardTitle>Alterar Senha</CardTitle>
+                <CardDescription>Mantenha sua conta segura com uma senha forte</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="newPassword">Nova Senha</Label>
-                    <Input
-                      id="newPassword"
-                      type="password"
-                      value={passwordData.newPassword}
-                      onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
-                      placeholder="••••••••"
-                    />
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="newPassword"
+                        type="password"
+                        value={passwordData.newPassword}
+                        onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
+                        placeholder="••••••••"
+                        className="pl-10"
+                      />
+                    </div>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="confirmPassword">Confirmar Nova Senha</Label>
-                    <Input
-                      id="confirmPassword"
-                      type="password"
-                      value={passwordData.confirmPassword}
-                      onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
-                      placeholder="••••••••"
-                    />
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="confirmPassword"
+                        type="password"
+                        value={passwordData.confirmPassword}
+                        onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
+                        placeholder="••••••••"
+                        className="pl-10"
+                      />
+                    </div>
                   </div>
+                </div>
+
+                <div className="p-4 bg-muted/30 rounded-lg">
+                  <p className="text-sm font-medium mb-2">Requisitos de senha:</p>
+                  <ul className="text-xs text-muted-foreground space-y-1">
+                    <li>• Mínimo de 6 caracteres</li>
+                    <li>• Recomendamos usar letras maiúsculas e minúsculas</li>
+                    <li>• Recomendamos usar números e caracteres especiais</li>
+                  </ul>
                 </div>
 
                 <Button onClick={handleChangePassword} disabled={loading}>

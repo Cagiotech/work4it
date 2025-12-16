@@ -1,14 +1,17 @@
 import { useState, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { startOfMonth, endOfMonth, isWithinInterval } from "date-fns";
-import { Users, Calendar, DollarSign, AlertCircle, TrendingUp, Clock, Loader2 } from "lucide-react";
-import { StatCard } from "@/components/dashboard/StatCard";
+import { startOfMonth, endOfMonth, subMonths, isWithinInterval } from "date-fns";
+import { Calendar, Clock, Loader2, Download, FileText } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { DateRangeFilter, DateRange, FilterPreset } from "@/components/company/dashboard/DateRangeFilter";
 import { RevenueChart } from "@/components/company/dashboard/RevenueChart";
 import { StudentsChart } from "@/components/company/dashboard/StudentsChart";
+import { KPICards } from "@/components/company/dashboard/KPICards";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { exportDashboardReport } from "@/lib/pdfExport";
 
 export default function CompanyDashboard() {
   const { t } = useTranslation();
@@ -27,6 +30,7 @@ export default function CompanyDashboard() {
   const [transactions, setTransactions] = useState<any[]>([]);
   const [recentActivity, setRecentActivity] = useState<any[]>([]);
   const [upcomingClasses, setUpcomingClasses] = useState<any[]>([]);
+  const [previousStats, setPreviousStats] = useState<any>(null);
 
   useEffect(() => {
     if (company?.id) {
@@ -71,17 +75,39 @@ export default function CompanyDashboard() {
         .gte('scheduled_date', today)
         .order('scheduled_date', { ascending: true })
         .order('start_time', { ascending: true })
-        .limit(4);
+        .limit(6);
 
       setStudents(studentsData || []);
       setClasses(classesData || []);
       setTransactions(transactionsData || []);
       setUpcomingClasses(schedulesData || []);
 
+      // Calculate previous period stats for comparison
+      const prevStart = subMonths(startOfMonth(new Date()), 1);
+      const prevEnd = endOfMonth(prevStart);
+      
+      const prevStudents = (studentsData || []).filter(s => 
+        new Date(s.created_at) < prevEnd
+      ).filter(s => s.status === 'active').length;
+      
+      const prevIncome = (transactionsData || [])
+        .filter(t => {
+          const txDate = new Date(t.created_at);
+          return isWithinInterval(txDate, { start: prevStart, end: prevEnd }) 
+            && t.type === 'income' && t.status === 'paid';
+        })
+        .reduce((sum, t) => sum + Number(t.amount), 0);
+
+      setPreviousStats({
+        totalStudents: prevStudents,
+        income: prevIncome,
+        expenses: 0,
+      });
+
       // Build recent activity from students and transactions
       const activity: any[] = [];
       
-      (studentsData || []).slice(0, 3).forEach(s => {
+      (studentsData || []).slice(0, 5).forEach(s => {
         activity.push({
           text: `Novo aluno registado: ${s.full_name}`,
           time: getRelativeTime(new Date(s.created_at)),
@@ -89,7 +115,7 @@ export default function CompanyDashboard() {
         });
       });
 
-      (transactionsData || []).filter(t => t.status === 'paid').slice(0, 3).forEach(t => {
+      (transactionsData || []).filter(t => t.status === 'paid').slice(0, 5).forEach(t => {
         activity.push({
           text: `Pagamento recebido: €${t.amount}`,
           time: getRelativeTime(new Date(t.created_at)),
@@ -98,7 +124,7 @@ export default function CompanyDashboard() {
       });
 
       activity.sort((a, b) => b.date.getTime() - a.date.getTime());
-      setRecentActivity(activity.slice(0, 5));
+      setRecentActivity(activity.slice(0, 8));
 
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
@@ -156,6 +182,11 @@ export default function CompanyDashboard() {
     return `${days} dia${days > 1 ? 's' : ''}`;
   };
 
+  const handleExportPDF = async () => {
+    await exportDashboardReport(stats, recentActivity, dateRange);
+    toast.success("Relatório exportado com sucesso");
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -169,42 +200,26 @@ export default function CompanyDashboard() {
       {/* Date Filter */}
       <div className="flex justify-between items-center flex-wrap gap-4">
         <h2 className="text-xl font-semibold">Dashboard</h2>
-        <DateRangeFilter
-          dateRange={dateRange}
-          onDateRangeChange={setDateRange}
-          preset={preset}
-          onPresetChange={setPreset}
-        />
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handleExportPDF}>
+            <Download className="h-4 w-4 mr-2" />
+            Exportar PDF
+          </Button>
+          <DateRangeFilter
+            dateRange={dateRange}
+            onDateRangeChange={setDateRange}
+            preset={preset}
+            onPresetChange={setPreset}
+          />
+        </div>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard
-          title={t("dashboard.totalStudents")}
-          value={stats.totalStudents}
-          icon={Users}
-          trend="up"
-          trendValue={`${stats.pendingStudents} pendentes`}
-        />
-        <StatCard
-          title={t("dashboard.activeClasses")}
-          value={stats.activeClasses}
-          icon={Calendar}
-        />
-        <StatCard
-          title="Receita"
-          value={`€${stats.income.toFixed(2)}`}
-          icon={DollarSign}
-          trend="up"
-          trendValue={`Despesas: €${stats.expenses.toFixed(2)}`}
-        />
-        <StatCard
-          title={t("dashboard.pendingPayments")}
-          value={`€${stats.pendingPayments.toFixed(2)}`}
-          icon={AlertCircle}
-          className="border-l-4 border-l-warning"
-        />
-      </div>
+      {/* KPI Cards */}
+      <KPICards 
+        stats={stats} 
+        previousStats={previousStats}
+        transactions={filteredTransactions}
+      />
 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -212,8 +227,8 @@ export default function CompanyDashboard() {
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
-              <TrendingUp className="h-5 w-5 text-primary" />
-              Evolução de Receitas
+              <FileText className="h-5 w-5 text-primary" />
+              Evolução Financeira
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -229,7 +244,6 @@ export default function CompanyDashboard() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
-              <Users className="h-5 w-5 text-primary" />
               Distribuição de Alunos
             </CardTitle>
           </CardHeader>
@@ -253,15 +267,15 @@ export default function CompanyDashboard() {
               Atividade Recente
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-3">
             {recentActivity.length === 0 ? (
               <p className="text-muted-foreground text-center py-4">Sem atividade recente</p>
             ) : (
               recentActivity.map((activity, index) => (
                 <div key={index} className="flex items-start gap-3 pb-3 border-b border-border last:border-0 last:pb-0">
-                  <div className="h-2 w-2 rounded-full bg-primary mt-2" />
-                  <div className="flex-1">
-                    <p className="text-sm text-foreground">{activity.text}</p>
+                  <div className="h-2 w-2 rounded-full bg-primary mt-2 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-foreground truncate">{activity.text}</p>
                     <p className="text-xs text-muted-foreground">{activity.time}</p>
                   </div>
                 </div>
@@ -282,12 +296,12 @@ export default function CompanyDashboard() {
             {upcomingClasses.length === 0 ? (
               <p className="text-muted-foreground text-center py-4">Sem aulas agendadas</p>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {upcomingClasses.map((schedule) => (
-                  <div key={schedule.id} className="p-4 bg-muted/30 rounded-xl border border-border hover:border-primary/50 transition-colors">
-                    <h4 className="font-semibold text-foreground">{(schedule.classes as any)?.name}</h4>
-                    <p className="text-primary font-medium">{schedule.start_time?.slice(0, 5)}</p>
-                    <p className="text-sm text-muted-foreground mt-1">{(schedule.staff as any)?.full_name || "Sem instrutor"}</p>
+                  <div key={schedule.id} className="p-3 bg-muted/30 rounded-xl border border-border hover:border-primary/50 transition-colors">
+                    <h4 className="font-semibold text-foreground text-sm">{(schedule.classes as any)?.name}</h4>
+                    <p className="text-primary font-medium text-sm">{schedule.start_time?.slice(0, 5)}</p>
+                    <p className="text-xs text-muted-foreground mt-1">{(schedule.staff as any)?.full_name || "Sem instrutor"}</p>
                     <p className="text-xs text-muted-foreground">{schedule.scheduled_date}</p>
                   </div>
                 ))}
