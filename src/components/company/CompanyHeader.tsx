@@ -3,6 +3,7 @@ import { Bell, Search, User, Menu, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -49,6 +50,7 @@ export function CompanyHeader() {
 
         <div className="flex flex-1 md:flex-none items-center justify-end gap-2 md:gap-4">
           <LanguageSwitcher />
+          <ThemeSwitcher />
           
           <Button variant="ghost" size="icon" className="relative">
             <Bell className="h-5 w-5" />
