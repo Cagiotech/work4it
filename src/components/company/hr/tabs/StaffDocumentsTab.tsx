@@ -91,7 +91,7 @@ export function StaffDocumentsTab({ staffId, canEdit }: StaffDocumentsTabProps) 
       const filePath = `staff/${staffId}/${Date.now()}.${fileExt}`;
 
       const { error: uploadError } = await supabase.storage
-        .from("documents")
+        .from("staff-documents")
         .upload(filePath, file);
 
       if (uploadError) throw uploadError;
@@ -128,7 +128,7 @@ export function StaffDocumentsTab({ staffId, canEdit }: StaffDocumentsTabProps) 
 
     try {
       // Delete from storage
-      await supabase.storage.from("documents").remove([documentToDelete.file_path]);
+      await supabase.storage.from("staff-documents").remove([documentToDelete.file_path]);
 
       // Delete record
       const { error } = await supabase
@@ -152,7 +152,7 @@ export function StaffDocumentsTab({ staffId, canEdit }: StaffDocumentsTabProps) 
   const handleDownload = async (doc: Document) => {
     try {
       const { data, error } = await supabase.storage
-        .from("documents")
+        .from("staff-documents")
         .download(doc.file_path);
 
       if (error) throw error;
