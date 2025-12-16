@@ -68,8 +68,8 @@ export function useStudentAccessCheck(): StudentCheckResult {
         // Self-registered students with pending status need onboarding
         if (isSelfRegistered && studentData.status === 'pending') {
           setNeedsOnboarding(true);
-          if (!location.pathname.includes('/onboarding-new-student')) {
-            navigate('/onboarding-new-student');
+          if (!location.pathname.includes('/new-student')) {
+            navigate('/new-student');
           }
           setChecking(false);
           return;
