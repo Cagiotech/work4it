@@ -12,6 +12,7 @@ import {
   CalendarDays,
   Settings,
   LogOut,
+  ChevronLeft,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import {
@@ -26,6 +27,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
 import logoLight from "@/assets/logo-light.png";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -44,7 +46,7 @@ const menuItems = [
 
 export function CompanySidebar() {
   const { t } = useTranslation();
-  const { state } = useSidebar();
+  const { state, toggleSidebar } = useSidebar();
   const location = useLocation();
   const navigate = useNavigate();
   const { profile, company, signOut } = useAuth();
@@ -63,70 +65,86 @@ export function CompanySidebar() {
   };
 
   return (
-    <Sidebar collapsible="icon" className="border-r border-border">
-      <SidebarContent className="bg-card flex flex-col">
-        {/* Header with user info */}
-        <div className="px-4 py-4">
-          {!collapsed ? (
-            <>
-              <div className="flex items-center gap-2">
-                <img src={logoLight} alt="Cagiotech" className="h-8" />
-                <span className="text-lg font-bold text-foreground">Cagiotech</span>
+    <Sidebar collapsible="icon" className="border-r-0">
+      <SidebarContent className="bg-gradient-sidebar flex flex-col">
+        {/* Header with logo and user info */}
+        <div className="p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="h-9 w-9 rounded-lg bg-sidebar-primary/20 flex items-center justify-center">
+                <img src={logoLight} alt="Cagiotech" className="h-6" />
               </div>
-              <div className="mt-3 space-y-1">
-                <p className="text-sm font-medium text-foreground">{profile?.full_name || 'Usuário'}</p>
-                {company?.name && (
-                  <p className="text-xs text-muted-foreground">{company.name}</p>
-                )}
-              </div>
-            </>
-          ) : (
-            <div className="flex justify-center">
-              <img src={logoLight} alt="Cagiotech" className="h-6" />
+              {!collapsed && (
+                <span className="text-lg font-bold text-sidebar-foreground">Cagiotech</span>
+              )}
+            </div>
+            {!collapsed && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={toggleSidebar}
+                className="h-8 w-8 text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+          
+          {!collapsed && (
+            <div className="mt-4 p-3 rounded-xl bg-sidebar-accent/50 border border-sidebar-border">
+              <p className="text-sm font-medium text-sidebar-foreground">{profile?.full_name || 'Usuário'}</p>
+              {company?.name && (
+                <p className="text-xs text-sidebar-foreground/60 mt-0.5">{company.name}</p>
+              )}
             </div>
           )}
         </div>
 
         {/* Menu Items */}
-        <SidebarGroup className="flex-1">
+        <SidebarGroup className="flex-1 px-3">
           <SidebarGroupContent>
-            <SidebarMenu>
-              {menuItems.map((item) => (
-                <SidebarMenuItem key={item.key}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={isActive(item.url)}
-                    tooltip={item.key === "settings" ? "Configurações" : t(`dashboard.${item.key === "dashboard" ? "title" : item.key}`)}
-                  >
-                    <NavLink
-                      to={item.url}
-                      end={item.url === "/company"}
-                      className="flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-200 text-foreground/70 hover:bg-muted hover:text-foreground border border-primary/30"
-                      activeClassName="bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground font-medium border-primary"
+            <SidebarMenu className="space-y-1">
+              {menuItems.map((item) => {
+                const active = isActive(item.url);
+                return (
+                  <SidebarMenuItem key={item.key}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={active}
+                      tooltip={item.key === "settings" ? "Configurações" : t(`dashboard.${item.key === "dashboard" ? "title" : item.key}`)}
                     >
-                      <item.icon className="h-5 w-5 shrink-0" />
-                      {!collapsed && (
-                        <span>{item.key === "settings" ? "Configurações" : t(`dashboard.${item.key === "dashboard" ? "title" : item.key}`)}</span>
-                      )}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+                      <NavLink
+                        to={item.url}
+                        end={item.url === "/company"}
+                        className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 ${
+                          active 
+                            ? 'bg-sidebar-primary text-sidebar-primary-foreground font-medium shadow-lg shadow-sidebar-primary/25' 
+                            : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground'
+                        }`}
+                        activeClassName=""
+                      >
+                        <item.icon className="h-5 w-5 shrink-0" />
+                        {!collapsed && (
+                          <span>{item.key === "settings" ? "Configurações" : t(`dashboard.${item.key === "dashboard" ? "title" : item.key}`)}</span>
+                        )}
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
 
         {/* Footer with logout */}
-        <SidebarFooter className="mt-auto">
-          <Separator className="mb-2" />
-
-          {/* Logout button */}
+        <SidebarFooter className="p-3">
+          <Separator className="mb-3 bg-sidebar-border" />
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton
                 onClick={handleLogout}
                 tooltip={t("common.logout")}
-                className="flex items-center gap-3 px-4 py-2.5 text-foreground/70 hover:bg-destructive/10 hover:text-destructive rounded-lg transition-all duration-200"
+                className="flex items-center gap-3 px-3 py-2.5 text-sidebar-foreground/70 hover:bg-destructive/20 hover:text-destructive rounded-lg transition-all duration-200"
               >
                 <LogOut className="h-5 w-5 shrink-0" />
                 {!collapsed && <span>{t("common.logout")}</span>}

@@ -20,8 +20,11 @@ export function StudentLayout() {
 
   if (checking) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="min-h-screen flex items-center justify-center bg-muted/30">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="h-10 w-10 animate-spin text-primary" />
+          <p className="text-sm text-muted-foreground">A carregar...</p>
+        </div>
       </div>
     );
   }
@@ -30,11 +33,11 @@ export function StudentLayout() {
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-background">
+      <div className="min-h-screen flex w-full">
         <StudentSidebar />
-        <div className="flex-1 flex flex-col min-w-0">
+        <div className="flex-1 flex flex-col min-w-0 bg-muted/30">
           <StudentHeader />
-          <main className="flex-1 p-3 md:p-6 overflow-auto">
+          <main className="flex-1 p-4 md:p-6 overflow-auto">
             <Outlet />
           </main>
           <DeveloperFooter />
