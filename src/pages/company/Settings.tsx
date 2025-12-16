@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { User, Lock, Building, Save, LogOut, Link, FileText, Copy, Check, Trash2, AlertTriangle, LayoutGrid, UserCheck, Phone, Mail, MapPin, Globe, FileCheck } from "lucide-react";
+import { User, Lock, Building, Save, LogOut, Link, FileText, Copy, Check, Trash2, AlertTriangle, LayoutGrid, UserCheck, Phone, Mail, MapPin, Globe, FileCheck, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { ClassesSettingsSection } from "@/components/company/settings/ClassesSettingsSection";
+import { RolesSettingsSection } from "@/components/company/settings/RolesSettingsSection";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -373,6 +374,10 @@ export default function Settings() {
             <Building className="h-4 w-4 mr-2" />
             Empresa
           </TabsTrigger>
+          <TabsTrigger value="hr">
+            <Users className="h-4 w-4 mr-2" />
+            RH
+          </TabsTrigger>
           <TabsTrigger value="classes">
             <LayoutGrid className="h-4 w-4 mr-2" />
             Aulas
@@ -562,6 +567,20 @@ export default function Settings() {
                 <Save className="h-4 w-4 mr-2" />
                 {loading ? 'Salvando...' : 'Salvar Alterações'}
               </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="hr">
+          <Card>
+            <CardHeader>
+              <CardTitle>Cargos e Permissões</CardTitle>
+              <CardDescription>
+                Configure os cargos e permissões dos colaboradores.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <RolesSettingsSection />
             </CardContent>
           </Card>
         </TabsContent>
