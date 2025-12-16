@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { Plus, Search, Users, UserCheck, UserX, MoreVertical, Trash2, Edit, Loader2, Key, Clock, Calendar, Calculator } from "lucide-react";
+import { Plus, Search, Users, UserCheck, UserX, MoreVertical, Trash2, Edit, Loader2, Key, Clock, Calendar, Calculator, Download, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,6 +16,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { usePermissions } from "@/hooks/usePermissions";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { exportStaffReport } from "@/lib/pdfExport";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -152,6 +153,11 @@ export default function HumanResources() {
     return name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
   };
 
+  const handleExportPDF = async () => {
+    await exportStaffReport(staff, stats);
+    toast.success('PDF exportado com sucesso!');
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -203,12 +209,18 @@ export default function HumanResources() {
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            {canCreate('hr') && (
-              <Button className="gap-2" onClick={() => openProfileDialog(null)}>
-                <Plus className="h-4 w-4" />
-                Adicionar Colaborador
+            <div className="flex gap-2">
+              <Button variant="outline" className="gap-2" onClick={handleExportPDF}>
+                <FileText className="h-4 w-4" />
+                Exportar PDF
               </Button>
-            )}
+              {canCreate('hr') && (
+                <Button className="gap-2" onClick={() => openProfileDialog(null)}>
+                  <Plus className="h-4 w-4" />
+                  Adicionar Colaborador
+                </Button>
+              )}
+            </div>
           </div>
 
           {/* Staff List */}

@@ -183,7 +183,14 @@ export default function CompanyDashboard() {
   };
 
   const handleExportPDF = async () => {
-    await exportDashboardReport(stats, recentActivity, dateRange);
+    const exportStats = {
+      totalStudents: stats.totalStudents,
+      activeClasses: stats.activeClasses,
+      income: stats.income,
+      expenses: stats.expenses,
+      pendingPayments: stats.pendingPayments,
+    };
+    await exportDashboardReport(exportStats, recentActivity, dateRange);
     toast.success("Relatório exportado com sucesso");
   };
 
