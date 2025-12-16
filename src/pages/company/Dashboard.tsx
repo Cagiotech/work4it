@@ -1,12 +1,15 @@
 import { useState, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { startOfMonth, endOfMonth, subMonths, isWithinInterval } from "date-fns";
-import { Calendar, Clock, Loader2, Download, FileText } from "lucide-react";
+import { Calendar, Clock, Loader2, Download, FileText, TrendingUp, Users, CreditCard, BarChart3 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { DateRangeFilter, DateRange, FilterPreset } from "@/components/company/dashboard/DateRangeFilter";
 import { RevenueChart } from "@/components/company/dashboard/RevenueChart";
 import { StudentsChart } from "@/components/company/dashboard/StudentsChart";
+import { ClassesChart } from "@/components/company/dashboard/ClassesChart";
+import { PaymentsChart } from "@/components/company/dashboard/PaymentsChart";
+import { MonthlyComparisonChart } from "@/components/company/dashboard/MonthlyComparisonChart";
 import { KPICards } from "@/components/company/dashboard/KPICards";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -27,6 +30,7 @@ export default function CompanyDashboard() {
   // Data state
   const [students, setStudents] = useState<any[]>([]);
   const [classes, setClasses] = useState<any[]>([]);
+  const [schedules, setSchedules] = useState<any[]>([]);
   const [transactions, setTransactions] = useState<any[]>([]);
   const [recentActivity, setRecentActivity] = useState<any[]>([]);
   const [upcomingClasses, setUpcomingClasses] = useState<any[]>([]);
@@ -49,12 +53,20 @@ export default function CompanyDashboard() {
         .select('id, full_name, status, created_at')
         .eq('company_id', company.id);
 
-      // Fetch classes
+      // Fetch classes with capacity
       const { data: classesData } = await supabase
         .from('classes')
-        .select('id, name, is_active')
-        .eq('company_id', company.id)
-        .eq('is_active', true);
+        .select('id, name, is_active, capacity')
+        .eq('company_id', company.id);
+
+      // Fetch all schedules for the current month
+      const monthStart = startOfMonth(new Date());
+      const monthEnd = endOfMonth(new Date());
+      const { data: schedulesData } = await supabase
+        .from('class_schedules')
+        .select('id, class_id, scheduled_date, start_time')
+        .gte('scheduled_date', monthStart.toISOString().split('T')[0])
+        .lte('scheduled_date', monthEnd.toISOString().split('T')[0]);
 
       // Fetch transactions
       const { data: transactionsData } = await supabase
@@ -65,7 +77,7 @@ export default function CompanyDashboard() {
 
       // Fetch upcoming class schedules
       const today = new Date().toISOString().split('T')[0];
-      const { data: schedulesData } = await supabase
+      const { data: upcomingData } = await supabase
         .from('class_schedules')
         .select(`
           id, scheduled_date, start_time,
@@ -79,8 +91,9 @@ export default function CompanyDashboard() {
 
       setStudents(studentsData || []);
       setClasses(classesData || []);
+      setSchedules(schedulesData || []);
       setTransactions(transactionsData || []);
-      setUpcomingClasses(schedulesData || []);
+      setUpcomingClasses(upcomingData || []);
 
       // Calculate previous period stats for comparison
       const prevStart = subMonths(startOfMonth(new Date()), 1);
@@ -161,7 +174,7 @@ export default function CompanyDashboard() {
 
     return {
       totalStudents: activeStudents,
-      activeClasses: classes.length,
+      activeClasses: classes.filter(c => c.is_active).length,
       income,
       expenses,
       pendingPayments,
@@ -183,15 +196,20 @@ export default function CompanyDashboard() {
   };
 
   const handleExportPDF = async () => {
-    const exportStats = {
-      totalStudents: stats.totalStudents,
-      activeClasses: stats.activeClasses,
-      income: stats.income,
-      expenses: stats.expenses,
-      pendingPayments: stats.pendingPayments,
-    };
-    await exportDashboardReport(exportStats, recentActivity, dateRange);
-    toast.success("Relatório exportado com sucesso");
+    try {
+      const exportStats = {
+        totalStudents: stats.totalStudents,
+        activeClasses: stats.activeClasses,
+        income: stats.income,
+        expenses: stats.expenses,
+        pendingPayments: stats.pendingPayments,
+      };
+      await exportDashboardReport(exportStats, recentActivity, dateRange);
+      toast.success("Relatório exportado com sucesso");
+    } catch (error) {
+      console.error('Error exporting PDF:', error);
+      toast.error("Erro ao exportar PDF");
+    }
   };
 
   if (loading) {
@@ -228,14 +246,13 @@ export default function CompanyDashboard() {
         transactions={filteredTransactions}
       />
 
-      {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Revenue Chart */}
-        <Card className="lg:col-span-2">
+      {/* Row 1: Revenue Chart + Monthly Comparison */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
-              <FileText className="h-5 w-5 text-primary" />
-              Evolução Financeira
+              <TrendingUp className="h-5 w-5 text-primary" />
+              Evolução Financeira (Período)
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -247,10 +264,25 @@ export default function CompanyDashboard() {
           </CardContent>
         </Card>
 
-        {/* Students Distribution */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
+              <BarChart3 className="h-5 w-5 text-primary" />
+              Comparativo Mensal (6 meses)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <MonthlyComparisonChart transactions={transactions} />
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Row 2: Students + Payments + Classes */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Users className="h-5 w-5 text-primary" />
               Distribuição de Alunos
             </CardTitle>
           </CardHeader>
@@ -262,11 +294,34 @@ export default function CompanyDashboard() {
             />
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <CreditCard className="h-5 w-5 text-primary" />
+              Status de Pagamentos
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <PaymentsChart transactions={filteredTransactions} />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Calendar className="h-5 w-5 text-primary" />
+              Aulas por Modalidade
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ClassesChart classes={classes} schedules={schedules} />
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Activity and Classes */}
+      {/* Row 3: Activity and Upcoming Classes */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Recent Activity */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
@@ -291,7 +346,6 @@ export default function CompanyDashboard() {
           </CardContent>
         </Card>
 
-        {/* Upcoming Classes */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
