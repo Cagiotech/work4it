@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { Plus, Search, LayoutGrid, List, ArrowUpAZ, ArrowDownAZ, Download, Trash2, Loader2, User, Calendar, CreditCard, Clock, Upload, Users, Filter, CheckCircle, Clock as ClockIcon, X, MessageCircle } from "lucide-react";
+import { Plus, Search, LayoutGrid, List, ArrowUpAZ, ArrowDownAZ, Download, Trash2, Loader2, User, Calendar, CreditCard, Clock, Upload, Users, Filter, CheckCircle, Clock as ClockIcon, X, MessageCircle, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -18,6 +18,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { usePermissions } from "@/hooks/usePermissions";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { exportStudentsReport } from "@/lib/pdfExport";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -349,7 +350,7 @@ export default function Students() {
     }
   };
 
-  const handleExport = () => {
+  const handleExportCSV = () => {
     const csvContent = [
       ['Nome', 'Email', 'Telefone', 'Status', 'Personal Trainer', 'Plano', 'Status Pagamento', 'Data Matrícula'].join(','),
       ...filteredStudents.map(s => [
@@ -369,7 +370,18 @@ export default function Students() {
     link.href = URL.createObjectURL(blob);
     link.download = 'alunos.csv';
     link.click();
-    toast.success('Exportação concluída!');
+    toast.success('CSV exportado!');
+  };
+
+  const handleExportPDF = async () => {
+    const stats = {
+      total: students.length,
+      active: activeStudents.length,
+      inactive: students.filter(s => s.status === 'inactive' || s.status === 'suspended').length,
+      pending: pendingStudents.length,
+    };
+    await exportStudentsReport(filteredStudents, stats);
+    toast.success('PDF exportado com sucesso!');
   };
 
   const handleStudentClick = (student: Student) => {
@@ -503,10 +515,16 @@ export default function Students() {
             <span className="hidden sm:inline">Grupos</span>
           </Button>
           {canExport('students') && (
-            <Button variant="outline" size="sm" className="gap-1.5" onClick={handleExport}>
-              <Download className="h-4 w-4" />
-              <span className="hidden sm:inline">Exportar</span>
-            </Button>
+            <>
+              <Button variant="outline" size="sm" className="gap-1.5" onClick={handleExportCSV}>
+                <Download className="h-4 w-4" />
+                <span className="hidden sm:inline">CSV</span>
+              </Button>
+              <Button variant="outline" size="sm" className="gap-1.5" onClick={handleExportPDF}>
+                <FileText className="h-4 w-4" />
+                <span className="hidden sm:inline">PDF</span>
+              </Button>
+            </>
           )}
           {canCreate('students') && (
             <>

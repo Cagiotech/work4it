@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { Calendar as CalendarIcon } from "lucide-react";
+import { Calendar as CalendarIcon, Download, FileText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -8,6 +8,8 @@ import { format, startOfWeek, startOfMonth, endOfMonth, addDays } from "date-fns
 import { ScheduleClassDialog } from "@/components/company/classes/ScheduleClassDialog";
 import { EnrollStudentsDialog } from "@/components/company/classes/EnrollStudentsDialog";
 import { CalendarSection } from "@/components/company/classes/CalendarSection";
+import { Button } from "@/components/ui/button";
+import { exportClassesReport } from "@/lib/pdfExport";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -195,6 +197,17 @@ export default function Classes() {
     fetchData();
   }, [profile?.company_id]);
 
+  const handleExportPDF = async () => {
+    const totalEnrollments = monthSchedules.reduce((sum, s) => sum + (s.enrollments_count || 0), 0);
+    const stats = {
+      totalClasses: classTypes.length,
+      totalSchedules: monthSchedules.length,
+      totalEnrollments,
+    };
+    await exportClassesReport(classTypes, monthSchedules, stats);
+    toast.success('PDF exportado com sucesso!');
+  };
+
   const handleDeleteSchedule = async () => {
     if (!deleteConfirm) return;
     
@@ -225,9 +238,15 @@ export default function Classes() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <CalendarIcon className="h-6 w-6 text-primary" />
-        <h1 className="text-2xl font-heading font-bold">Aulas e Serviços</h1>
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <CalendarIcon className="h-6 w-6 text-primary" />
+          <h1 className="text-2xl font-heading font-bold">Aulas e Serviços</h1>
+        </div>
+        <Button variant="outline" className="gap-2" onClick={handleExportPDF}>
+          <FileText className="h-4 w-4" />
+          Exportar PDF
+        </Button>
       </div>
 
       <CalendarSection
