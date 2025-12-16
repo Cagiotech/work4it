@@ -477,6 +477,7 @@ export type Database = {
       }
       roles: {
         Row: {
+          color: string | null
           company_id: string
           created_at: string
           description: string | null
@@ -487,6 +488,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          color?: string | null
           company_id: string
           created_at?: string
           description?: string | null
@@ -497,6 +499,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          color?: string | null
           company_id?: string
           created_at?: string
           description?: string | null
