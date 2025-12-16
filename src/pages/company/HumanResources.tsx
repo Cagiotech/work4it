@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { Plus, Search, Users, UserCheck, UserX, MoreVertical, Trash2, Edit, Loader2, Key, Clock, Calendar, Calculator, Download, FileText } from "lucide-react";
+import { Plus, Search, Users, UserCheck, UserX, MoreVertical, Trash2, Edit, Loader2, Key, Clock, Calendar, Calculator, FileText, Palmtree, Briefcase } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,7 +10,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { StaffProfileDialog } from "@/components/company/hr/StaffProfileDialog";
 import { TimeTrackingSection } from "@/components/company/hr/TimeTrackingSection";
-import { AbsencesSection } from "@/components/company/hr/AbsencesSection";
+import { VacationManagementSection } from "@/components/company/hr/VacationManagementSection";
+import { WorkScheduleSection } from "@/components/company/hr/WorkScheduleSection";
 import { PayrollCalculationSection } from "@/components/company/hr/PayrollCalculationSection";
 import { useAuth } from "@/hooks/useAuth";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -177,18 +178,22 @@ export default function HumanResources() {
 
       {/* Tabs */}
       <Tabs defaultValue="staff" className="space-y-6">
-        <TabsList>
+        <TabsList className="flex flex-wrap h-auto gap-1">
           <TabsTrigger value="staff" className="gap-2">
             <Users className="h-4 w-4" />
             Colaboradores
+          </TabsTrigger>
+          <TabsTrigger value="schedules" className="gap-2">
+            <Briefcase className="h-4 w-4" />
+            Horários
           </TabsTrigger>
           <TabsTrigger value="time" className="gap-2">
             <Clock className="h-4 w-4" />
             Ponto
           </TabsTrigger>
-          <TabsTrigger value="absences" className="gap-2">
-            <Calendar className="h-4 w-4" />
-            Ausências
+          <TabsTrigger value="vacations" className="gap-2">
+            <Palmtree className="h-4 w-4" />
+            Férias/Ausências
           </TabsTrigger>
           <TabsTrigger value="payroll" className="gap-2">
             <Calculator className="h-4 w-4" />
@@ -315,14 +320,19 @@ export default function HumanResources() {
           </Card>
         </TabsContent>
 
+        {/* Work Schedules Tab */}
+        <TabsContent value="schedules">
+          <WorkScheduleSection />
+        </TabsContent>
+
         {/* Time Tracking Tab */}
         <TabsContent value="time">
           <TimeTrackingSection />
         </TabsContent>
 
-        {/* Absences Tab */}
-        <TabsContent value="absences">
-          <AbsencesSection />
+        {/* Vacations/Absences Tab */}
+        <TabsContent value="vacations">
+          <VacationManagementSection />
         </TabsContent>
 
         {/* Payroll Tab */}
