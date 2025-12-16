@@ -42,20 +42,20 @@
 
     --radius: 0.75rem;
 
-    --sidebar-background: 220 20% 10%;
-    --sidebar-foreground: 0 0% 95%;
-    --sidebar-primary: 66 85% 50%;
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 220 20% 15%;
+    --sidebar-primary: 66 85% 45%;
     --sidebar-primary-foreground: 220 20% 10%;
-    --sidebar-accent: 220 20% 16%;
-    --sidebar-accent-foreground: 0 0% 95%;
-    --sidebar-border: 220 20% 18%;
-    --sidebar-ring: 66 85% 50%;
-    --sidebar-muted: 220 15% 25%;
+    --sidebar-accent: 220 14% 94%;
+    --sidebar-accent-foreground: 220 20% 15%;
+    --sidebar-border: 220 13% 88%;
+    --sidebar-ring: 66 85% 45%;
+    --sidebar-muted: 220 14% 94%;
 
     --gradient-primary: linear-gradient(135deg, hsl(66 85% 50%) 0%, hsl(75 80% 45%) 100%);
     --gradient-hero: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(66 30% 96%) 100%);
     --gradient-card: linear-gradient(145deg, hsl(0 0% 100%) 0%, hsl(66 15% 97%) 100%);
-    --gradient-sidebar: linear-gradient(180deg, hsl(220 25% 12%) 0%, hsl(220 20% 8%) 100%);
+    --gradient-sidebar: linear-gradient(180deg, hsl(0 0% 99%) 0%, hsl(220 14% 96%) 100%);
 
     --shadow-sm: 0 1px 2px 0 hsl(220 20% 20% / 0.05);
     --shadow-md: 0 4px 6px -1px hsl(220 20% 20% / 0.1), 0 2px 4px -2px hsl(220 20% 20% / 0.1);

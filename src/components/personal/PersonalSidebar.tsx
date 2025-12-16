@@ -63,13 +63,13 @@ export function PersonalSidebar() {
   };
 
   return (
-    <Sidebar collapsible="icon" className="border-r-0">
-      <SidebarContent className="bg-gradient-sidebar flex flex-col">
+    <Sidebar collapsible="icon" className="border-r border-sidebar-border">
+      <SidebarContent className="bg-sidebar flex flex-col">
         {/* Header with logo */}
         <div className="p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className="h-9 w-9 rounded-lg bg-sidebar-primary/20 flex items-center justify-center">
+              <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center">
                 <img src={logoLight} alt="Cagiotech" className="h-6" />
               </div>
               {!collapsed && (
@@ -87,7 +87,7 @@ export function PersonalSidebar() {
           </div>
           
           {!collapsed && (
-            <div className="mt-4 p-3 rounded-xl bg-sidebar-accent/50 border border-sidebar-border">
+            <div className="mt-4 p-3 rounded-xl bg-primary/10 border border-primary/20">
               <p className="text-sm font-medium text-sidebar-foreground">{profile?.full_name || 'Personal Trainer'}</p>
               <p className="text-xs text-sidebar-foreground/60 mt-0.5">{user?.email}</p>
             </div>
@@ -112,7 +112,7 @@ export function PersonalSidebar() {
                         end={item.url === "/personal"}
                         className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 ${
                           active 
-                            ? 'bg-sidebar-primary text-sidebar-primary-foreground font-medium shadow-lg shadow-sidebar-primary/25' 
+                            ? 'bg-primary text-primary-foreground font-medium shadow-md shadow-primary/20' 
                             : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground'
                         }`}
                         activeClassName=""
