@@ -85,7 +85,7 @@ export default function StudentRegister() {
         email: formData.email,
         password: formData.password,
         options: {
-          emailRedirectTo: `${window.location.origin}/onboarding-new-student`,
+          emailRedirectTo: `${window.location.origin}/new-student`,
           data: {
             full_name: formData.fullName,
             role: 'student',
@@ -127,9 +127,9 @@ export default function StudentRegister() {
           // Don't redirect to onboarding, show pending message
         } else {
           toast.success("Conta criada com sucesso!");
-          // Redirect to onboarding after a moment
+          // Redirect to student onboarding after a moment
           setTimeout(() => {
-            navigate('/onboarding-new-student');
+            navigate('/new-student');
           }, 2000);
         }
       }

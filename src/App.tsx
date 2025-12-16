@@ -77,7 +77,7 @@ const App = () => (
             <Route path="/register" element={<Register />} />
             <Route path="/onboarding" element={<Onboarding />} />
             <Route path="/registro" element={<StudentRegister />} />
-            <Route path="/onboarding-new-student" element={<StudentOnboarding />} />
+            <Route path="/new-student" element={<StudentOnboarding />} />
             <Route path="/pending-approval" element={<StudentPendingApproval />} />
             
             {/* Company Dashboard Routes */}
