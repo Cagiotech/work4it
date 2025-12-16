@@ -613,9 +613,15 @@ export type Database = {
       }
       staff: {
         Row: {
+          address: string | null
+          citizen_card: string | null
+          city: string | null
           company_id: string
+          country: string | null
           created_at: string
           email: string
+          emergency_contact: string | null
+          emergency_phone: string | null
           full_name: string
           hire_date: string | null
           id: string
@@ -623,14 +629,21 @@ export type Database = {
           password_changed: boolean | null
           phone: string | null
           position: string | null
+          postal_code: string | null
           role_id: string | null
           updated_at: string
           user_id: string | null
         }
         Insert: {
+          address?: string | null
+          citizen_card?: string | null
+          city?: string | null
           company_id: string
+          country?: string | null
           created_at?: string
           email: string
+          emergency_contact?: string | null
+          emergency_phone?: string | null
           full_name: string
           hire_date?: string | null
           id?: string
@@ -638,14 +651,21 @@ export type Database = {
           password_changed?: boolean | null
           phone?: string | null
           position?: string | null
+          postal_code?: string | null
           role_id?: string | null
           updated_at?: string
           user_id?: string | null
         }
         Update: {
+          address?: string | null
+          citizen_card?: string | null
+          city?: string | null
           company_id?: string
+          country?: string | null
           created_at?: string
           email?: string
+          emergency_contact?: string | null
+          emergency_phone?: string | null
           full_name?: string
           hire_date?: string | null
           id?: string
@@ -653,6 +673,7 @@ export type Database = {
           password_changed?: boolean | null
           phone?: string | null
           position?: string | null
+          postal_code?: string | null
           role_id?: string | null
           updated_at?: string
           user_id?: string | null
