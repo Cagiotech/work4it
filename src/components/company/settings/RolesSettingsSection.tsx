@@ -357,8 +357,8 @@ export function RolesSettingsSection() {
           </DialogHeader>
           
           <form onSubmit={handleSaveRole} className="flex flex-col flex-1 overflow-hidden">
-            <ScrollArea className="flex-1 pr-4">
-              <div className="space-y-6 pb-4">
+            <ScrollArea className="flex-1 max-h-[60vh] pr-4">
+              <div className="space-y-6 pb-4 pr-2">
                 {/* Basic Info */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
