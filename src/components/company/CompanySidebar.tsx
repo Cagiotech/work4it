@@ -96,7 +96,7 @@ export function CompanySidebar() {
                   <SidebarMenuButton
                     asChild
                     isActive={isActive(item.url)}
-                    tooltip={t(`dashboard.${item.key === "dashboard" ? "title" : item.key}`)}
+                    tooltip={item.key === "settings" ? "Configurações" : t(`dashboard.${item.key === "dashboard" ? "title" : item.key}`)}
                   >
                     <NavLink
                       to={item.url}
@@ -106,7 +106,7 @@ export function CompanySidebar() {
                     >
                       <item.icon className="h-5 w-5 shrink-0" />
                       {!collapsed && (
-                        <span>{t(`dashboard.${item.key === "dashboard" ? "title" : item.key}`)}</span>
+                        <span>{item.key === "settings" ? "Configurações" : t(`dashboard.${item.key === "dashboard" ? "title" : item.key}`)}</span>
                       )}
                     </NavLink>
                   </SidebarMenuButton>
