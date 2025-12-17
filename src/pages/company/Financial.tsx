@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { format, startOfMonth, endOfMonth, isWithinInterval, differenceInDays, isToday, isBefore } from "date-fns";
 import { pt } from "date-fns/locale";
-import { DollarSign, TrendingUp, TrendingDown, CreditCard, Receipt, Download, Plus, Trash2, Pencil, Loader2, RefreshCw, Wallet, Check, X, AlertTriangle, Bell } from "lucide-react";
+import { DollarSign, TrendingUp, TrendingDown, CreditCard, Receipt, Download, Plus, Trash2, Pencil, Loader2, RefreshCw, Wallet, Check, X, AlertTriangle, Bell, Eye, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatCard } from "@/components/dashboard/StatCard";
@@ -28,11 +28,31 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+
+interface PaymentProof {
+  id: string;
+  student_id: string;
+  amount: number;
+  proof_file_path: string;
+  proof_file_name: string;
+  proof_file_type: string;
+  status: string;
+  notes: string | null;
+  created_at: string;
+  reviewed_at: string | null;
+}
 
 interface Category {
   id: string;
@@ -85,6 +105,12 @@ export default function Financial() {
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<{ type: 'category' | 'transaction'; id: string } | null>(null);
+  
+  // Payment proof states
+  const [proofDialogOpen, setProofDialogOpen] = useState(false);
+  const [selectedProof, setSelectedProof] = useState<PaymentProof | null>(null);
+  const [proofPreviewUrl, setProofPreviewUrl] = useState<string | null>(null);
+  const [loadingProof, setLoadingProof] = useState(false);
 
   useEffect(() => {
     if (company?.id) {
@@ -213,6 +239,62 @@ export default function Financial() {
     } catch (error: any) {
       toast.error(error.message || 'Erro ao atualizar status');
     }
+  };
+
+  // View payment proof for a transaction
+  const handleViewProof = async (studentId: string, transactionId: string) => {
+    setLoadingProof(true);
+    setProofDialogOpen(true);
+    
+    try {
+      // Try to find a proof linked to this transaction or student
+      const { data: proofs, error } = await supabase
+        .from('payment_proofs')
+        .select('*')
+        .eq('student_id', studentId)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      
+      // Look for proof linked to this transaction or the most recent one
+      const linkedProof = proofs?.find(p => p.transaction_id === transactionId);
+      const proof = linkedProof || (proofs && proofs.length > 0 ? proofs[0] : null);
+      
+      if (proof) {
+        setSelectedProof(proof);
+        
+        // Get signed URL for preview
+        const { data: urlData, error: urlError } = await supabase.storage
+          .from('payment-proofs')
+          .createSignedUrl(proof.proof_file_path, 3600);
+        
+        if (urlError) throw urlError;
+        setProofPreviewUrl(urlData.signedUrl);
+      } else {
+        setSelectedProof(null);
+        setProofPreviewUrl(null);
+      }
+    } catch (error) {
+      console.error('Error fetching proof:', error);
+      toast.error('Erro ao carregar comprovante');
+      setSelectedProof(null);
+    } finally {
+      setLoadingProof(false);
+    }
+  };
+
+  const getProofStatusBadge = (status: string) => {
+    const styles: Record<string, string> = {
+      pending: "border-yellow-500 text-yellow-600 bg-yellow-500/10",
+      approved: "border-green-500 text-green-600 bg-green-500/10",
+      rejected: "border-red-500 text-red-600 bg-red-500/10",
+    };
+    const labels: Record<string, string> = {
+      pending: "Pendente",
+      approved: "Aprovado",
+      rejected: "Rejeitado",
+    };
+    return <Badge variant="outline" className={styles[status]}>{labels[status]}</Badge>;
   };
 
   const getPaymentMethodLabel = (method: string | null) => {
@@ -568,6 +650,22 @@ export default function Financial() {
                               <TableCell>{getStatusBadge(tx.status)}</TableCell>
                               <TableCell>
                                 <div className="flex gap-1">
+                                  {/* View proof button - only for student transactions */}
+                                  {tx.student_id && (
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className="text-blue-600 hover:text-blue-700 hover:bg-blue-100"
+                                          onClick={() => handleViewProof(tx.student_id!, tx.id)}
+                                        >
+                                          <Eye className="h-4 w-4" />
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>Ver comprovante</TooltipContent>
+                                    </Tooltip>
+                                  )}
                                   {tx.status === 'pending' && (
                                     <>
                                       <Tooltip>
@@ -715,6 +813,84 @@ export default function Financial() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Payment Proof Dialog */}
+      <Dialog open={proofDialogOpen} onOpenChange={setProofDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5 text-primary" />
+              Comprovante de Pagamento
+            </DialogTitle>
+          </DialogHeader>
+
+          {loadingProof ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : selectedProof ? (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="text-muted-foreground">Valor:</span>
+                  <p className="font-bold text-green-600">€{Number(selectedProof.amount).toFixed(2)}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Status:</span>
+                  <div className="mt-1">{getProofStatusBadge(selectedProof.status)}</div>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Data de Envio:</span>
+                  <p>{format(new Date(selectedProof.created_at), "dd/MM/yyyy HH:mm", { locale: pt })}</p>
+                </div>
+                {selectedProof.reviewed_at && (
+                  <div>
+                    <span className="text-muted-foreground">Data de Revisão:</span>
+                    <p>{format(new Date(selectedProof.reviewed_at), "dd/MM/yyyy HH:mm", { locale: pt })}</p>
+                  </div>
+                )}
+              </div>
+
+              {selectedProof.notes && (
+                <div>
+                  <span className="text-muted-foreground text-sm">Notas:</span>
+                  <p className="text-sm mt-1">{selectedProof.notes}</p>
+                </div>
+              )}
+
+              {proofPreviewUrl && (
+                <div className="border rounded-lg p-2 bg-muted/50">
+                  {selectedProof.proof_file_type.startsWith('image/') ? (
+                    <img src={proofPreviewUrl} alt="Comprovante" className="max-w-full h-auto mx-auto rounded" />
+                  ) : (
+                    <div className="text-center py-8">
+                      <FileText className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
+                      <p className="text-muted-foreground mb-4">{selectedProof.proof_file_name}</p>
+                      <Button asChild variant="outline">
+                        <a href={proofPreviewUrl} target="_blank" rel="noopener noreferrer">
+                          <Download className="h-4 w-4 mr-2" />
+                          Abrir Ficheiro
+                        </a>
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <FileText className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
+              <p className="text-muted-foreground">Nenhum comprovante enviado para esta transação</p>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setProofDialogOpen(false)}>
+              Fechar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
