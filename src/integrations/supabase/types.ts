@@ -286,6 +286,7 @@ export type Database = {
           id: string
           notes: string | null
           paid_at: string | null
+          payment_method: string | null
           staff_id: string | null
           status: string
           student_id: string | null
@@ -303,6 +304,7 @@ export type Database = {
           id?: string
           notes?: string | null
           paid_at?: string | null
+          payment_method?: string | null
           staff_id?: string | null
           status?: string
           student_id?: string | null
@@ -320,6 +322,7 @@ export type Database = {
           id?: string
           notes?: string | null
           paid_at?: string | null
+          payment_method?: string | null
           staff_id?: string | null
           status?: string
           student_id?: string | null

@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { format, startOfMonth, endOfMonth, isWithinInterval } from "date-fns";
+import { format, startOfMonth, endOfMonth, isWithinInterval, differenceInDays, isToday, isBefore } from "date-fns";
 import { pt } from "date-fns/locale";
-import { DollarSign, TrendingUp, TrendingDown, CreditCard, Receipt, Download, Plus, Trash2, Pencil, Loader2, RefreshCw, Wallet } from "lucide-react";
+import { DollarSign, TrendingUp, TrendingDown, CreditCard, Receipt, Download, Plus, Trash2, Pencil, Loader2, RefreshCw, Wallet, Check, X, AlertTriangle, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatCard } from "@/components/dashboard/StatCard";
@@ -27,6 +27,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface Category {
   id: string;
@@ -49,6 +55,7 @@ interface Transaction {
   due_date: string | null;
   paid_at: string | null;
   notes: string | null;
+  payment_method: string | null;
   created_at: string;
   category?: { id: string; name: string; type: string; color: string } | null;
   student?: { full_name: string } | null;
@@ -155,6 +162,72 @@ export default function Financial() {
     return { income, expenses, profit: income - expenses, pending };
   }, [filteredTransactions]);
 
+  // Check for due date notifications
+  const dueDateAlerts = useMemo(() => {
+    const today = new Date();
+    return transactions.filter(t => {
+      if (!t.due_date || t.status === 'paid' || t.status === 'cancelled') return false;
+      const dueDate = new Date(t.due_date);
+      const daysUntilDue = differenceInDays(dueDate, today);
+      return daysUntilDue <= 3 && daysUntilDue >= -7; // 3 days before to 7 days after
+    });
+  }, [transactions]);
+
+  // Show notifications on mount
+  useEffect(() => {
+    if (dueDateAlerts.length > 0) {
+      const overdueCount = dueDateAlerts.filter(t => {
+        const dueDate = new Date(t.due_date!);
+        return isBefore(dueDate, new Date()) && !isToday(dueDate);
+      }).length;
+      
+      const dueTodayCount = dueDateAlerts.filter(t => isToday(new Date(t.due_date!))).length;
+      const upcomingCount = dueDateAlerts.length - overdueCount - dueTodayCount;
+      
+      if (overdueCount > 0) {
+        toast.error(`${overdueCount} pagamento(s) em atraso!`, { duration: 5000 });
+      }
+      if (dueTodayCount > 0) {
+        toast.warning(`${dueTodayCount} pagamento(s) vencem hoje!`, { duration: 5000 });
+      }
+      if (upcomingCount > 0) {
+        toast.info(`${upcomingCount} pagamento(s) a vencer em breve`, { duration: 4000 });
+      }
+    }
+  }, [dueDateAlerts.length]);
+
+  // Quick status update
+  const handleQuickStatusUpdate = async (txId: string, newStatus: 'paid' | 'cancelled') => {
+    try {
+      const { error } = await supabase
+        .from('financial_transactions')
+        .update({ 
+          status: newStatus,
+          paid_at: newStatus === 'paid' ? new Date().toISOString() : null
+        })
+        .eq('id', txId);
+      
+      if (error) throw error;
+      toast.success(newStatus === 'paid' ? 'Pagamento confirmado!' : 'Transação cancelada');
+      fetchData();
+    } catch (error: any) {
+      toast.error(error.message || 'Erro ao atualizar status');
+    }
+  };
+
+  const getPaymentMethodLabel = (method: string | null) => {
+    const labels: Record<string, string> = {
+      cash: 'Dinheiro',
+      card: 'Cartão',
+      transfer: 'Transferência',
+      mbway: 'MB Way',
+      multibanco: 'Multibanco',
+      check: 'Cheque',
+      other: 'Outro',
+    };
+    return labels[method || 'cash'] || method;
+  };
+
   // Sync student subscriptions as income
   const handleSyncSubscriptions = async () => {
     if (!company?.id) return;
@@ -257,6 +330,7 @@ export default function Financial() {
             status: data.status || 'pending',
             due_date: data.due_date || null,
             notes: data.notes || null,
+            payment_method: data.payment_method || 'cash',
             paid_at: data.status === 'paid' ? new Date().toISOString() : null,
           })
           .eq('id', selectedTransaction.id);
@@ -276,6 +350,7 @@ export default function Financial() {
             status: data.status || 'pending',
             due_date: data.due_date || null,
             notes: data.notes || null,
+            payment_method: data.payment_method || 'cash',
             paid_at: data.status === 'paid' ? new Date().toISOString() : null,
           }]);
         if (error) throw error;
@@ -403,6 +478,19 @@ export default function Financial() {
             </Button>
           </div>
 
+          {dueDateAlerts.length > 0 && (
+            <Card className="border-yellow-500/50 bg-yellow-500/5">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2">
+                  <Bell className="h-5 w-5 text-yellow-600" />
+                  <span className="font-medium text-yellow-700 dark:text-yellow-400">
+                    {dueDateAlerts.length} pagamento(s) pendente(s) próximo(s) do vencimento
+                  </span>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -415,66 +503,124 @@ export default function Financial() {
                 <p className="text-center text-muted-foreground py-8">Sem transações no período selecionado</p>
               ) : (
                 <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Descrição</TableHead>
-                        <TableHead>Categoria</TableHead>
-                        <TableHead>Data</TableHead>
-                        <TableHead>Valor</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="w-[100px]">Ações</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredTransactions.map((tx) => (
-                        <TableRow key={tx.id}>
-                          <TableCell>
-                            <div>
-                              <p className="font-medium">{tx.description}</p>
-                              {tx.student && <p className="text-xs text-muted-foreground">{tx.student.full_name}</p>}
-                              {tx.staff && <p className="text-xs text-muted-foreground">{tx.staff.full_name}</p>}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            {tx.category ? (
-                              <Badge variant="outline" style={{ borderColor: tx.category.color, color: tx.category.color }}>
-                                {tx.category.name}
-                              </Badge>
-                            ) : (
-                              <span className="text-muted-foreground">-</span>
-                            )}
-                          </TableCell>
-                          <TableCell>{format(new Date(tx.created_at), "dd/MM/yyyy", { locale: pt })}</TableCell>
-                          <TableCell>
-                            <span className={tx.type === 'income' ? 'text-green-600 font-bold' : 'text-red-600 font-bold'}>
-                              {tx.type === 'income' ? '+' : '-'}€{Number(tx.amount).toFixed(2)}
-                            </span>
-                          </TableCell>
-                          <TableCell>{getStatusBadge(tx.status)}</TableCell>
-                          <TableCell>
-                            <div className="flex gap-1">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => { setSelectedTransaction(tx); setTransactionDialogOpen(true); }}
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="text-destructive"
-                                onClick={() => { setItemToDelete({ type: 'transaction', id: tx.id }); setDeleteDialogOpen(true); }}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
+                  <TooltipProvider>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Descrição</TableHead>
+                          <TableHead>Categoria</TableHead>
+                          <TableHead>Pagamento</TableHead>
+                          <TableHead>Vencimento</TableHead>
+                          <TableHead>Valor</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead className="w-[150px]">Ações</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredTransactions.map((tx) => {
+                          const isDueSoon = tx.due_date && tx.status !== 'paid' && tx.status !== 'cancelled' && 
+                            differenceInDays(new Date(tx.due_date), new Date()) <= 3;
+                          const isOverdue = tx.due_date && tx.status !== 'paid' && tx.status !== 'cancelled' && 
+                            isBefore(new Date(tx.due_date), new Date()) && !isToday(new Date(tx.due_date));
+                          
+                          return (
+                            <TableRow key={tx.id} className={isOverdue ? 'bg-red-500/5' : isDueSoon ? 'bg-yellow-500/5' : ''}>
+                              <TableCell>
+                                <div>
+                                  <p className="font-medium">{tx.description}</p>
+                                  {tx.student && <p className="text-xs text-muted-foreground">{tx.student.full_name}</p>}
+                                  {tx.staff && <p className="text-xs text-muted-foreground">{tx.staff.full_name}</p>}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                {tx.category ? (
+                                  <Badge variant="outline" style={{ borderColor: tx.category.color, color: tx.category.color }}>
+                                    {tx.category.name}
+                                  </Badge>
+                                ) : (
+                                  <span className="text-muted-foreground">-</span>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant="secondary" className="text-xs">
+                                  {getPaymentMethodLabel(tx.payment_method)}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                {tx.due_date ? (
+                                  <div className="flex items-center gap-1">
+                                    {(isOverdue || isDueSoon) && (
+                                      <AlertTriangle className={`h-4 w-4 ${isOverdue ? 'text-red-500' : 'text-yellow-500'}`} />
+                                    )}
+                                    <span className={isOverdue ? 'text-red-600 font-medium' : isDueSoon ? 'text-yellow-600' : ''}>
+                                      {format(new Date(tx.due_date), "dd/MM/yyyy", { locale: pt })}
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <span className="text-muted-foreground">-</span>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                <span className={tx.type === 'income' ? 'text-green-600 font-bold' : 'text-red-600 font-bold'}>
+                                  {tx.type === 'income' ? '+' : '-'}€{Number(tx.amount).toFixed(2)}
+                                </span>
+                              </TableCell>
+                              <TableCell>{getStatusBadge(tx.status)}</TableCell>
+                              <TableCell>
+                                <div className="flex gap-1">
+                                  {tx.status === 'pending' && (
+                                    <>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="text-green-600 hover:text-green-700 hover:bg-green-100"
+                                            onClick={() => handleQuickStatusUpdate(tx.id, 'paid')}
+                                          >
+                                            <Check className="h-4 w-4" />
+                                          </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>Confirmar pagamento</TooltipContent>
+                                      </Tooltip>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="text-red-600 hover:text-red-700 hover:bg-red-100"
+                                            onClick={() => handleQuickStatusUpdate(tx.id, 'cancelled')}
+                                          >
+                                            <X className="h-4 w-4" />
+                                          </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>Cancelar</TooltipContent>
+                                      </Tooltip>
+                                    </>
+                                  )}
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => { setSelectedTransaction(tx); setTransactionDialogOpen(true); }}
+                                  >
+                                    <Pencil className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="text-destructive"
+                                    onClick={() => { setItemToDelete({ type: 'transaction', id: tx.id }); setDeleteDialogOpen(true); }}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </TooltipProvider>
                 </div>
               )}
             </CardContent>

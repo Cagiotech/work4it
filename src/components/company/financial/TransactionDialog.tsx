@@ -39,6 +39,7 @@ interface Transaction {
   status: string;
   due_date: string | null;
   notes: string | null;
+  payment_method: string | null;
 }
 
 interface TransactionDialogProps {
@@ -69,6 +70,7 @@ export function TransactionDialog({
   const [status, setStatus] = useState("pending");
   const [dueDate, setDueDate] = useState<Date | undefined>();
   const [notes, setNotes] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState("cash");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -82,6 +84,7 @@ export function TransactionDialog({
       setStatus(transaction.status);
       setDueDate(transaction.due_date ? new Date(transaction.due_date) : undefined);
       setNotes(transaction.notes || "");
+      setPaymentMethod(transaction.payment_method || "cash");
     } else {
       setType("income");
       setCategoryId("");
@@ -92,6 +95,7 @@ export function TransactionDialog({
       setStatus("pending");
       setDueDate(undefined);
       setNotes("");
+      setPaymentMethod("cash");
     }
   }, [transaction, open]);
 
@@ -109,6 +113,7 @@ export function TransactionDialog({
         status,
         due_date: dueDate ? format(dueDate, "yyyy-MM-dd") : null,
         notes: notes.trim() || null,
+        payment_method: paymentMethod,
       });
       onOpenChange(false);
     } finally {
@@ -195,28 +200,46 @@ export function TransactionDialog({
             </div>
 
             <div className="space-y-2">
-              <Label>Data de Vencimento</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn("w-full justify-start text-left font-normal", !dueDate && "text-muted-foreground")}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {dueDate ? format(dueDate, "dd/MM/yyyy") : "Selecionar"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={dueDate}
-                    onSelect={setDueDate}
-                    locale={pt}
-                    className="pointer-events-auto"
-                  />
-                </PopoverContent>
-              </Popover>
+              <Label>Método de Pagamento</Label>
+              <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="cash">Dinheiro</SelectItem>
+                  <SelectItem value="card">Cartão</SelectItem>
+                  <SelectItem value="transfer">Transferência</SelectItem>
+                  <SelectItem value="mbway">MB Way</SelectItem>
+                  <SelectItem value="multibanco">Multibanco</SelectItem>
+                  <SelectItem value="check">Cheque</SelectItem>
+                  <SelectItem value="other">Outro</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Data de Vencimento</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn("w-full justify-start text-left font-normal", !dueDate && "text-muted-foreground")}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {dueDate ? format(dueDate, "dd/MM/yyyy") : "Selecionar"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={dueDate}
+                  onSelect={setDueDate}
+                  locale={pt}
+                  className="pointer-events-auto"
+                />
+              </PopoverContent>
+            </Popover>
           </div>
 
           {type === "income" && (
