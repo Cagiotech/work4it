@@ -45,6 +45,7 @@ interface SubscriptionPlan {
   penalty_percentage: number;
   block_after_days: number | null;
   grace_period_days: number;
+  default_commitment_months: number;
   is_active: boolean;
 }
 
@@ -56,6 +57,16 @@ const BILLING_FREQUENCIES = [
   { value: "quarterly", label: "Trimestral", days: 90 },
   { value: "semiannual", label: "Semestral", days: 180 },
   { value: "annual", label: "Anual", days: 365 },
+];
+
+const COMMITMENT_OPTIONS = [
+  { value: 0, label: "Sem fidelidade" },
+  { value: 1, label: "1 mês" },
+  { value: 3, label: "3 meses" },
+  { value: 6, label: "6 meses" },
+  { value: 12, label: "12 meses" },
+  { value: 18, label: "18 meses" },
+  { value: 24, label: "24 meses" },
 ];
 
 export function PlansSettingsSection() {
@@ -76,6 +87,7 @@ export function PlansSettingsSection() {
     block_after_days: "",
     grace_period_days: "3",
     enable_blocking: false,
+    default_commitment_months: "0",
   });
 
   const fetchPlans = async () => {
@@ -114,6 +126,7 @@ export function PlansSettingsSection() {
         block_after_days: selectedPlan.block_after_days ? String(selectedPlan.block_after_days) : "",
         grace_period_days: String(selectedPlan.grace_period_days || 3),
         enable_blocking: selectedPlan.block_after_days !== null,
+        default_commitment_months: String(selectedPlan.default_commitment_months || 0),
       });
     } else {
       setFormData({
@@ -125,6 +138,7 @@ export function PlansSettingsSection() {
         block_after_days: "",
         grace_period_days: "3",
         enable_blocking: false,
+        default_commitment_months: "0",
       });
     }
   }, [selectedPlan, showDialog]);
@@ -148,6 +162,7 @@ export function PlansSettingsSection() {
           ? parseInt(formData.block_after_days) 
           : null,
         grace_period_days: parseInt(formData.grace_period_days) || 3,
+        default_commitment_months: parseInt(formData.default_commitment_months) || 0,
       };
 
       if (selectedPlan) {
@@ -251,6 +266,12 @@ export function PlansSettingsSection() {
                 </div>
 
                 <div className="mt-4 space-y-2 text-sm text-muted-foreground">
+                  {plan.default_commitment_months > 0 && (
+                    <div className="flex items-center gap-2 text-primary font-medium">
+                      <Clock className="h-4 w-4" />
+                      <span>Fidelidade: {plan.default_commitment_months} meses</span>
+                    </div>
+                  )}
                   <div className="flex items-center gap-2">
                     <Calendar className="h-4 w-4" />
                     <span>Período de carência: {plan.grace_period_days} dias</span>
@@ -351,7 +372,25 @@ export function PlansSettingsSection() {
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Período de Fidelidade Padrão</Label>
+              <Select 
+                value={formData.default_commitment_months} 
+                onValueChange={(val) => setFormData({ ...formData, default_commitment_months: val })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {COMMITMENT_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={String(opt.value)}>{opt.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">Tempo mínimo de permanência do aluno</p>
+            </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
