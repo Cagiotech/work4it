@@ -2,13 +2,19 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { format, addDays, startOfWeek, addWeeks, subWeeks, startOfDay, isSameDay } from "date-fns";
 import { pt } from "date-fns/locale";
-import { ChevronLeft, ChevronRight, Clock, Users, UserPlus, Trash2, User, MapPin, List, CalendarDays, Calendar as CalendarIcon, Plus, Settings } from "lucide-react";
+import { ChevronLeft, ChevronRight, Clock, Users, UserPlus, Trash2, User, MapPin, List, CalendarDays, Calendar as CalendarIcon, Plus, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { MonthlyCalendarView } from "./MonthlyCalendarView";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface Room {
   id: string;
@@ -42,6 +48,7 @@ interface CalendarSectionProps {
   monthSchedules: ClassSchedule[];
   hasClassTypes: boolean;
   onEnroll: (schedule: ClassSchedule) => void;
+  onEdit: (schedule: ClassSchedule) => void;
   onDelete: (id: string) => void;
   onScheduleClass: () => void;
 }
@@ -60,7 +67,8 @@ export function CalendarSection({
   weekSchedules, 
   monthSchedules, 
   hasClassTypes,
-  onEnroll, 
+  onEnroll,
+  onEdit,
   onDelete,
   onScheduleClass 
 }: CalendarSectionProps) {
@@ -106,31 +114,40 @@ export function CalendarSection({
   const renderScheduleCard = (schedule: ClassSchedule, compact = false) => (
     <Card 
       key={schedule.id} 
-      className="hover:shadow-lg transition-shadow border-l-4"
+      className="hover:shadow-lg transition-all border-l-4 group"
       style={{ borderLeftColor: schedule.class?.color || '#aeca12' }}
     >
       <CardContent className={compact ? "p-3" : "p-4"}>
         <div className="flex justify-between items-start mb-2">
-          <h3 className={cn("font-heading font-semibold text-foreground", compact ? "text-base" : "text-lg")}>
-            {schedule.class?.name}
-          </h3>
+          <div className="flex items-center gap-2">
+            <div 
+              className="w-3 h-3 rounded-full"
+              style={{ backgroundColor: schedule.class?.color || '#aeca12' }}
+            />
+            <h3 className={cn("font-heading font-semibold text-foreground", compact ? "text-base" : "text-lg")}>
+              {schedule.class?.name}
+            </h3>
+          </div>
           <Badge 
             variant="outline" 
             className={cn(
-              "text-xs",
+              "text-xs font-medium",
               schedule.enrollments_count >= (schedule.class?.capacity || 0)
-                ? "border-red-500 text-red-500"
-                : "border-primary text-primary"
+                ? "border-red-500 text-red-600 bg-red-500/10"
+                : schedule.enrollments_count > 0
+                  ? "border-primary text-primary bg-primary/10"
+                  : "border-muted-foreground/30 text-muted-foreground"
             )}
           >
+            <Users className="h-3 w-3 mr-1" />
             {schedule.enrollments_count}/{schedule.class?.capacity}
           </Badge>
         </div>
         
         <div className="space-y-1.5 text-sm">
           <div className="flex items-center gap-2 text-muted-foreground">
-            <Clock className="h-3.5 w-3.5" />
-            <span>{schedule.start_time.slice(0, 5)} - {schedule.end_time.slice(0, 5)}</span>
+            <Clock className="h-3.5 w-3.5 text-primary" />
+            <span className="font-medium">{schedule.start_time.slice(0, 5)} - {schedule.end_time.slice(0, 5)}</span>
           </div>
           {schedule.instructor && (
             <div className="flex items-center gap-2 text-muted-foreground">
@@ -144,26 +161,56 @@ export function CalendarSection({
               <span>{schedule.class.room.name}</span>
             </div>
           )}
+          {schedule.notes && (
+            <p className="text-xs text-muted-foreground/80 italic mt-2 line-clamp-2">
+              {schedule.notes}
+            </p>
+          )}
         </div>
         
         <div className="mt-3 flex gap-2">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="flex-1"
-            onClick={() => onEnroll(schedule)}
-          >
-            <UserPlus className="h-3.5 w-3.5 mr-1" />
-            Inscrever
-          </Button>
-          <Button 
-            variant="outline" 
-            size="icon"
-            className="h-8 w-8"
-            onClick={() => onDelete(schedule.id)}
-          >
-            <Trash2 className="h-3.5 w-3.5 text-destructive" />
-          </Button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="flex-1"
+                  onClick={() => onEnroll(schedule)}
+                >
+                  <UserPlus className="h-3.5 w-3.5 mr-1" />
+                  Inscrever
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Inscrever alunos nesta aula</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="outline" 
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => onEdit(schedule)}
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Editar aula</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="outline" 
+                  size="icon"
+                  className="h-8 w-8 hover:bg-destructive/10 hover:border-destructive"
+                  onClick={() => onDelete(schedule.id)}
+                >
+                  <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Eliminar aula</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
       </CardContent>
     </Card>
@@ -172,74 +219,94 @@ export function CalendarSection({
   return (
     <div className="space-y-4">
       {/* Header with view toggle and navigation */}
-      <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1 bg-muted p-1 rounded-lg">
-            <Button
-              variant={viewMode === 'day' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setViewMode('day')}
-              className="gap-1.5 px-2.5"
-            >
-              <CalendarIcon className="h-4 w-4" />
-              <span className="hidden sm:inline">Dia</span>
-            </Button>
-            <Button
-              variant={viewMode === 'week' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setViewMode('week')}
-              className="gap-1.5 px-2.5"
-            >
-              <List className="h-4 w-4" />
-              <span className="hidden sm:inline">Semana</span>
-            </Button>
-            <Button
-              variant={viewMode === 'month' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setViewMode('month')}
-              className="gap-1.5 px-2.5"
-            >
-              <CalendarDays className="h-4 w-4" />
-              <span className="hidden sm:inline">Mês</span>
+      <Card className="border-none shadow-sm bg-card/50 backdrop-blur">
+        <CardContent className="p-4">
+          <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 bg-muted p-1 rounded-lg">
+                <Button
+                  variant={viewMode === 'day' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setViewMode('day')}
+                  className="gap-1.5 px-3"
+                >
+                  <CalendarIcon className="h-4 w-4" />
+                  <span className="hidden sm:inline">Dia</span>
+                </Button>
+                <Button
+                  variant={viewMode === 'week' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setViewMode('week')}
+                  className="gap-1.5 px-3"
+                >
+                  <List className="h-4 w-4" />
+                  <span className="hidden sm:inline">Semana</span>
+                </Button>
+                <Button
+                  variant={viewMode === 'month' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setViewMode('month')}
+                  className="gap-1.5 px-3"
+                >
+                  <CalendarDays className="h-4 w-4" />
+                  <span className="hidden sm:inline">Mês</span>
+                </Button>
+              </div>
+            </div>
+
+            <Button onClick={onScheduleClass} className="gap-2 shadow-sm">
+              <Plus className="h-4 w-4" />
+              Agendar Aula
             </Button>
           </div>
-        </div>
-
-        <Button onClick={onScheduleClass} className="gap-2">
-          <CalendarIcon className="h-4 w-4" />
-          Agendar Aula
-        </Button>
-      </div>
+        </CardContent>
+      </Card>
 
       {/* Day View */}
       {viewMode === 'day' && (
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <Button 
-              variant="outline" 
-              size="icon"
-              onClick={() => setSelectedDay(addDays(selectedDay, -1))}
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <h3 className="font-heading font-semibold text-lg capitalize">
-              {format(selectedDay, "EEEE, d 'de' MMMM", { locale: pt })}
-            </h3>
-            <Button 
-              variant="outline" 
-              size="icon"
-              onClick={() => setSelectedDay(addDays(selectedDay, 1))}
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
+          <Card className="border-none shadow-sm">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <Button 
+                  variant="outline" 
+                  size="icon"
+                  onClick={() => setSelectedDay(addDays(selectedDay, -1))}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <div className="text-center">
+                  <h3 className="font-heading font-semibold text-lg capitalize">
+                    {format(selectedDay, "EEEE", { locale: pt })}
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    {format(selectedDay, "d 'de' MMMM 'de' yyyy", { locale: pt })}
+                  </p>
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="icon"
+                  onClick={() => setSelectedDay(addDays(selectedDay, 1))}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {getSchedulesForDate(selectedDay).map((schedule) => renderScheduleCard(schedule))}
             {getSchedulesForDate(selectedDay).length === 0 && (
-              <div className="col-span-full text-center py-12 text-muted-foreground">
-                Nenhuma aula agendada para este dia
-              </div>
+              <Card className="col-span-full">
+                <CardContent className="text-center py-12 text-muted-foreground">
+                  <CalendarIcon className="h-12 w-12 mx-auto mb-4 opacity-30" />
+                  <p>Nenhuma aula agendada para este dia</p>
+                  <Button variant="outline" className="mt-4" onClick={onScheduleClass}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Agendar Aula
+                  </Button>
+                </CardContent>
+              </Card>
             )}
           </div>
         </div>
@@ -248,28 +315,37 @@ export function CalendarSection({
       {/* Week View */}
       {viewMode === 'week' && (
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <Button 
-              variant="outline" 
-              size="icon"
-              onClick={() => setCurrentWeekStart(subWeeks(currentWeekStart, 1))}
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <h3 className="font-heading font-semibold text-base sm:text-lg">
-              {format(currentWeekStart, "d", { locale: pt })} - {format(addDays(currentWeekStart, 6), "d MMMM yyyy", { locale: pt })}
-            </h3>
-            <Button 
-              variant="outline" 
-              size="icon"
-              onClick={() => setCurrentWeekStart(addWeeks(currentWeekStart, 1))}
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
+          <Card className="border-none shadow-sm">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <Button 
+                  variant="outline" 
+                  size="icon"
+                  onClick={() => setCurrentWeekStart(subWeeks(currentWeekStart, 1))}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <div className="text-center">
+                  <h3 className="font-heading font-semibold text-base sm:text-lg">
+                    {format(currentWeekStart, "d", { locale: pt })} - {format(addDays(currentWeekStart, 6), "d 'de' MMMM", { locale: pt })}
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    {format(currentWeekStart, "yyyy", { locale: pt })}
+                  </p>
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="icon"
+                  onClick={() => setCurrentWeekStart(addWeeks(currentWeekStart, 1))}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
 
           <Tabs defaultValue="seg" className="w-full">
-            <TabsList className="w-full grid grid-cols-7 h-auto p-1">
+            <TabsList className="w-full grid grid-cols-7 h-auto p-1 bg-muted/50">
               {weekDays.map((day) => {
                 const dayDate = addDays(currentWeekStart, day.dayOffset);
                 const isToday = isSameDay(dayDate, new Date());
@@ -279,15 +355,16 @@ export function CalendarSection({
                     key={day.key} 
                     value={day.key} 
                     className={cn(
-                      "py-2 px-1 text-xs font-medium",
-                      isToday && "ring-2 ring-primary ring-inset"
+                      "py-2.5 px-1 text-xs font-medium flex flex-col gap-0.5",
+                      isToday && "ring-2 ring-primary ring-inset bg-primary/5"
                     )}
                   >
-                    {day.shortLabel}
+                    <span>{day.shortLabel}</span>
+                    <span className="text-[10px] text-muted-foreground">{format(dayDate, 'd')}</span>
                     {count > 0 && (
-                      <span className="ml-1 text-[10px] bg-muted-foreground/20 rounded-full px-1.5">
+                      <Badge variant="secondary" className="text-[10px] h-4 px-1.5 mt-0.5">
                         {count}
-                      </span>
+                      </Badge>
                     )}
                   </TabsTrigger>
                 );
@@ -299,9 +376,16 @@ export function CalendarSection({
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {getSchedulesForDay(day.dayOffset).map((schedule) => renderScheduleCard(schedule))}
                   {getSchedulesForDay(day.dayOffset).length === 0 && (
-                    <div className="col-span-full text-center py-12 text-muted-foreground">
-                      Nenhuma aula agendada para este dia
-                    </div>
+                    <Card className="col-span-full">
+                      <CardContent className="text-center py-12 text-muted-foreground">
+                        <CalendarIcon className="h-12 w-12 mx-auto mb-4 opacity-30" />
+                        <p>Nenhuma aula agendada para {day.label.toLowerCase()}</p>
+                        <Button variant="outline" className="mt-4" onClick={onScheduleClass}>
+                          <Plus className="h-4 w-4 mr-2" />
+                          Agendar Aula
+                        </Button>
+                      </CardContent>
+                    </Card>
                   )}
                 </div>
               </TabsContent>
@@ -315,6 +399,7 @@ export function CalendarSection({
         <MonthlyCalendarView
           schedules={monthSchedules}
           onEnroll={onEnroll}
+          onEdit={onEdit}
           onDelete={onDelete}
         />
       )}
