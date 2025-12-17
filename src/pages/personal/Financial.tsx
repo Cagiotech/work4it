@@ -1,8 +1,11 @@
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { DollarSign, TrendingUp, TrendingDown, Calendar, Download, Users, Clock } from "lucide-react";
+import { DollarSign, TrendingUp, Calendar, Download, Users, Clock, Loader2 } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -11,47 +14,239 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-
-const stats = [
-  { title: "Rendimento Mensal", value: "€2.450", icon: DollarSign, change: "+8.2%", trend: "up" },
-  { title: "Aulas Este Mês", value: "48", icon: Calendar, change: "+12", trend: "up" },
-  { title: "Alunos Ativos", value: "24", icon: Users, change: "+2", trend: "up" },
-  { title: "Média por Aula", value: "€51", icon: TrendingUp, change: "+€3", trend: "up" },
-];
-
-const earnings = [
-  { month: "Janeiro", classes: 42, students: 22, total: "€2.100", bonus: "€150" },
-  { month: "Fevereiro", classes: 45, students: 23, total: "€2.250", bonus: "€200" },
-  { month: "Março", classes: 48, students: 24, total: "€2.450", bonus: "€250" },
-];
-
-const recentPayments = [
-  { id: 1, student: "Maria Santos", type: "Mensalidade", date: "01 Mar 2024", value: "€150", status: "Pago" },
-  { id: 2, student: "Pedro Costa", type: "Pack 10 aulas", date: "28 Fev 2024", value: "€400", status: "Pago" },
-  { id: 3, student: "Ana Ferreira", type: "Mensalidade", date: "01 Mar 2024", value: "€180", status: "Pago" },
-  { id: 4, student: "João Oliveira", type: "Mensalidade", date: "01 Mar 2024", value: "€120", status: "Pendente" },
-  { id: 5, student: "Sofia Rodrigues", type: "Avulso", date: "05 Mar 2024", value: "€60", status: "Pago" },
-];
-
-const pendingPayments = [
-  { id: 1, student: "João Oliveira", type: "Mensalidade", dueDate: "01 Mar 2024", value: "€120", daysLate: 5 },
-  { id: 2, student: "Miguel Almeida", type: "Mensalidade", dueDate: "01 Mar 2024", value: "€150", daysLate: 5 },
-];
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { supabase } from "@/integrations/supabase/client";
+import { format, startOfMonth, endOfMonth, subMonths, startOfYear, endOfYear } from "date-fns";
+import { pt } from "date-fns/locale";
 
 export default function PersonalFinancial() {
+  const [period, setPeriod] = useState<'month' | 'year'>('month');
+
+  // Get staff info and payment config
+  const { data: staffData, isLoading: loadingStaff } = useQuery({
+    queryKey: ['personal-staff-financial'],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      const { data: staff, error: staffError } = await supabase
+        .from('staff')
+        .select('id, full_name, company_id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (staffError) throw staffError;
+
+      const { data: paymentConfig } = await supabase
+        .from('staff_payment_config')
+        .select('*')
+        .eq('staff_id', staff.id)
+        .single();
+
+      return { staff, paymentConfig };
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const staffInfo = staffData?.staff;
+  const paymentConfig = staffData?.paymentConfig;
+
+  // Get classes and earnings data
+  const { data: financialData, isLoading: loadingFinancial } = useQuery({
+    queryKey: ['personal-financial-data', staffInfo?.id, period],
+    queryFn: async () => {
+      if (!staffInfo?.id) return null;
+
+      const now = new Date();
+      let startDate: Date, endDate: Date;
+      
+      if (period === 'month') {
+        startDate = startOfMonth(now);
+        endDate = endOfMonth(now);
+      } else {
+        startDate = startOfYear(now);
+        endDate = endOfYear(now);
+      }
+
+      // Get completed classes in period
+      const { data: classes, error: classesError } = await supabase
+        .from('class_schedules')
+        .select(`
+          id,
+          scheduled_date,
+          start_time,
+          end_time,
+          status,
+          classes (name)
+        `)
+        .eq('instructor_id', staffInfo.id)
+        .eq('status', 'completed')
+        .gte('scheduled_date', format(startDate, 'yyyy-MM-dd'))
+        .lte('scheduled_date', format(endDate, 'yyyy-MM-dd'))
+        .order('scheduled_date', { ascending: false });
+
+      if (classesError) throw classesError;
+
+      // Get assigned students count
+      const { count: studentsCount } = await supabase
+        .from('students')
+        .select('id', { count: 'exact', head: true })
+        .eq('personal_trainer_id', staffInfo.id)
+        .eq('status', 'active');
+
+      // Calculate earnings based on payment config
+      const completedClasses = classes?.length || 0;
+      let earnings = 0;
+
+      if (paymentConfig) {
+        switch (paymentConfig.payment_type) {
+          case 'per_class':
+            earnings = completedClasses * (paymentConfig.per_class_rate || 0);
+            break;
+          case 'hourly':
+            const totalHours = (classes || []).reduce((acc, cls) => {
+              const [sh, sm] = cls.start_time.split(':').map(Number);
+              const [eh, em] = cls.end_time.split(':').map(Number);
+              return acc + ((eh * 60 + em) - (sh * 60 + sm)) / 60;
+            }, 0);
+            earnings = totalHours * (paymentConfig.hourly_rate || 0);
+            break;
+          case 'monthly':
+            earnings = paymentConfig.base_salary || 0;
+            break;
+          default:
+            earnings = paymentConfig.base_salary || 0;
+        }
+      }
+
+      // Get monthly breakdown for last 6 months
+      const monthlyData = [];
+      for (let i = 5; i >= 0; i--) {
+        const monthDate = subMonths(now, i);
+        const monthStart = startOfMonth(monthDate);
+        const monthEnd = endOfMonth(monthDate);
+
+        const monthClasses = (classes || []).filter(cls => {
+          const date = new Date(cls.scheduled_date);
+          return date >= monthStart && date <= monthEnd;
+        });
+
+        let monthEarnings = 0;
+        if (paymentConfig?.payment_type === 'per_class') {
+          monthEarnings = monthClasses.length * (paymentConfig.per_class_rate || 0);
+        } else if (paymentConfig?.payment_type === 'monthly') {
+          monthEarnings = paymentConfig.base_salary || 0;
+        }
+
+        monthlyData.push({
+          month: format(monthDate, 'MMMM', { locale: pt }),
+          classes: monthClasses.length,
+          earnings: monthEarnings,
+        });
+      }
+
+      return {
+        classes: classes || [],
+        completedClasses,
+        studentsCount: studentsCount || 0,
+        earnings,
+        monthlyData,
+        avgPerClass: completedClasses > 0 ? earnings / completedClasses : 0,
+      };
+    },
+    enabled: !!staffInfo?.id,
+    staleTime: 2 * 60 * 1000,
+  });
+
+  const isLoading = loadingStaff || loadingFinancial;
+
+  if (isLoading) {
+    return (
+      <div className="space-y-4 md:space-y-6">
+        <Skeleton className="h-8 w-48" />
+        <div className="grid gap-3 md:gap-4 grid-cols-2 lg:grid-cols-4">
+          {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-28" />)}
+        </div>
+        <Skeleton className="h-96" />
+      </div>
+    );
+  }
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('pt-PT', {
+      style: 'currency',
+      currency: 'EUR',
+    }).format(value);
+  };
+
+  const stats = [
+    { 
+      title: "Rendimento", 
+      value: formatCurrency(financialData?.earnings || 0), 
+      icon: DollarSign, 
+      subtitle: period === 'month' ? 'Este mês' : 'Este ano',
+    },
+    { 
+      title: "Aulas Concluídas", 
+      value: (financialData?.completedClasses || 0).toString(), 
+      icon: Calendar, 
+      subtitle: period === 'month' ? 'Este mês' : 'Este ano',
+    },
+    { 
+      title: "Alunos Ativos", 
+      value: (financialData?.studentsCount || 0).toString(), 
+      icon: Users, 
+      subtitle: 'Atribuídos',
+    },
+    { 
+      title: "Média por Aula", 
+      value: formatCurrency(financialData?.avgPerClass || 0), 
+      icon: TrendingUp, 
+      subtitle: 'Estimativa',
+    },
+  ];
+
+  const getPaymentTypeLabel = (type: string) => {
+    const labels: Record<string, string> = {
+      monthly: 'Salário Mensal',
+      hourly: 'Por Hora',
+      per_class: 'Por Aula',
+      daily: 'Diário',
+      commission: 'Comissão',
+    };
+    return labels[type] || type;
+  };
+
   return (
     <div className="space-y-4 md:space-y-6">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Financeiro</h1>
           <p className="text-muted-foreground text-sm md:text-base">
-            Acompanhar os seus rendimentos e pagamentos
+            Acompanhar os seus rendimentos
           </p>
         </div>
-        <Button variant="outline" className="w-full md:w-auto">
-          <Download className="h-4 w-4 mr-2" />
-          Exportar Relatório
-        </Button>
+        <div className="flex gap-2">
+          <Select value={period} onValueChange={(v: 'month' | 'year') => setPeriod(v)}>
+            <SelectTrigger className="w-32">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="month">Este Mês</SelectItem>
+              <SelectItem value="year">Este Ano</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button variant="outline">
+            <Download className="h-4 w-4 mr-2" />
+            Exportar
+          </Button>
+        </div>
       </div>
 
       {/* Stats */}
@@ -66,157 +261,111 @@ export default function PersonalFinancial() {
             </CardHeader>
             <CardContent>
               <div className="text-xl md:text-2xl font-bold">{stat.value}</div>
-              <p className={`text-xs flex items-center gap-1 ${
-                stat.trend === "up" ? "text-green-600" : "text-red-600"
-              }`}>
-                {stat.trend === "up" ? (
-                  <TrendingUp className="h-3 w-3" />
-                ) : (
-                  <TrendingDown className="h-3 w-3" />
-                )}
-                {stat.change}
-              </p>
+              <p className="text-xs text-muted-foreground">{stat.subtitle}</p>
             </CardContent>
           </Card>
         ))}
       </div>
 
-      <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList className="w-full md:w-auto grid grid-cols-3 md:flex">
-          <TabsTrigger value="overview">Resumo</TabsTrigger>
-          <TabsTrigger value="payments">Pagamentos</TabsTrigger>
-          <TabsTrigger value="pending">Pendentes</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="overview" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Histórico de Rendimentos</CardTitle>
-              <CardDescription>Os seus rendimentos nos últimos meses</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Mês</TableHead>
-                      <TableHead className="text-center">Aulas</TableHead>
-                      <TableHead className="text-center">Alunos</TableHead>
-                      <TableHead className="text-right">Total</TableHead>
-                      <TableHead className="text-right">Bónus</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {earnings.map((earning) => (
-                      <TableRow key={earning.month}>
-                        <TableCell className="font-medium">{earning.month}</TableCell>
-                        <TableCell className="text-center">{earning.classes}</TableCell>
-                        <TableCell className="text-center">{earning.students}</TableCell>
-                        <TableCell className="text-right font-medium">{earning.total}</TableCell>
-                        <TableCell className="text-right text-green-600">{earning.bonus}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+      {/* Payment Config Info */}
+      {paymentConfig && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Configuração de Pagamento</CardTitle>
+            <CardDescription>Como o seu rendimento é calculado</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className="p-4 rounded-lg bg-muted/50">
+                <p className="text-sm text-muted-foreground">Tipo</p>
+                <p className="font-semibold">{getPaymentTypeLabel(paymentConfig.payment_type)}</p>
               </div>
-            </CardContent>
-          </Card>
-
-          {/* Chart placeholder */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Evolução Mensal</CardTitle>
-              <CardDescription>Gráfico de rendimentos ao longo do tempo</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="h-64 flex items-center justify-center bg-muted/30 rounded-lg">
-                <p className="text-muted-foreground">Gráfico de evolução (em desenvolvimento)</p>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="payments" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Pagamentos Recentes</CardTitle>
-              <CardDescription>Histórico dos últimos pagamentos recebidos</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Aluno</TableHead>
-                      <TableHead>Tipo</TableHead>
-                      <TableHead>Data</TableHead>
-                      <TableHead className="text-right">Valor</TableHead>
-                      <TableHead className="text-center">Estado</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {recentPayments.map((payment) => (
-                      <TableRow key={payment.id}>
-                        <TableCell className="font-medium">{payment.student}</TableCell>
-                        <TableCell>{payment.type}</TableCell>
-                        <TableCell>{payment.date}</TableCell>
-                        <TableCell className="text-right font-medium">{payment.value}</TableCell>
-                        <TableCell className="text-center">
-                          <Badge variant={payment.status === "Pago" ? "default" : "secondary"}>
-                            {payment.status}
-                          </Badge>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="pending" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Clock className="h-5 w-5 text-orange-500" />
-                Pagamentos Pendentes
-              </CardTitle>
-              <CardDescription>Pagamentos que aguardam regularização</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {pendingPayments.length > 0 ? (
-                <div className="space-y-4">
-                  {pendingPayments.map((payment) => (
-                    <div
-                      key={payment.id}
-                      className="flex flex-col md:flex-row md:items-center justify-between p-4 rounded-lg border bg-orange-500/5 border-orange-500/20"
-                    >
-                      <div className="space-y-1 mb-3 md:mb-0">
-                        <p className="font-medium">{payment.student}</p>
-                        <p className="text-sm text-muted-foreground">{payment.type}</p>
-                        <p className="text-xs text-orange-600">
-                          Vencido há {payment.daysLate} dias (desde {payment.dueDate})
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        <span className="text-lg font-bold">{payment.value}</span>
-                        <Button variant="outline" size="sm">
-                          Enviar Lembrete
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-12">
-                  <p className="text-muted-foreground">Não existem pagamentos pendentes</p>
+              {paymentConfig.base_salary && (
+                <div className="p-4 rounded-lg bg-muted/50">
+                  <p className="text-sm text-muted-foreground">Salário Base</p>
+                  <p className="font-semibold">{formatCurrency(paymentConfig.base_salary)}</p>
                 </div>
               )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+              {paymentConfig.per_class_rate && (
+                <div className="p-4 rounded-lg bg-muted/50">
+                  <p className="text-sm text-muted-foreground">Valor por Aula</p>
+                  <p className="font-semibold">{formatCurrency(paymentConfig.per_class_rate)}</p>
+                </div>
+              )}
+              {paymentConfig.hourly_rate && (
+                <div className="p-4 rounded-lg bg-muted/50">
+                  <p className="text-sm text-muted-foreground">Valor/Hora</p>
+                  <p className="font-semibold">{formatCurrency(paymentConfig.hourly_rate)}</p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Monthly Breakdown */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Histórico de Rendimentos</CardTitle>
+          <CardDescription>Últimos 6 meses</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Mês</TableHead>
+                  <TableHead className="text-center">Aulas</TableHead>
+                  <TableHead className="text-right">Rendimento</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {(financialData?.monthlyData || []).map((month) => (
+                  <TableRow key={month.month}>
+                    <TableCell className="font-medium capitalize">{month.month}</TableCell>
+                    <TableCell className="text-center">{month.classes}</TableCell>
+                    <TableCell className="text-right font-medium">
+                      {formatCurrency(month.earnings)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Recent Classes */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Aulas Recentes</CardTitle>
+          <CardDescription>Últimas aulas concluídas</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {(financialData?.classes || []).length === 0 ? (
+            <p className="text-center py-8 text-muted-foreground">
+              Nenhuma aula concluída no período selecionado
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {(financialData?.classes || []).slice(0, 10).map((cls: any) => (
+                <div
+                  key={cls.id}
+                  className="flex items-center justify-between p-3 rounded-lg bg-muted/30"
+                >
+                  <div>
+                    <p className="font-medium">{cls.classes?.name || 'Aula'}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {format(new Date(cls.scheduled_date), "d MMM yyyy", { locale: pt })} às {cls.start_time.substring(0, 5)}
+                    </p>
+                  </div>
+                  <Badge variant="default">Concluída</Badge>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
