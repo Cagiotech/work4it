@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { format, addDays, startOfWeek, addWeeks, subWeeks, startOfDay, isSameDay } from "date-fns";
 import { pt } from "date-fns/locale";
-import { ChevronLeft, ChevronRight, Clock, Users, UserPlus, Trash2, User, MapPin, List, CalendarDays, Calendar as CalendarIcon, Plus, Pencil } from "lucide-react";
+import { ChevronLeft, ChevronRight, Clock, Users, UserPlus, Trash2, User, MapPin, List, CalendarDays, Calendar as CalendarIcon, Plus, Pencil, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -49,6 +49,7 @@ interface CalendarSectionProps {
   hasClassTypes: boolean;
   onEnroll: (schedule: ClassSchedule) => void;
   onEdit: (schedule: ClassSchedule) => void;
+  onDuplicate: (schedule: ClassSchedule) => void;
   onDelete: (id: string) => void;
   onScheduleClass: () => void;
 }
@@ -69,6 +70,7 @@ export function CalendarSection({
   hasClassTypes,
   onEnroll,
   onEdit,
+  onDuplicate,
   onDelete,
   onScheduleClass 
 }: CalendarSectionProps) {
@@ -196,6 +198,19 @@ export function CalendarSection({
                 </Button>
               </TooltipTrigger>
               <TooltipContent>Editar aula</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="outline" 
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => onDuplicate(schedule)}
+                >
+                  <Copy className="h-3.5 w-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Duplicar aula</TooltipContent>
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -400,6 +415,7 @@ export function CalendarSection({
           schedules={monthSchedules}
           onEnroll={onEnroll}
           onEdit={onEdit}
+          onDuplicate={onDuplicate}
           onDelete={onDelete}
         />
       )}

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, getDay } from "date-fns";
 import { pt } from "date-fns/locale";
-import { ChevronLeft, ChevronRight, Clock, Users, UserPlus, Trash2, Pencil, X, MapPin, User } from "lucide-react";
+import { ChevronLeft, ChevronRight, Clock, Users, UserPlus, Trash2, Pencil, X, MapPin, User, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -50,12 +50,13 @@ interface MonthlyCalendarViewProps {
   schedules: ClassSchedule[];
   onEnroll: (schedule: ClassSchedule) => void;
   onEdit: (schedule: ClassSchedule) => void;
+  onDuplicate: (schedule: ClassSchedule) => void;
   onDelete: (scheduleId: string) => void;
 }
 
 const weekDaysShort = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
-export function MonthlyCalendarView({ schedules, onEnroll, onEdit, onDelete }: MonthlyCalendarViewProps) {
+export function MonthlyCalendarView({ schedules, onEnroll, onEdit, onDuplicate, onDelete }: MonthlyCalendarViewProps) {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
   const [showDayDialog, setShowDayDialog] = useState(false);
@@ -307,6 +308,22 @@ export function MonthlyCalendarView({ schedules, onEnroll, onEdit, onDelete }: M
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>Editar aula</TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button 
+                              variant="outline" 
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => {
+                                setShowDayDialog(false);
+                                onDuplicate(schedule);
+                              }}
+                            >
+                              <Copy className="h-3.5 w-3.5" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Duplicar aula</TooltipContent>
                         </Tooltip>
                         <Tooltip>
                           <TooltipTrigger asChild>
