@@ -41,6 +41,7 @@ const Login = () => {
   }, []);
 
   const redirectBasedOnRole = async (userId: string) => {
+    // Check if user is a student
     const { data: student } = await supabase
       .from('students')
       .select('id, registration_method, status, password_changed, terms_accepted_at, company_id')
@@ -62,6 +63,7 @@ const Login = () => {
       return;
     }
 
+    // Check if user is staff (takes priority over profile)
     const { data: staff } = await supabase
       .from('staff')
       .select('id, role_id, company_id, position, password_changed')
@@ -70,7 +72,7 @@ const Login = () => {
 
     if (staff) {
       // Check if password needs to be changed (first login)
-      if (!staff.password_changed) {
+      if (staff.password_changed === false) {
         navigate('/onboarding-staff');
         return;
       }
@@ -86,6 +88,7 @@ const Login = () => {
       return;
     }
 
+    // Only check profile if user is not a student or staff (company owner)
     const { data: profile } = await supabase
       .from('profiles')
       .select('onboarding_completed')
