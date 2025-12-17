@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { User, Lock, Building, Save, LogOut, Link, FileText, Copy, Check, Trash2, AlertTriangle, LayoutGrid, UserCheck, Phone, Mail, MapPin, Globe, FileCheck, Users } from "lucide-react";
+import { User, Lock, Building, Save, LogOut, Link, FileText, Copy, Check, Trash2, AlertTriangle, LayoutGrid, UserCheck, Phone, Mail, MapPin, Globe, FileCheck, Users, CreditCard, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { ClassesSettingsSection } from "@/components/company/settings/ClassesSettingsSection";
 import { RolesSettingsSection } from "@/components/company/settings/RolesSettingsSection";
+import { PlansSettingsSection } from "@/components/company/settings/PlansSettingsSection";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -101,6 +102,7 @@ interface ExtendedCompany {
   regulations_text?: string | null;
   anamnesis_filled_by?: string;
   require_student_approval?: boolean;
+  mbway_phone?: string | null;
 }
 
 export default function Settings() {
@@ -129,6 +131,7 @@ export default function Settings() {
     email: '',
     website: '',
     nif: '',
+    mbway_phone: '',
   });
 
   const [regulationsData, setRegulationsData] = useState({
@@ -161,6 +164,7 @@ export default function Settings() {
         email: '',
         website: '',
         nif: '',
+        mbway_phone: '',
       });
       fetchExtendedCompanyData(company.id);
     }
@@ -176,12 +180,16 @@ export default function Settings() {
   const fetchExtendedCompanyData = async (companyId: string) => {
     const { data, error } = await supabase
       .from('companies')
-      .select('id, name, address, registration_code, terms_text, regulations_text, anamnesis_filled_by, require_student_approval')
+      .select('id, name, address, registration_code, terms_text, regulations_text, anamnesis_filled_by, require_student_approval, mbway_phone')
       .eq('id', companyId)
       .single();
 
     if (data) {
       setExtendedCompany(data);
+      setCompanyData(prev => ({
+        ...prev,
+        mbway_phone: data.mbway_phone || '',
+      }));
       setRegulationsData({
         termsText: data.terms_text || '',
         regulationsText: data.regulations_text || '',
@@ -242,6 +250,7 @@ export default function Settings() {
         .update({
           name: companyData.name.trim(),
           address: companyData.address.trim() || null,
+          mbway_phone: companyData.mbway_phone.trim() || null,
         })
         .eq('id', company.id);
 
@@ -381,6 +390,10 @@ export default function Settings() {
           <TabsTrigger value="classes">
             <LayoutGrid className="h-4 w-4 mr-2" />
             Aulas
+          </TabsTrigger>
+          <TabsTrigger value="plans">
+            <CreditCard className="h-4 w-4 mr-2" />
+            Planos
           </TabsTrigger>
           <TabsTrigger value="registration">
             <Link className="h-4 w-4 mr-2" />
@@ -563,6 +576,30 @@ export default function Settings() {
                 </div>
               </div>
 
+              {/* MB Way Configuration */}
+              <div className="border-t pt-6">
+                <h3 className="text-sm font-medium mb-4 flex items-center gap-2">
+                  <Smartphone className="h-4 w-4 text-primary" />
+                  Configurações de Pagamento
+                </h3>
+                <div className="space-y-2 max-w-md">
+                  <Label htmlFor="mbway_phone">Número MB Way</Label>
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="mbway_phone"
+                      value={companyData.mbway_phone}
+                      onChange={(e) => setCompanyData({ ...companyData, mbway_phone: e.target.value })}
+                      placeholder="912345678"
+                      className="pl-10"
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Este número será exibido aos alunos para pagamento via MB Way quando houver parcelas em atraso.
+                  </p>
+                </div>
+              </div>
+
               <Button onClick={handleSaveCompany} disabled={loading}>
                 <Save className="h-4 w-4 mr-2" />
                 {loading ? 'Salvando...' : 'Salvar Alterações'}
@@ -595,6 +632,20 @@ export default function Settings() {
             </CardHeader>
             <CardContent>
               <ClassesSettingsSection />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="plans">
+          <Card>
+            <CardHeader>
+              <CardTitle>Planos de Subscrição</CardTitle>
+              <CardDescription>
+                Configure os planos de subscrição e regras de pagamento para alunos.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <PlansSettingsSection />
             </CardContent>
           </Card>
         </TabsContent>
