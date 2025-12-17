@@ -46,6 +46,17 @@ interface Staff {
   full_name: string;
 }
 
+interface ClassSchedule {
+  id: string;
+  class_id: string;
+  instructor_id: string | null;
+  scheduled_date: string;
+  start_time: string;
+  end_time: string;
+  status: string;
+  notes: string | null;
+}
+
 interface ScheduleClassDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -53,6 +64,7 @@ interface ScheduleClassDialogProps {
   rooms: Room[];
   staff: Staff[];
   onSuccess: () => void;
+  schedule?: ClassSchedule | null; // For editing
 }
 
 export function ScheduleClassDialog({ 
@@ -61,7 +73,8 @@ export function ScheduleClassDialog({
   classTypes, 
   rooms, 
   staff, 
-  onSuccess 
+  onSuccess,
+  schedule 
 }: ScheduleClassDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -72,9 +85,34 @@ export function ScheduleClassDialog({
     notes: ""
   });
 
-  // Auto-fill when class type changes
+  const isEditing = !!schedule;
+
+  // Reset form when dialog opens/closes or schedule changes
   useEffect(() => {
-    if (formData.class_id) {
+    if (open) {
+      if (schedule) {
+        setFormData({
+          class_id: schedule.class_id,
+          instructor_id: schedule.instructor_id || "",
+          scheduled_date: schedule.scheduled_date,
+          start_time: schedule.start_time.slice(0, 5),
+          notes: schedule.notes || ""
+        });
+      } else {
+        setFormData({
+          class_id: "",
+          instructor_id: "",
+          scheduled_date: format(new Date(), 'yyyy-MM-dd'),
+          start_time: "09:00",
+          notes: ""
+        });
+      }
+    }
+  }, [open, schedule]);
+
+  // Auto-fill when class type changes (only for new schedules)
+  useEffect(() => {
+    if (formData.class_id && !isEditing) {
       const selectedClass = classTypes.find(c => c.id === formData.class_id);
       if (selectedClass) {
         setFormData(prev => ({
@@ -86,7 +124,7 @@ export function ScheduleClassDialog({
         }));
       }
     }
-  }, [formData.class_id, classTypes]);
+  }, [formData.class_id, classTypes, isEditing]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -101,34 +139,37 @@ export function ScheduleClassDialog({
       const startTime = parse(formData.start_time, 'HH:mm', new Date());
       const endTime = addMinutes(startTime, selectedClass?.duration_minutes || 60);
 
-      const { error } = await supabase
-        .from('class_schedules')
-        .insert({
-          class_id: formData.class_id,
-          instructor_id: formData.instructor_id || null,
-          scheduled_date: formData.scheduled_date,
-          start_time: formData.start_time,
-          end_time: format(endTime, 'HH:mm'),
-          notes: formData.notes || null
-        });
+      const scheduleData = {
+        class_id: formData.class_id,
+        instructor_id: formData.instructor_id || null,
+        scheduled_date: formData.scheduled_date,
+        start_time: formData.start_time,
+        end_time: format(endTime, 'HH:mm'),
+        notes: formData.notes || null
+      };
 
-      if (error) throw error;
+      if (isEditing && schedule) {
+        const { error } = await supabase
+          .from('class_schedules')
+          .update(scheduleData)
+          .eq('id', schedule.id);
+
+        if (error) throw error;
+        toast.success('Aula atualizada com sucesso');
+      } else {
+        const { error } = await supabase
+          .from('class_schedules')
+          .insert(scheduleData);
+
+        if (error) throw error;
+        toast.success('Aula agendada com sucesso');
+      }
       
-      toast.success('Aula agendada com sucesso');
       onSuccess();
       onOpenChange(false);
-      
-      // Reset form
-      setFormData({
-        class_id: "",
-        instructor_id: "",
-        scheduled_date: format(new Date(), 'yyyy-MM-dd'),
-        start_time: "09:00",
-        notes: ""
-      });
     } catch (error) {
-      console.error('Error scheduling class:', error);
-      toast.error('Erro ao agendar aula');
+      console.error('Error saving class schedule:', error);
+      toast.error(isEditing ? 'Erro ao atualizar aula' : 'Erro ao agendar aula');
     } finally {
       setIsLoading(false);
     }
@@ -143,9 +184,9 @@ export function ScheduleClassDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Agendar Aula</DialogTitle>
+          <DialogTitle>{isEditing ? 'Editar Aula' : 'Agendar Aula'}</DialogTitle>
           <DialogDescription>
-            Agende uma nova sessão de aula
+            {isEditing ? 'Altere os dados da aula agendada' : 'Agende uma nova sessão de aula'}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
@@ -238,7 +279,7 @@ export function ScheduleClassDialog({
               Cancelar
             </Button>
             <Button type="submit" disabled={isLoading || !formData.class_id}>
-              {isLoading ? 'A agendar...' : 'Agendar'}
+              {isLoading ? (isEditing ? 'A guardar...' : 'A agendar...') : (isEditing ? 'Guardar' : 'Agendar')}
             </Button>
           </DialogFooter>
         </form>

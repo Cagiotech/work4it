@@ -84,6 +84,7 @@ export default function Classes() {
   const [showScheduleDialog, setShowScheduleDialog] = useState(false);
   const [showEnrollDialog, setShowEnrollDialog] = useState(false);
   const [selectedSchedule, setSelectedSchedule] = useState<ClassSchedule | null>(null);
+  const [editingSchedule, setEditingSchedule] = useState<ClassSchedule | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   
   const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
@@ -257,18 +258,29 @@ export default function Classes() {
           setSelectedSchedule(schedule);
           setShowEnrollDialog(true);
         }}
+        onEdit={(schedule) => {
+          setEditingSchedule(schedule);
+          setShowScheduleDialog(true);
+        }}
         onDelete={(id) => setDeleteConfirm(id)}
-        onScheduleClass={() => setShowScheduleDialog(true)}
+        onScheduleClass={() => {
+          setEditingSchedule(null);
+          setShowScheduleDialog(true);
+        }}
       />
 
       {/* Dialogs */}
       <ScheduleClassDialog
         open={showScheduleDialog}
-        onOpenChange={setShowScheduleDialog}
+        onOpenChange={(open) => {
+          setShowScheduleDialog(open);
+          if (!open) setEditingSchedule(null);
+        }}
         classTypes={classTypes}
         rooms={rooms}
         staff={staff}
         onSuccess={fetchData}
+        schedule={editingSchedule}
       />
 
       <EnrollStudentsDialog
