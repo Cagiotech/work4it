@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DeveloperFooter } from '@/components/DeveloperFooter';
 import logo from '@/assets/logo-light.png';
-import { User, Briefcase, Building2, MapPin, ArrowRight, ArrowLeft, Check } from 'lucide-react';
+import { User, Briefcase, Building2, MapPin, ArrowRight, ArrowLeft, Check, LogOut } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -193,6 +193,22 @@ const Onboarding = () => {
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 flex flex-col">
       <div className="flex flex-1 items-center justify-center px-4 py-8">
         <div className="w-full max-w-lg">
+          {/* Back to Login Button */}
+          <div className="mb-6">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-muted-foreground hover:text-foreground"
+              onClick={async () => {
+                await supabase.auth.signOut();
+                navigate('/login');
+              }}
+            >
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Voltar para o login
+            </Button>
+          </div>
+
           {/* Header */}
           <div className="text-center mb-6">
             <img src={logo} alt="Cagiotech" className="mx-auto h-12 w-auto" />
