@@ -6,6 +6,7 @@ import {
   Dumbbell,
   Apple,
   CreditCard,
+  FileText,
   MessageCircle,
   Settings,
   LogOut,
@@ -34,6 +35,7 @@ const menuItems = [
   { key: "plans", icon: Dumbbell, url: "/student/plans" },
   { key: "nutrition", icon: Apple, url: "/student/nutrition" },
   { key: "payments", icon: CreditCard, url: "/student/payments" },
+  { key: "proofs", icon: FileText, url: "/student/proofs" },
   { key: "chat", icon: MessageCircle, url: "/student/chat" },
   { key: "settings", icon: Settings, url: "/student/settings" },
 ];

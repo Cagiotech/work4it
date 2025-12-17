@@ -35,6 +35,7 @@ import StudentClasses from "./pages/student/Classes";
 import TrainingPlans from "./pages/student/TrainingPlans";
 import NutritionPlan from "./pages/student/Nutrition";
 import Payments from "./pages/student/Payments";
+import PaymentProofs from "./pages/student/PaymentProofs";
 import StudentChat from "./pages/student/Chat";
 import StudentSettings from "./pages/student/Settings";
 
@@ -103,6 +104,7 @@ const App = () => (
                 <Route path="plans" element={<TrainingPlans />} />
                 <Route path="nutrition" element={<NutritionPlan />} />
                 <Route path="payments" element={<Payments />} />
+                <Route path="proofs" element={<PaymentProofs />} />
                 <Route path="chat" element={<StudentChat />} />
                 <Route path="settings" element={<StudentSettings />} />
               </Route>
