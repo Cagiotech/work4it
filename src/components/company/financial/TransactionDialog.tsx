@@ -158,12 +158,12 @@ export function TransactionDialog({
 
           <div className="space-y-2">
             <Label>Categoria</Label>
-            <Select value={categoryId} onValueChange={setCategoryId}>
+            <Select value={categoryId || "_none"} onValueChange={(val) => setCategoryId(val === "_none" ? "" : val)}>
               <SelectTrigger>
                 <SelectValue placeholder="Selecionar categoria" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Sem categoria</SelectItem>
+                <SelectItem value="_none">Sem categoria</SelectItem>
                 {filteredCategories.map((cat) => (
                   <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
                 ))}
@@ -222,12 +222,12 @@ export function TransactionDialog({
           {type === "income" && (
             <div className="space-y-2">
               <Label>Aluno (opcional)</Label>
-              <Select value={studentId} onValueChange={setStudentId}>
+              <Select value={studentId || "_none"} onValueChange={(val) => setStudentId(val === "_none" ? "" : val)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Associar a aluno" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Nenhum</SelectItem>
+                  <SelectItem value="_none">Nenhum</SelectItem>
                   {students.map((s) => (
                     <SelectItem key={s.id} value={s.id}>{s.full_name}</SelectItem>
                   ))}
@@ -239,12 +239,12 @@ export function TransactionDialog({
           {type === "expense" && (
             <div className="space-y-2">
               <Label>Funcionário (opcional)</Label>
-              <Select value={staffId} onValueChange={setStaffId}>
+              <Select value={staffId || "_none"} onValueChange={(val) => setStaffId(val === "_none" ? "" : val)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Associar a funcionário" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Nenhum</SelectItem>
+                  <SelectItem value="_none">Nenhum</SelectItem>
                   {staff.map((s) => (
                     <SelectItem key={s.id} value={s.id}>{s.full_name}</SelectItem>
                   ))}
