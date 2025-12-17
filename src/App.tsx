@@ -13,6 +13,7 @@ import Onboarding from "./pages/Onboarding";
 import StudentRegister from "./pages/StudentRegister";
 import StudentOnboarding from "./pages/StudentOnboarding";
 import StudentPendingApproval from "./pages/StudentPendingApproval";
+import StaffOnboarding from "./pages/StaffOnboarding";
 import NotFound from "./pages/NotFound";
 
 // Company Layout & Pages
@@ -82,6 +83,7 @@ const App = () => (
               <Route path="/registro" element={<StudentRegister />} />
               <Route path="/new-student" element={<StudentOnboarding />} />
               <Route path="/pending-approval" element={<StudentPendingApproval />} />
+              <Route path="/onboarding-staff" element={<StaffOnboarding />} />
               
               {/* Company Dashboard Routes */}
               <Route path="/company" element={<CompanyLayout />}>
