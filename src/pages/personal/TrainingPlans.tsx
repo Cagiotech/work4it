@@ -1,80 +1,177 @@
 import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, Plus, Dumbbell, Clock, Target, MoreVertical, Copy, Edit, Trash } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Search, Plus, Dumbbell, Clock, Target, MoreVertical, Edit, Trash, Loader2, Eye } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { format } from "date-fns";
+import { pt } from "date-fns/locale";
 
-const trainingPlans = [
-  {
-    id: 1,
-    name: "Hipertrofia - Iniciante",
-    student: "Maria Santos",
-    duration: "8 semanas",
-    frequency: "4x por semana",
-    goal: "Ganho de massa muscular",
-    status: "Ativo",
-    progress: 65,
-    createdAt: "15 Jan 2024",
-  },
-  {
-    id: 2,
-    name: "Emagrecimento Intensivo",
-    student: "Pedro Costa",
-    duration: "12 semanas",
-    frequency: "5x por semana",
-    goal: "Perda de gordura",
-    status: "Ativo",
-    progress: 40,
-    createdAt: "20 Fev 2024",
-  },
-  {
-    id: 3,
-    name: "Força e Potência",
-    student: "Ana Ferreira",
-    duration: "6 semanas",
-    frequency: "3x por semana",
-    goal: "Aumento de força",
-    status: "Ativo",
-    progress: 80,
-    createdAt: "01 Mar 2024",
-  },
-  {
-    id: 4,
-    name: "Reabilitação Lombar",
-    student: "João Oliveira",
-    duration: "4 semanas",
-    frequency: "2x por semana",
-    goal: "Recuperação",
-    status: "Pausado",
-    progress: 50,
-    createdAt: "10 Dez 2023",
-  },
-];
+interface Student {
+  id: string;
+  full_name: string;
+  profile_photo_url: string | null;
+}
 
-const templates = [
-  { id: 1, name: "Hipertrofia - Iniciante", duration: "8 semanas", exercises: 24, uses: 12 },
-  { id: 2, name: "Emagrecimento HIIT", duration: "6 semanas", exercises: 18, uses: 8 },
-  { id: 3, name: "Full Body Funcional", duration: "4 semanas", exercises: 16, uses: 15 },
-  { id: 4, name: "Força Powerlifting", duration: "12 semanas", exercises: 32, uses: 5 },
-  { id: 5, name: "Mobilidade e Flexibilidade", duration: "4 semanas", exercises: 20, uses: 10 },
-];
+// Note: Training plans would need a dedicated table. For now, using nutrition_plans structure
+// In production, create a training_plans table similar to nutrition_meal_plans
 
 export default function PersonalTrainingPlans() {
+  const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
+  const [isCreating, setIsCreating] = useState(false);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [formData, setFormData] = useState({
+    title: "",
+    description: "",
+    student_id: "",
+    duration: "8 semanas",
+    frequency: "4x por semana",
+    goal: "",
+  });
 
-  const filteredPlans = trainingPlans.filter((plan) =>
-    plan.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    plan.student.toLowerCase().includes(searchTerm.toLowerCase())
+  // Get staff info
+  const { data: staffInfo } = useQuery({
+    queryKey: ['personal-staff-info'],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      const { data, error } = await supabase
+        .from('staff')
+        .select('id, company_id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Get assigned students
+  const { data: students = [] } = useQuery({
+    queryKey: ['personal-students-for-training', staffInfo?.id],
+    queryFn: async () => {
+      if (!staffInfo?.id) return [];
+
+      const { data, error } = await supabase
+        .from('students')
+        .select('id, full_name, profile_photo_url')
+        .eq('personal_trainer_id', staffInfo.id)
+        .eq('status', 'active')
+        .order('full_name');
+
+      if (error) throw error;
+      return data as Student[];
+    },
+    enabled: !!staffInfo?.id,
+    staleTime: 2 * 60 * 1000,
+  });
+
+  // Get student nutrition plans as training plans proxy
+  // In production, replace with actual training_plans table
+  const { data: plans = [], isLoading } = useQuery({
+    queryKey: ['personal-training-plans', staffInfo?.id],
+    queryFn: async () => {
+      if (!staffInfo?.id) return [];
+
+      const { data: assignedStudents } = await supabase
+        .from('students')
+        .select('id, full_name, profile_photo_url')
+        .eq('personal_trainer_id', staffInfo.id);
+
+      if (!assignedStudents?.length) return [];
+
+      // Return mock training plans based on students
+      // In production, fetch from training_plans table
+      return assignedStudents.map((student, index) => ({
+        id: `training-${student.id}`,
+        title: `Plano de Treino - ${student.full_name}`,
+        description: 'Plano personalizado de treino',
+        is_active: true,
+        created_at: new Date().toISOString(),
+        student_id: student.id,
+        student: student,
+        duration: '8 semanas',
+        frequency: '4x por semana',
+        goal: 'Hipertrofia',
+      }));
+    },
+    enabled: !!staffInfo?.id,
+    staleTime: 1 * 60 * 1000,
+  });
+
+  const filteredPlans = plans.filter((plan) =>
+    plan.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    plan.student?.full_name.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const activePlans = filteredPlans.filter(p => p.is_active);
+
+  const getInitials = (name: string) => {
+    return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+  };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-4 md:space-y-6">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <Skeleton className="h-8 w-48 mb-2" />
+            <Skeleton className="h-4 w-64" />
+          </div>
+          <Skeleton className="h-10 w-32" />
+        </div>
+        <div className="grid gap-4 md:grid-cols-2">
+          {[1, 2, 3, 4].map(i => (
+            <Card key={i}>
+              <CardHeader><Skeleton className="h-6 w-32" /></CardHeader>
+              <CardContent><Skeleton className="h-32 w-full" /></CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4 md:space-y-6">
@@ -85,33 +182,40 @@ export default function PersonalTrainingPlans() {
             Criar e gerir planos de treino para os seus alunos
           </p>
         </div>
-        <Button className="w-full md:w-auto">
+        <Button className="w-full md:w-auto" onClick={() => setIsCreating(true)}>
           <Plus className="h-4 w-4 mr-2" />
           Novo Plano
         </Button>
       </div>
 
-      <Tabs defaultValue="active" className="space-y-4">
-        <TabsList className="w-full md:w-auto">
-          <TabsTrigger value="active" className="flex-1 md:flex-none">Planos Ativos</TabsTrigger>
-          <TabsTrigger value="templates" className="flex-1 md:flex-none">Templates</TabsTrigger>
-        </TabsList>
+      <div className="space-y-4">
+        <div className="relative max-w-md">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Pesquisar planos..."
+            className="pl-10"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
 
-        <TabsContent value="active" className="space-y-4">
-          {/* Search */}
-          <div className="relative max-w-md">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Pesquisar planos..."
-              className="pl-10"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-
-          {/* Plans Grid */}
+        {activePlans.length === 0 ? (
+          <Card>
+            <CardContent className="py-12 text-center">
+              <Dumbbell className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+              <p className="text-muted-foreground">Nenhum plano de treino encontrado</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Crie planos de treino para os seus alunos atribuídos
+              </p>
+              <Button variant="outline" className="mt-4" onClick={() => setIsCreating(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Criar Plano
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
           <div className="grid gap-4 md:grid-cols-2">
-            {filteredPlans.map((plan) => (
+            {activePlans.map((plan) => (
               <Card key={plan.id} className="hover:shadow-md transition-shadow">
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between">
@@ -120,8 +224,10 @@ export default function PersonalTrainingPlans() {
                         <Dumbbell className="h-5 w-5 text-primary" />
                       </div>
                       <div>
-                        <CardTitle className="text-base">{plan.name}</CardTitle>
-                        <CardDescription>Criado em {plan.createdAt}</CardDescription>
+                        <CardTitle className="text-base">{plan.title}</CardTitle>
+                        <CardDescription>
+                          {format(new Date(plan.created_at), "dd MMM yyyy", { locale: pt })}
+                        </CardDescription>
                       </div>
                     </div>
                     <DropdownMenu>
@@ -132,12 +238,12 @@ export default function PersonalTrainingPlans() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem>
-                          <Edit className="h-4 w-4 mr-2" />
-                          Editar
+                          <Eye className="h-4 w-4 mr-2" />
+                          Ver Detalhes
                         </DropdownMenuItem>
                         <DropdownMenuItem>
-                          <Copy className="h-4 w-4 mr-2" />
-                          Duplicar
+                          <Edit className="h-4 w-4 mr-2" />
+                          Editar
                         </DropdownMenuItem>
                         <DropdownMenuItem className="text-destructive">
                           <Trash className="h-4 w-4 mr-2" />
@@ -150,17 +256,16 @@ export default function PersonalTrainingPlans() {
                 <CardContent className="space-y-4">
                   <div className="flex items-center gap-3">
                     <Avatar className="h-8 w-8">
-                      <AvatarImage src="/placeholder.svg" />
+                      {plan.student?.profile_photo_url && (
+                        <AvatarImage src={plan.student.profile_photo_url} />
+                      )}
                       <AvatarFallback className="bg-primary/10 text-primary text-xs">
-                        {plan.student.split(" ").map((n) => n[0]).join("")}
+                        {getInitials(plan.student?.full_name || '?')}
                       </AvatarFallback>
                     </Avatar>
-                    <span className="text-sm font-medium">{plan.student}</span>
-                    <Badge
-                      variant={plan.status === "Ativo" ? "default" : "secondary"}
-                      className="ml-auto text-xs"
-                    >
-                      {plan.status}
+                    <span className="text-sm font-medium">{plan.student?.full_name}</span>
+                    <Badge variant="default" className="ml-auto text-xs">
+                      Ativo
                     </Badge>
                   </div>
 
@@ -180,19 +285,6 @@ export default function PersonalTrainingPlans() {
                     <span>{plan.goal}</span>
                   </div>
 
-                  <div>
-                    <div className="flex items-center justify-between text-xs mb-1">
-                      <span className="text-muted-foreground">Progresso</span>
-                      <span className="font-medium">{plan.progress}%</span>
-                    </div>
-                    <div className="h-2 bg-muted rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-primary rounded-full transition-all"
-                        style={{ width: `${plan.progress}%` }}
-                      />
-                    </div>
-                  </div>
-
                   <Button variant="outline" className="w-full">
                     Ver Detalhes
                   </Button>
@@ -200,44 +292,119 @@ export default function PersonalTrainingPlans() {
               </Card>
             ))}
           </div>
-        </TabsContent>
+        )}
+      </div>
 
-        <TabsContent value="templates" className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {templates.map((template) => (
-              <Card key={template.id} className="hover:shadow-md transition-shadow">
-                <CardHeader>
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-primary/10">
-                      <Dumbbell className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-base">{template.name}</CardTitle>
-                      <CardDescription>{template.duration}</CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">{template.exercises} exercícios</span>
-                    <span className="text-muted-foreground">Usado {template.uses}x</span>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button variant="outline" className="flex-1">
-                      <Edit className="h-4 w-4 mr-2" />
-                      Editar
-                    </Button>
-                    <Button className="flex-1">
-                      <Copy className="h-4 w-4 mr-2" />
-                      Usar
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+      {/* Create Dialog */}
+      <Dialog open={isCreating} onOpenChange={setIsCreating}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Novo Plano de Treino</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Aluno *</Label>
+              <Select
+                value={formData.student_id}
+                onValueChange={(v) => setFormData({ ...formData, student_id: v })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecionar aluno" />
+                </SelectTrigger>
+                <SelectContent>
+                  {students.map((student) => (
+                    <SelectItem key={student.id} value={student.id}>
+                      {student.full_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Título *</Label>
+              <Input
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                placeholder="Ex: Plano de Hipertrofia"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Duração</Label>
+                <Select
+                  value={formData.duration}
+                  onValueChange={(v) => setFormData({ ...formData, duration: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="4 semanas">4 semanas</SelectItem>
+                    <SelectItem value="6 semanas">6 semanas</SelectItem>
+                    <SelectItem value="8 semanas">8 semanas</SelectItem>
+                    <SelectItem value="12 semanas">12 semanas</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Frequência</Label>
+                <Select
+                  value={formData.frequency}
+                  onValueChange={(v) => setFormData({ ...formData, frequency: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="2x por semana">2x/semana</SelectItem>
+                    <SelectItem value="3x por semana">3x/semana</SelectItem>
+                    <SelectItem value="4x por semana">4x/semana</SelectItem>
+                    <SelectItem value="5x por semana">5x/semana</SelectItem>
+                    <SelectItem value="6x por semana">6x/semana</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Objetivo</Label>
+              <Input
+                value={formData.goal}
+                onChange={(e) => setFormData({ ...formData, goal: e.target.value })}
+                placeholder="Ex: Ganho de massa muscular"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Descrição</Label>
+              <Textarea
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                placeholder="Descrição do plano..."
+                rows={3}
+              />
+            </div>
           </div>
-        </TabsContent>
-      </Tabs>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsCreating(false)}>Cancelar</Button>
+            <Button
+              disabled={!formData.student_id || !formData.title}
+              onClick={() => {
+                toast.success("Plano de treino criado!");
+                setIsCreating(false);
+                setFormData({
+                  title: "",
+                  description: "",
+                  student_id: "",
+                  duration: "8 semanas",
+                  frequency: "4x por semana",
+                  goal: "",
+                });
+              }}
+            >
+              Criar Plano
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

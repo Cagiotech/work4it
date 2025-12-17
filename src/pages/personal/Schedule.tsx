@@ -1,127 +1,217 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ChevronLeft, ChevronRight, Plus, Clock, MapPin } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { ChevronLeft, ChevronRight, Clock, MapPin, Users } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { format, addWeeks, subWeeks, startOfWeek, addDays } from "date-fns";
+import { pt } from "date-fns/locale";
 
-const weekDays = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"];
+const weekDays = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
 
-const scheduleData = {
-  Segunda: [
-    { time: "08:00", duration: "1h", student: "Maria Santos", type: "Musculação", location: "Sala 1" },
-    { time: "10:00", duration: "1h", student: "Pedro Costa", type: "Funcional", location: "Sala 2" },
-    { time: "14:00", duration: "1h30", student: "Ana Ferreira", type: "Pilates", location: "Sala 3" },
-    { time: "17:00", duration: "1h", student: "João Oliveira", type: "HIIT", location: "Sala 1" },
-  ],
-  Terça: [
-    { time: "09:00", duration: "1h", student: "Sofia Rodrigues", type: "Musculação", location: "Sala 1" },
-    { time: "11:00", duration: "1h", student: "Miguel Almeida", type: "Funcional", location: "Sala 2" },
-    { time: "15:00", duration: "1h30", student: "Maria Santos", type: "Cardio", location: "Sala 1" },
-  ],
-  Quarta: [
-    { time: "08:00", duration: "1h", student: "Pedro Costa", type: "Musculação", location: "Sala 1" },
-    { time: "10:00", duration: "1h", student: "Ana Ferreira", type: "Funcional", location: "Sala 2" },
-    { time: "14:00", duration: "1h", student: "João Oliveira", type: "Pilates", location: "Sala 3" },
-    { time: "16:00", duration: "1h", student: "Sofia Rodrigues", type: "HIIT", location: "Sala 1" },
-    { time: "18:00", duration: "1h", student: "Miguel Almeida", type: "Musculação", location: "Sala 2" },
-  ],
-  Quinta: [
-    { time: "09:00", duration: "1h", student: "Maria Santos", type: "Funcional", location: "Sala 2" },
-    { time: "11:00", duration: "1h30", student: "Pedro Costa", type: "Cardio", location: "Sala 1" },
-    { time: "15:00", duration: "1h", student: "Ana Ferreira", type: "Musculação", location: "Sala 1" },
-  ],
-  Sexta: [
-    { time: "08:00", duration: "1h", student: "João Oliveira", type: "Funcional", location: "Sala 2" },
-    { time: "10:00", duration: "1h", student: "Sofia Rodrigues", type: "Pilates", location: "Sala 3" },
-    { time: "14:00", duration: "1h", student: "Miguel Almeida", type: "HIIT", location: "Sala 1" },
-    { time: "17:00", duration: "1h30", student: "Maria Santos", type: "Musculação", location: "Sala 1" },
-  ],
-  Sábado: [
-    { time: "09:00", duration: "1h", student: "Pedro Costa", type: "Funcional", location: "Sala 2" },
-    { time: "11:00", duration: "1h", student: "Ana Ferreira", type: "Cardio", location: "Sala 1" },
-  ],
-  Domingo: [],
-};
-
-const typeColors: Record<string, string> = {
-  Musculação: "bg-blue-500/10 text-blue-600 border-blue-500/20",
-  Funcional: "bg-green-500/10 text-green-600 border-green-500/20",
-  Pilates: "bg-purple-500/10 text-purple-600 border-purple-500/20",
-  HIIT: "bg-red-500/10 text-red-600 border-red-500/20",
-  Cardio: "bg-orange-500/10 text-orange-600 border-orange-500/20",
-};
+interface ClassSchedule {
+  id: string;
+  scheduled_date: string;
+  start_time: string;
+  end_time: string;
+  status: string | null;
+  class_info: {
+    name: string;
+    color: string | null;
+    room?: {
+      name: string;
+    } | null;
+  } | null;
+  enrollments_count: number;
+}
 
 export default function PersonalSchedule() {
-  const [currentWeek, setCurrentWeek] = useState(0);
-  const [selectedDay, setSelectedDay] = useState("Segunda");
+  const [currentWeekStart, setCurrentWeekStart] = useState(() => 
+    startOfWeek(new Date(), { weekStartsOn: 1 })
+  );
+  const [selectedDayIndex, setSelectedDayIndex] = useState(() => {
+    const today = new Date().getDay();
+    return today === 0 ? 6 : today - 1; // Adjust for Monday start
+  });
+
+  // Get staff info
+  const { data: staffInfo } = useQuery({
+    queryKey: ['personal-staff-info'],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      const { data, error } = await supabase
+        .from('staff')
+        .select('id, company_id, full_name')
+        .eq('user_id', user.id)
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Get week's classes
+  const { data: weekClasses = [], isLoading } = useQuery({
+    queryKey: ['personal-schedule', staffInfo?.id, format(currentWeekStart, 'yyyy-MM-dd')],
+    queryFn: async () => {
+      if (!staffInfo?.id) return [];
+
+      const weekEnd = addDays(currentWeekStart, 6);
+
+      const { data, error } = await supabase
+        .from('class_schedules')
+        .select(`
+          id,
+          scheduled_date,
+          start_time,
+          end_time,
+          status,
+          classes (
+            name,
+            color,
+            rooms (name)
+          ),
+          class_enrollments (id)
+        `)
+        .eq('instructor_id', staffInfo.id)
+        .gte('scheduled_date', format(currentWeekStart, 'yyyy-MM-dd'))
+        .lte('scheduled_date', format(weekEnd, 'yyyy-MM-dd'))
+        .order('start_time');
+
+      if (error) throw error;
+
+      return (data || []).map(cls => ({
+        id: cls.id,
+        scheduled_date: cls.scheduled_date,
+        start_time: cls.start_time,
+        end_time: cls.end_time,
+        status: cls.status,
+        class_info: cls.classes ? {
+          name: cls.classes.name,
+          color: cls.classes.color,
+          room: cls.classes.rooms,
+        } : null,
+        enrollments_count: cls.class_enrollments?.length || 0,
+      })) as ClassSchedule[];
+    },
+    enabled: !!staffInfo?.id,
+    staleTime: 60 * 1000,
+  });
 
   const getWeekDates = () => {
-    const today = new Date();
-    const monday = new Date(today);
-    monday.setDate(today.getDate() - today.getDay() + 1 + currentWeek * 7);
-    
     return weekDays.map((_, index) => {
-      const date = new Date(monday);
-      date.setDate(monday.getDate() + index);
-      return date.getDate();
+      const date = addDays(currentWeekStart, index);
+      return {
+        date,
+        dayNum: format(date, 'd'),
+        isToday: format(date, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd'),
+      };
     });
   };
 
   const weekDates = getWeekDates();
 
+  const selectedDate = addDays(currentWeekStart, selectedDayIndex);
+  const selectedDateStr = format(selectedDate, 'yyyy-MM-dd');
+
+  const dayClasses = weekClasses.filter(cls => cls.scheduled_date === selectedDateStr);
+  
+  const classesPerDay = weekDays.map((_, i) => {
+    const dateStr = format(addDays(currentWeekStart, i), 'yyyy-MM-dd');
+    return weekClasses.filter(cls => cls.scheduled_date === dateStr).length;
+  });
+
+  const isCurrentWeek = format(startOfWeek(new Date(), { weekStartsOn: 1 }), 'yyyy-MM-dd') === 
+                        format(currentWeekStart, 'yyyy-MM-dd');
+
+  const getDuration = (start: string, end: string) => {
+    const [sh, sm] = start.split(':').map(Number);
+    const [eh, em] = end.split(':').map(Number);
+    const totalMinutes = (eh * 60 + em) - (sh * 60 + sm);
+    if (totalMinutes >= 60) {
+      const hours = Math.floor(totalMinutes / 60);
+      const mins = totalMinutes % 60;
+      return mins > 0 ? `${hours}h${mins}` : `${hours}h`;
+    }
+    return `${totalMinutes}min`;
+  };
+
+  if (isLoading && !staffInfo) {
+    return (
+      <div className="space-y-4 md:space-y-6">
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-32 w-full" />
+        <Skeleton className="h-96 w-full" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4 md:space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Agenda</h1>
-          <p className="text-muted-foreground text-sm md:text-base">
-            Gerir as suas aulas e compromissos
-          </p>
-        </div>
-        <Button className="w-full md:w-auto">
-          <Plus className="h-4 w-4 mr-2" />
-          Nova Aula
-        </Button>
+      <div>
+        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Agenda</h1>
+        <p className="text-muted-foreground text-sm md:text-base">
+          As suas aulas e compromissos
+        </p>
       </div>
 
       {/* Week Navigation */}
       <Card>
         <CardContent className="p-4">
           <div className="flex items-center justify-between mb-4">
-            <Button variant="outline" size="icon" onClick={() => setCurrentWeek(currentWeek - 1)}>
+            <Button 
+              variant="outline" 
+              size="icon" 
+              onClick={() => setCurrentWeekStart(subWeeks(currentWeekStart, 1))}
+            >
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <span className="font-medium">
-              {currentWeek === 0 ? "Esta Semana" : currentWeek > 0 ? `+${currentWeek} semana(s)` : `${currentWeek} semana(s)`}
-            </span>
-            <Button variant="outline" size="icon" onClick={() => setCurrentWeek(currentWeek + 1)}>
+            <div className="text-center">
+              <span className="font-medium">
+                {format(currentWeekStart, "d MMM", { locale: pt })} - {format(addDays(currentWeekStart, 6), "d MMM yyyy", { locale: pt })}
+              </span>
+              {isCurrentWeek && (
+                <Badge variant="secondary" className="ml-2">Esta Semana</Badge>
+              )}
+            </div>
+            <Button 
+              variant="outline" 
+              size="icon" 
+              onClick={() => setCurrentWeekStart(addWeeks(currentWeekStart, 1))}
+            >
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
 
-          {/* Week Days - Responsive */}
+          {/* Week Days Grid */}
           <div className="grid grid-cols-7 gap-1 md:gap-2">
             {weekDays.map((day, index) => (
               <button
                 key={day}
-                onClick={() => setSelectedDay(day)}
+                onClick={() => setSelectedDayIndex(index)}
                 className={`flex flex-col items-center p-2 md:p-3 rounded-lg transition-all ${
-                  selectedDay === day
+                  selectedDayIndex === index
                     ? "bg-primary text-primary-foreground"
+                    : weekDates[index].isToday
+                    ? "bg-primary/10 hover:bg-primary/20"
                     : "hover:bg-muted"
                 }`}
               >
-                <span className="text-xs font-medium hidden md:block">{day}</span>
-                <span className="text-xs font-medium md:hidden">{day.slice(0, 3)}</span>
+                <span className="text-xs font-medium">{day}</span>
                 <span className={`text-lg md:text-xl font-bold mt-1 ${
-                  selectedDay === day ? "" : "text-foreground"
+                  selectedDayIndex === index ? "" : "text-foreground"
                 }`}>
-                  {weekDates[index]}
+                  {weekDates[index].dayNum}
                 </span>
-                {scheduleData[day as keyof typeof scheduleData]?.length > 0 && (
+                {classesPerDay[index] > 0 && (
                   <div className={`w-1.5 h-1.5 rounded-full mt-1 ${
-                    selectedDay === day ? "bg-primary-foreground" : "bg-primary"
+                    selectedDayIndex === index ? "bg-primary-foreground" : "bg-primary"
                   }`} />
                 )}
               </button>
@@ -133,68 +223,67 @@ export default function PersonalSchedule() {
       {/* Day Schedule */}
       <Card>
         <CardHeader>
-          <CardTitle>{selectedDay}</CardTitle>
+          <CardTitle className="capitalize">
+            {format(selectedDate, "EEEE, d 'de' MMMM", { locale: pt })}
+          </CardTitle>
           <CardDescription>
-            {scheduleData[selectedDay as keyof typeof scheduleData]?.length || 0} aulas agendadas
+            {dayClasses.length} aula{dayClasses.length !== 1 ? 's' : ''} agendada{dayClasses.length !== 1 ? 's' : ''}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {scheduleData[selectedDay as keyof typeof scheduleData]?.length > 0 ? (
+          {isLoading ? (
             <div className="space-y-3">
-              {scheduleData[selectedDay as keyof typeof scheduleData].map((session, index) => (
+              {[1, 2, 3].map(i => <Skeleton key={i} className="h-24 w-full" />)}
+            </div>
+          ) : dayClasses.length > 0 ? (
+            <div className="space-y-3">
+              {dayClasses.map((cls) => (
                 <div
-                  key={index}
+                  key={cls.id}
                   className="flex flex-col md:flex-row md:items-center gap-3 md:gap-4 p-4 rounded-lg border bg-card hover:shadow-sm transition-shadow"
+                  style={{
+                    borderLeftWidth: '4px',
+                    borderLeftColor: cls.class_info?.color || 'hsl(var(--primary))',
+                  }}
                 >
-                  <div className="flex items-center gap-3 md:w-24">
+                  <div className="flex items-center gap-3 md:w-28">
                     <Clock className="h-4 w-4 text-muted-foreground" />
                     <div>
-                      <p className="font-medium">{session.time}</p>
-                      <p className="text-xs text-muted-foreground">{session.duration}</p>
+                      <p className="font-medium">{cls.start_time.substring(0, 5)}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {getDuration(cls.start_time, cls.end_time)}
+                      </p>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-3 flex-1">
-                    <Avatar className="h-10 w-10">
-                      <AvatarImage src="/placeholder.svg" />
-                      <AvatarFallback className="bg-primary/10 text-primary text-sm">
-                        {session.student.split(" ").map((n) => n[0]).join("")}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium truncate">{session.student}</p>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium">{cls.class_info?.name || 'Aula'}</p>
+                    {cls.class_info?.room && (
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
                         <MapPin className="h-3 w-3" />
-                        <span>{session.location}</span>
+                        <span>{cls.class_info.room.name}</span>
                       </div>
-                    </div>
+                    )}
                   </div>
 
-                  <Badge
-                    variant="outline"
-                    className={typeColors[session.type] || ""}
-                  >
-                    {session.type}
-                  </Badge>
-
-                  <div className="flex gap-2 mt-2 md:mt-0">
-                    <Button variant="outline" size="sm" className="flex-1 md:flex-none">
-                      Editar
-                    </Button>
-                    <Button variant="ghost" size="sm" className="flex-1 md:flex-none">
-                      Cancelar
-                    </Button>
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                      <Users className="h-4 w-4" />
+                      <span>{cls.enrollments_count}</span>
+                    </div>
+                    <Badge
+                      variant={cls.status === 'completed' ? 'default' : cls.status === 'cancelled' ? 'destructive' : 'secondary'}
+                    >
+                      {cls.status === 'completed' ? 'Concluída' : cls.status === 'cancelled' ? 'Cancelada' : 'Agendada'}
+                    </Badge>
                   </div>
                 </div>
               ))}
             </div>
           ) : (
             <div className="text-center py-12">
+              <Clock className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
               <p className="text-muted-foreground">Sem aulas agendadas para este dia</p>
-              <Button variant="outline" className="mt-4">
-                <Plus className="h-4 w-4 mr-2" />
-                Agendar Aula
-              </Button>
             </div>
           )}
         </CardContent>
