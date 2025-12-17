@@ -199,6 +199,7 @@ export type Database = {
           created_at: string
           created_by: string
           id: string
+          mbway_phone: string | null
           name: string | null
           registration_code: string | null
           regulations_text: string | null
@@ -212,6 +213,7 @@ export type Database = {
           created_at?: string
           created_by: string
           id?: string
+          mbway_phone?: string | null
           name?: string | null
           registration_code?: string | null
           regulations_text?: string | null
@@ -225,6 +227,7 @@ export type Database = {
           created_at?: string
           created_by?: string
           id?: string
+          mbway_phone?: string | null
           name?: string | null
           registration_code?: string | null
           regulations_text?: string | null
@@ -397,6 +400,86 @@ export type Database = {
           sort_order?: number | null
         }
         Relationships: []
+      }
+      payment_proofs: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          notes: string | null
+          proof_file_name: string
+          proof_file_path: string
+          proof_file_type: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          student_id: string
+          subscription_id: string | null
+          transaction_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          proof_file_name: string
+          proof_file_path: string
+          proof_file_type: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          student_id: string
+          subscription_id?: string | null
+          transaction_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          proof_file_name?: string
+          proof_file_path?: string
+          proof_file_type?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          student_id?: string
+          subscription_id?: string | null
+          transaction_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_proofs_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_proofs_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_proofs_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "student_subscriptions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_proofs_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "financial_transactions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -1735,35 +1818,47 @@ export type Database = {
       }
       subscription_plans: {
         Row: {
+          billing_frequency: string | null
+          block_after_days: number | null
           company_id: string
           created_at: string
           description: string | null
           duration_days: number
+          grace_period_days: number | null
           id: string
           is_active: boolean | null
           name: string
+          penalty_percentage: number | null
           price: number
           updated_at: string
         }
         Insert: {
+          billing_frequency?: string | null
+          block_after_days?: number | null
           company_id: string
           created_at?: string
           description?: string | null
           duration_days?: number
+          grace_period_days?: number | null
           id?: string
           is_active?: boolean | null
           name: string
+          penalty_percentage?: number | null
           price?: number
           updated_at?: string
         }
         Update: {
+          billing_frequency?: string | null
+          block_after_days?: number | null
           company_id?: string
           created_at?: string
           description?: string | null
           duration_days?: number
+          grace_period_days?: number | null
           id?: string
           is_active?: boolean | null
           name?: string
+          penalty_percentage?: number | null
           price?: number
           updated_at?: string
         }
