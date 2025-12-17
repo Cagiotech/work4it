@@ -36,6 +36,7 @@ interface Plan {
   price: number;
   duration_days: number;
   billing_frequency: string | null;
+  default_commitment_months: number | null;
 }
 
 interface SubscriptionPayment {
@@ -59,6 +60,8 @@ interface Subscription {
   installment_amount: number | null;
   auto_renewal: boolean | null;
   next_payment_date: string | null;
+  commitment_months: number | null;
+  commitment_end_date: string | null;
   subscription_plans: Plan;
   subscription_payments?: SubscriptionPayment[];
 }
@@ -88,6 +91,7 @@ export function StudentPlansTab({ studentId, personalTrainerId, companyId, canEd
   const [startDate, setStartDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [totalInstallments, setTotalInstallments] = useState<number>(1);
   const [autoRenewal, setAutoRenewal] = useState<boolean>(false);
+  const [commitmentMonths, setCommitmentMonths] = useState<number>(0);
   const [isAddingPlan, setIsAddingPlan] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [confirmSaveTrainer, setConfirmSaveTrainer] = useState(false);
@@ -156,6 +160,9 @@ export function StudentPlansTab({ studentId, personalTrainerId, companyId, canEd
 
     const endDate = addDays(new Date(startDate), plan.duration_days);
     const installmentAmount = plan.price / totalInstallments;
+    const commitmentEndDate = commitmentMonths > 0 
+      ? addDays(new Date(startDate), commitmentMonths * 30) 
+      : null;
 
     try {
       // Create the subscription
@@ -173,6 +180,8 @@ export function StudentPlansTab({ studentId, personalTrainerId, companyId, canEd
           installment_amount: installmentAmount,
           auto_renewal: autoRenewal,
           next_payment_date: startDate,
+          commitment_months: commitmentMonths,
+          commitment_end_date: commitmentEndDate ? format(commitmentEndDate, 'yyyy-MM-dd') : null,
         })
         .select()
         .single();
@@ -209,6 +218,7 @@ export function StudentPlansTab({ studentId, personalTrainerId, companyId, canEd
       setSelectedPlan("");
       setTotalInstallments(1);
       setAutoRenewal(false);
+      setCommitmentMonths(0);
       fetchData();
     } catch (error: any) {
       toast.error(error.message || "Erro ao adicionar plano");
@@ -393,7 +403,16 @@ export function StudentPlansTab({ studentId, personalTrainerId, companyId, canEd
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Plano</Label>
-                    <Select value={selectedPlan} onValueChange={setSelectedPlan}>
+                    <Select 
+                      value={selectedPlan} 
+                      onValueChange={(v) => {
+                        setSelectedPlan(v);
+                        const plan = plans.find(p => p.id === v);
+                        if (plan?.default_commitment_months) {
+                          setCommitmentMonths(plan.default_commitment_months);
+                        }
+                      }}
+                    >
                       <SelectTrigger>
                         <SelectValue placeholder="Selecionar plano" />
                       </SelectTrigger>
@@ -454,12 +473,37 @@ export function StudentPlansTab({ studentId, personalTrainerId, companyId, canEd
                   </div>
                 </div>
 
+                <div className="space-y-2">
+                  <Label>Período de Fidelidade</Label>
+                  <Select 
+                    value={commitmentMonths.toString()} 
+                    onValueChange={(v) => setCommitmentMonths(parseInt(v))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="0">Sem fidelidade</SelectItem>
+                      <SelectItem value="1">1 mês</SelectItem>
+                      <SelectItem value="3">3 meses</SelectItem>
+                      <SelectItem value="6">6 meses</SelectItem>
+                      <SelectItem value="12">12 meses</SelectItem>
+                      <SelectItem value="18">18 meses</SelectItem>
+                      <SelectItem value="24">24 meses</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Tempo mínimo de permanência do aluno
+                  </p>
+                </div>
+
                 <div className="flex justify-end gap-2">
                   <Button variant="outline" onClick={() => {
                     setIsAddingPlan(false);
                     setSelectedPlan("");
                     setTotalInstallments(1);
                     setAutoRenewal(false);
+                    setCommitmentMonths(0);
                   }}>
                     Cancelar
                   </Button>
@@ -519,6 +563,11 @@ export function StudentPlansTab({ studentId, personalTrainerId, companyId, canEd
                       {sub.total_installments && sub.total_installments > 1 && (
                         <span className="text-primary font-medium">
                           {sub.paid_installments || 0}/{sub.total_installments} parcelas
+                        </span>
+                      )}
+                      {sub.commitment_months && sub.commitment_months > 0 && (
+                        <span className="text-orange-600 font-medium">
+                          Fidelidade: {sub.commitment_months} meses
                         </span>
                       )}
                     </div>
@@ -637,6 +686,7 @@ export function StudentPlansTab({ studentId, personalTrainerId, companyId, canEd
                   <p><strong>Plano:</strong> {selectedPlanData.name}</p>
                   <p><strong>Valor Total:</strong> €{selectedPlanData.price}</p>
                   <p><strong>Parcelas:</strong> {totalInstallments === 1 ? "À vista" : `${totalInstallments}x de €${calculatedInstallmentAmount}`}</p>
+                  <p><strong>Fidelidade:</strong> {commitmentMonths === 0 ? "Sem fidelidade" : `${commitmentMonths} meses`}</p>
                   <p><strong>Renovação Automática:</strong> {autoRenewal ? "Sim" : "Não"}</p>
                 </div>
               )}

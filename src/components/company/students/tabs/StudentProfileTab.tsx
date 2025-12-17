@@ -1,12 +1,14 @@
-import { useState, useEffect, useContext } from "react";
+import { useState, useEffect, useContext, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { SaveTriggerContext } from "../StudentProfileDialog";
+import { Camera, Loader2, Trash2 } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,6 +38,7 @@ interface StudentData {
   emergency_contact: string | null;
   emergency_phone: string | null;
   status: string | null;
+  profile_photo_url?: string | null;
 }
 
 interface StudentProfileTabProps {
@@ -50,6 +53,8 @@ export function StudentProfileTab({ student, canEdit, onUpdate }: StudentProfile
   const [loading, setLoading] = useState(false);
   const [editData, setEditData] = useState<StudentData>(student);
   const [confirmSaveOpen, setConfirmSaveOpen] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setEditData(student);
@@ -99,9 +104,152 @@ export function StudentProfileTab({ student, canEdit, onUpdate }: StudentProfile
     }
   };
 
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("A imagem não pode exceder 2MB");
+      return;
+    }
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Apenas imagens são permitidas");
+      return;
+    }
+
+    setUploadingPhoto(true);
+    try {
+      const fileExt = file.name.split(".").pop();
+      const fileName = `${student.id}.${fileExt}`;
+
+      // Delete old photo if exists
+      if (editData.profile_photo_url) {
+        const oldPath = editData.profile_photo_url.split("/").pop();
+        if (oldPath) {
+          await supabase.storage.from("student-photos").remove([oldPath]);
+        }
+      }
+
+      // Upload new photo
+      const { error: uploadError } = await supabase.storage
+        .from("student-photos")
+        .upload(fileName, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: urlData } = supabase.storage
+        .from("student-photos")
+        .getPublicUrl(fileName);
+
+      // Update student record
+      const { error: updateError } = await supabase
+        .from("students")
+        .update({ profile_photo_url: urlData.publicUrl })
+        .eq("id", student.id);
+
+      if (updateError) throw updateError;
+
+      setEditData({ ...editData, profile_photo_url: urlData.publicUrl });
+      toast.success("Foto atualizada com sucesso");
+      onUpdate();
+    } catch (error: any) {
+      console.error("Error uploading photo:", error);
+      toast.error("Erro ao enviar foto");
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
+  const handleRemovePhoto = async () => {
+    if (!editData.profile_photo_url) return;
+
+    setUploadingPhoto(true);
+    try {
+      const fileName = editData.profile_photo_url.split("/").pop();
+      if (fileName) {
+        await supabase.storage.from("student-photos").remove([fileName]);
+      }
+
+      await supabase
+        .from("students")
+        .update({ profile_photo_url: null })
+        .eq("id", student.id);
+
+      setEditData({ ...editData, profile_photo_url: null });
+      toast.success("Foto removida");
+      onUpdate();
+    } catch (error) {
+      toast.error("Erro ao remover foto");
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
+  const getInitials = (name: string) => {
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
   return (
     <>
       <div className="space-y-6">
+        {/* Profile Photo */}
+        <div className="flex items-center gap-6">
+          <div className="relative">
+            <Avatar className="h-24 w-24 border-2 border-primary/20">
+              <AvatarImage src={editData.profile_photo_url || undefined} />
+              <AvatarFallback className="text-xl bg-primary/10 text-primary">
+                {getInitials(editData.full_name)}
+              </AvatarFallback>
+            </Avatar>
+            {uploadingPhoto && (
+              <div className="absolute inset-0 flex items-center justify-center bg-background/80 rounded-full">
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+              </div>
+            )}
+          </div>
+          {canEdit && (
+            <div className="space-y-2">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handlePhotoUpload}
+                className="hidden"
+              />
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploadingPhoto}
+                >
+                  <Camera className="h-4 w-4 mr-2" />
+                  {editData.profile_photo_url ? "Alterar Foto" : "Adicionar Foto"}
+                </Button>
+                {editData.profile_photo_url && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleRemovePhoto}
+                    disabled={uploadingPhoto}
+                    className="text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">Máximo 2MB. JPG, PNG</p>
+            </div>
+          )}
+        </div>
+
         {/* Personal Information */}
         <div className="space-y-4">
           <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">

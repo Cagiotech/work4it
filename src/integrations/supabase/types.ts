@@ -1657,6 +1657,8 @@ export type Database = {
       student_subscriptions: {
         Row: {
           auto_renewal: boolean | null
+          commitment_end_date: string | null
+          commitment_months: number | null
           created_at: string
           end_date: string
           id: string
@@ -1674,6 +1676,8 @@ export type Database = {
         }
         Insert: {
           auto_renewal?: boolean | null
+          commitment_end_date?: string | null
+          commitment_months?: number | null
           created_at?: string
           end_date: string
           id?: string
@@ -1691,6 +1695,8 @@ export type Database = {
         }
         Update: {
           auto_renewal?: boolean | null
+          commitment_end_date?: string | null
+          commitment_months?: number | null
           created_at?: string
           end_date?: string
           id?: string
@@ -1900,6 +1906,7 @@ export type Database = {
           block_after_days: number | null
           company_id: string
           created_at: string
+          default_commitment_months: number | null
           description: string | null
           duration_days: number
           grace_period_days: number | null
@@ -1915,6 +1922,7 @@ export type Database = {
           block_after_days?: number | null
           company_id: string
           created_at?: string
+          default_commitment_months?: number | null
           description?: string | null
           duration_days?: number
           grace_period_days?: number | null
@@ -1930,6 +1938,7 @@ export type Database = {
           block_after_days?: number | null
           company_id?: string
           created_at?: string
+          default_commitment_months?: number | null
           description?: string | null
           duration_days?: number
           grace_period_days?: number | null
