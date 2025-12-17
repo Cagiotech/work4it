@@ -583,6 +583,147 @@ export type Database = {
         }
         Relationships: []
       }
+      nutrition_meal_plans: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          student_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          student_id: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          student_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nutrition_meal_plans_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      nutrition_plan_days: {
+        Row: {
+          calories_target: number | null
+          carbs_target: number | null
+          created_at: string
+          day_of_week: number
+          fat_target: number | null
+          id: string
+          notes: string | null
+          plan_id: string
+          protein_target: number | null
+          updated_at: string
+        }
+        Insert: {
+          calories_target?: number | null
+          carbs_target?: number | null
+          created_at?: string
+          day_of_week: number
+          fat_target?: number | null
+          id?: string
+          notes?: string | null
+          plan_id: string
+          protein_target?: number | null
+          updated_at?: string
+        }
+        Update: {
+          calories_target?: number | null
+          carbs_target?: number | null
+          created_at?: string
+          day_of_week?: number
+          fat_target?: number | null
+          id?: string
+          notes?: string | null
+          plan_id?: string
+          protein_target?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nutrition_plan_days_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "nutrition_meal_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      nutrition_plan_meals: {
+        Row: {
+          calories: number | null
+          carbs: number | null
+          created_at: string
+          day_id: string
+          description: string | null
+          fat: number | null
+          foods: string | null
+          id: string
+          meal_time: string | null
+          meal_type: string
+          protein: number | null
+          sort_order: number | null
+        }
+        Insert: {
+          calories?: number | null
+          carbs?: number | null
+          created_at?: string
+          day_id: string
+          description?: string | null
+          fat?: number | null
+          foods?: string | null
+          id?: string
+          meal_time?: string | null
+          meal_type: string
+          protein?: number | null
+          sort_order?: number | null
+        }
+        Update: {
+          calories?: number | null
+          carbs?: number | null
+          created_at?: string
+          day_id?: string
+          description?: string | null
+          fat?: number | null
+          foods?: string | null
+          id?: string
+          meal_time?: string | null
+          meal_type?: string
+          protein?: number | null
+          sort_order?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nutrition_plan_meals_day_id_fkey"
+            columns: ["day_id"]
+            isOneToOne: false
+            referencedRelation: "nutrition_plan_days"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payment_proofs: {
         Row: {
           amount: number
@@ -1785,10 +1926,12 @@ export type Database = {
           calories_target: number | null
           carbs_target: number | null
           created_at: string
+          day_of_week: number | null
           description: string | null
           fat_target: number | null
           id: string
           is_active: boolean | null
+          meal_type: string | null
           meals: string | null
           notes: string | null
           protein_target: number | null
@@ -1800,10 +1943,12 @@ export type Database = {
           calories_target?: number | null
           carbs_target?: number | null
           created_at?: string
+          day_of_week?: number | null
           description?: string | null
           fat_target?: number | null
           id?: string
           is_active?: boolean | null
+          meal_type?: string | null
           meals?: string | null
           notes?: string | null
           protein_target?: number | null
@@ -1815,10 +1960,12 @@ export type Database = {
           calories_target?: number | null
           carbs_target?: number | null
           created_at?: string
+          day_of_week?: number | null
           description?: string | null
           fat_target?: number | null
           id?: string
           is_active?: boolean | null
+          meal_type?: string | null
           meals?: string | null
           notes?: string | null
           protein_target?: number | null
@@ -2137,6 +2284,150 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      training_plan_days: {
+        Row: {
+          created_at: string
+          day_of_week: number
+          id: string
+          is_rest_day: boolean | null
+          notes: string | null
+          plan_id: string
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          day_of_week: number
+          id?: string
+          is_rest_day?: boolean | null
+          notes?: string | null
+          plan_id: string
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          day_of_week?: number
+          id?: string
+          is_rest_day?: boolean | null
+          notes?: string | null
+          plan_id?: string
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_plan_days_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "training_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      training_plan_exercises: {
+        Row: {
+          created_at: string
+          day_id: string
+          exercise_name: string
+          id: string
+          muscle_group: string | null
+          notes: string | null
+          reps: string | null
+          rest_seconds: number | null
+          sets: number | null
+          sort_order: number | null
+          video_url: string | null
+          weight: string | null
+        }
+        Insert: {
+          created_at?: string
+          day_id: string
+          exercise_name: string
+          id?: string
+          muscle_group?: string | null
+          notes?: string | null
+          reps?: string | null
+          rest_seconds?: number | null
+          sets?: number | null
+          sort_order?: number | null
+          video_url?: string | null
+          weight?: string | null
+        }
+        Update: {
+          created_at?: string
+          day_id?: string
+          exercise_name?: string
+          id?: string
+          muscle_group?: string | null
+          notes?: string | null
+          reps?: string | null
+          rest_seconds?: number | null
+          sets?: number | null
+          sort_order?: number | null
+          video_url?: string | null
+          weight?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_plan_exercises_day_id_fkey"
+            columns: ["day_id"]
+            isOneToOne: false
+            referencedRelation: "training_plan_days"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      training_plans: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          end_date: string | null
+          goal: string | null
+          id: string
+          is_active: boolean | null
+          start_date: string | null
+          student_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          end_date?: string | null
+          goal?: string | null
+          id?: string
+          is_active?: boolean | null
+          start_date?: string | null
+          student_id: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          end_date?: string | null
+          goal?: string | null
+          id?: string
+          is_active?: boolean | null
+          start_date?: string | null
+          student_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_plans_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
             referencedColumns: ["id"]
           },
         ]
