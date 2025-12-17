@@ -85,6 +85,7 @@ export default function Classes() {
   const [showEnrollDialog, setShowEnrollDialog] = useState(false);
   const [selectedSchedule, setSelectedSchedule] = useState<ClassSchedule | null>(null);
   const [editingSchedule, setEditingSchedule] = useState<ClassSchedule | null>(null);
+  const [duplicatingSchedule, setDuplicatingSchedule] = useState<ClassSchedule | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   
   const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
@@ -260,11 +261,18 @@ export default function Classes() {
         }}
         onEdit={(schedule) => {
           setEditingSchedule(schedule);
+          setDuplicatingSchedule(null);
+          setShowScheduleDialog(true);
+        }}
+        onDuplicate={(schedule) => {
+          setDuplicatingSchedule(schedule);
+          setEditingSchedule(null);
           setShowScheduleDialog(true);
         }}
         onDelete={(id) => setDeleteConfirm(id)}
         onScheduleClass={() => {
           setEditingSchedule(null);
+          setDuplicatingSchedule(null);
           setShowScheduleDialog(true);
         }}
       />
@@ -274,13 +282,17 @@ export default function Classes() {
         open={showScheduleDialog}
         onOpenChange={(open) => {
           setShowScheduleDialog(open);
-          if (!open) setEditingSchedule(null);
+          if (!open) {
+            setEditingSchedule(null);
+            setDuplicatingSchedule(null);
+          }
         }}
         classTypes={classTypes}
         rooms={rooms}
         staff={staff}
         onSuccess={fetchData}
-        schedule={editingSchedule}
+        schedule={editingSchedule || duplicatingSchedule}
+        duplicateMode={!!duplicatingSchedule}
       />
 
       <EnrollStudentsDialog
