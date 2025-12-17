@@ -1,124 +1,195 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Search, Plus, MoreVertical, Mail, Phone, Calendar } from "lucide-react";
+import { Search, Mail, Phone, Calendar, User, Dumbbell, Apple, FileText } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
+import { format } from "date-fns";
+import { pt } from "date-fns/locale";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
-const students = [
-  {
-    id: 1,
-    name: "Maria Santos",
-    email: "maria@email.com",
-    phone: "+351 912 345 678",
-    plan: "Premium",
-    status: "Ativo",
-    nextSession: "Hoje, 14:00",
-    progress: 85,
-    joinDate: "Jan 2024",
-  },
-  {
-    id: 2,
-    name: "Pedro Costa",
-    email: "pedro@email.com",
-    phone: "+351 923 456 789",
-    plan: "Básico",
-    status: "Ativo",
-    nextSession: "Amanhã, 09:00",
-    progress: 72,
-    joinDate: "Mar 2024",
-  },
-  {
-    id: 3,
-    name: "Ana Ferreira",
-    email: "ana@email.com",
-    phone: "+351 934 567 890",
-    plan: "Premium",
-    status: "Ativo",
-    nextSession: "Hoje, 16:00",
-    progress: 90,
-    joinDate: "Fev 2024",
-  },
-  {
-    id: 4,
-    name: "João Oliveira",
-    email: "joao@email.com",
-    phone: "+351 945 678 901",
-    plan: "Intermédio",
-    status: "Pausado",
-    nextSession: "-",
-    progress: 65,
-    joinDate: "Dez 2023",
-  },
-  {
-    id: 5,
-    name: "Sofia Rodrigues",
-    email: "sofia@email.com",
-    phone: "+351 956 789 012",
-    plan: "Premium",
-    status: "Ativo",
-    nextSession: "Quinta, 10:00",
-    progress: 78,
-    joinDate: "Abr 2024",
-  },
-  {
-    id: 6,
-    name: "Miguel Almeida",
-    email: "miguel@email.com",
-    phone: "+351 967 890 123",
-    plan: "Básico",
-    status: "Ativo",
-    nextSession: "Sexta, 17:00",
-    progress: 60,
-    joinDate: "Mai 2024",
-  },
-];
+interface Student {
+  id: string;
+  full_name: string;
+  email: string | null;
+  phone: string | null;
+  profile_photo_url: string | null;
+  status: string | null;
+  enrollment_date: string | null;
+  birth_date: string | null;
+  gender: string | null;
+  address: string | null;
+  city: string | null;
+  health_notes: string | null;
+  subscription?: {
+    plan_name: string;
+    status: string;
+  } | null;
+}
 
 export default function PersonalStudents() {
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
+  const [students, setStudents] = useState<Student[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterPlan, setFilterPlan] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+
+  useEffect(() => {
+    loadStudents();
+  }, []);
+
+  const loadStudents = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        navigate('/login');
+        return;
+      }
+
+      // Get staff info
+      const { data: staff } = await supabase
+        .from('staff')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (!staff) {
+        console.error('Staff not found');
+        return;
+      }
+
+      // Get students assigned to this personal trainer
+      const { data: studentsData, error } = await supabase
+        .from('students')
+        .select(`
+          id,
+          full_name,
+          email,
+          phone,
+          profile_photo_url,
+          status,
+          enrollment_date,
+          birth_date,
+          gender,
+          address,
+          city,
+          health_notes,
+          student_subscriptions (
+            status,
+            subscription_plans (name)
+          )
+        `)
+        .eq('personal_trainer_id', staff.id)
+        .order('full_name', { ascending: true });
+
+      if (error) {
+        console.error('Error loading students:', error);
+        return;
+      }
+
+      const formattedStudents = studentsData?.map(student => ({
+        ...student,
+        subscription: student.student_subscriptions?.[0] ? {
+          plan_name: (student.student_subscriptions[0] as any).subscription_plans?.name || 'Sem plano',
+          status: (student.student_subscriptions[0] as any).status || 'inactive'
+        } : null
+      })) || [];
+
+      setStudents(formattedStudents);
+    } catch (error) {
+      console.error('Error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getInitials = (name: string) => {
+    return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+  };
+
+  const getStatusBadge = (status: string | null) => {
+    switch (status) {
+      case 'active':
+        return <Badge className="bg-green-500/10 text-green-600 border-green-500/20">Ativo</Badge>;
+      case 'inactive':
+        return <Badge variant="secondary">Inativo</Badge>;
+      case 'blocked':
+        return <Badge variant="destructive">Bloqueado</Badge>;
+      default:
+        return <Badge variant="outline">Pendente</Badge>;
+    }
+  };
 
   const filteredStudents = students.filter((student) => {
-    const matchesSearch = student.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesPlan = filterPlan === "all" || student.plan === filterPlan;
+    const matchesSearch = student.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (student.email?.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesStatus = filterStatus === "all" || student.status === filterStatus;
-    return matchesSearch && matchesPlan && matchesStatus;
+    return matchesSearch && matchesStatus;
   });
+
+  const openStudentProfile = (student: Student) => {
+    setSelectedStudent(student);
+    setDialogOpen(true);
+  };
+
+  if (loading) {
+    return (
+      <div className="space-y-4 md:space-y-6">
+        <div className="flex flex-col gap-4">
+          <Skeleton className="h-8 w-48" />
+          <Skeleton className="h-4 w-64" />
+        </div>
+        <Card>
+          <CardContent className="p-4">
+            <Skeleton className="h-10 w-full" />
+          </CardContent>
+        </Card>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {[1, 2, 3, 4, 5, 6].map(i => (
+            <Card key={i}>
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <Skeleton className="h-12 w-12 rounded-full" />
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-3 w-24" />
+                  </div>
+                </div>
+              </CardHeader>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4 md:space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Meus Alunos</h1>
-          <p className="text-muted-foreground text-sm md:text-base">
-            Gerir e acompanhar os seus alunos
-          </p>
-        </div>
-        <Button className="w-full md:w-auto">
-          <Plus className="h-4 w-4 mr-2" />
-          Adicionar Aluno
-        </Button>
+      <div>
+        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Meus Alunos</h1>
+        <p className="text-muted-foreground text-sm md:text-base">
+          {students.length} aluno(s) atribuído(s) a si
+        </p>
       </div>
 
       {/* Filters */}
       <Card>
-        <CardContent className="p-4">
-          <div className="flex flex-col md:flex-row gap-3">
+        <CardContent className="p-3 md:p-4">
+          <div className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
@@ -128,110 +199,206 @@ export default function PersonalStudents() {
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            <Select value={filterPlan} onValueChange={setFilterPlan}>
-              <SelectTrigger className="w-full md:w-40">
-                <SelectValue placeholder="Plano" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos os Planos</SelectItem>
-                <SelectItem value="Premium">Premium</SelectItem>
-                <SelectItem value="Intermédio">Intermédio</SelectItem>
-                <SelectItem value="Básico">Básico</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger className="w-full md:w-40">
-                <SelectValue placeholder="Estado" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                <SelectItem value="Ativo">Ativo</SelectItem>
-                <SelectItem value="Pausado">Pausado</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="flex gap-2">
+              <Button
+                variant={filterStatus === "all" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setFilterStatus("all")}
+                className="flex-1 sm:flex-none"
+              >
+                Todos
+              </Button>
+              <Button
+                variant={filterStatus === "active" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setFilterStatus("active")}
+                className="flex-1 sm:flex-none"
+              >
+                Ativos
+              </Button>
+              <Button
+                variant={filterStatus === "inactive" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setFilterStatus("inactive")}
+                className="flex-1 sm:flex-none"
+              >
+                Inativos
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
 
       {/* Students Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {filteredStudents.map((student) => (
-          <Card key={student.id} className="hover:shadow-md transition-shadow">
-            <CardHeader className="pb-3">
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-3">
-                  <Avatar className="h-12 w-12">
-                    <AvatarImage src="/placeholder.svg" />
-                    <AvatarFallback className="bg-primary/10 text-primary">
-                      {student.name.split(" ").map((n) => n[0]).join("")}
+      {filteredStudents.length === 0 ? (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <User className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+            <h3 className="text-lg font-medium mb-2">Nenhum aluno encontrado</h3>
+            <p className="text-muted-foreground text-sm">
+              {searchTerm || filterStatus !== "all" 
+                ? "Tente ajustar os filtros de pesquisa"
+                : "Ainda não tem alunos atribuídos"}
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid gap-3 md:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+          {filteredStudents.map((student) => (
+            <Card 
+              key={student.id} 
+              className="hover:shadow-md transition-all cursor-pointer active:scale-[0.98]"
+              onClick={() => openStudentProfile(student)}
+            >
+              <CardHeader className="pb-3">
+                <div className="flex items-start gap-3">
+                  <Avatar className="h-12 w-12 shrink-0">
+                    {student.profile_photo_url && (
+                      <AvatarImage src={student.profile_photo_url} alt={student.full_name} />
+                    )}
+                    <AvatarFallback className="bg-primary/10 text-primary font-medium">
+                      {getInitials(student.full_name)}
                     </AvatarFallback>
                   </Avatar>
-                  <div>
-                    <CardTitle className="text-base">{student.name}</CardTitle>
-                    <CardDescription className="text-xs">
-                      Desde {student.joinDate}
+                  <div className="flex-1 min-w-0">
+                    <CardTitle className="text-base truncate">{student.full_name}</CardTitle>
+                    <CardDescription className="text-xs truncate">
+                      {student.subscription?.plan_name || 'Sem plano'}
                     </CardDescription>
                   </div>
+                  {getStatusBadge(student.status)}
                 </div>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                      <MoreVertical className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem>Ver Perfil</DropdownMenuItem>
-                    <DropdownMenuItem>Editar</DropdownMenuItem>
-                    <DropdownMenuItem>Criar Plano</DropdownMenuItem>
-                    <DropdownMenuItem>Enviar Mensagem</DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex items-center gap-2">
-                <Badge
-                  variant={student.status === "Ativo" ? "default" : "secondary"}
-                  className="text-xs"
-                >
-                  {student.status}
-                </Badge>
-                <Badge variant="outline" className="text-xs">
-                  {student.plan}
-                </Badge>
-              </div>
+              </CardHeader>
+              <CardContent className="space-y-2 pt-0">
+                {student.email && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Mail className="h-3.5 w-3.5 shrink-0" />
+                    <span className="truncate">{student.email}</span>
+                  </div>
+                )}
+                {student.phone && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Phone className="h-3.5 w-3.5 shrink-0" />
+                    <span>{student.phone}</span>
+                  </div>
+                )}
+                {student.enrollment_date && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Calendar className="h-3.5 w-3.5 shrink-0" />
+                    <span>Desde {format(new Date(student.enrollment_date), "MMM yyyy", { locale: pt })}</span>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
 
-              <div className="space-y-2 text-sm">
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <Mail className="h-3.5 w-3.5" />
-                  <span className="truncate">{student.email}</span>
-                </div>
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <Phone className="h-3.5 w-3.5" />
-                  <span>{student.phone}</span>
-                </div>
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <Calendar className="h-3.5 w-3.5" />
-                  <span>Próxima sessão: {student.nextSession}</span>
-                </div>
+      {/* Student Profile Dialog */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="max-w-lg max-h-[90vh]">
+          <DialogHeader>
+            <div className="flex items-center gap-4">
+              <Avatar className="h-16 w-16">
+                {selectedStudent?.profile_photo_url && (
+                  <AvatarImage src={selectedStudent.profile_photo_url} alt={selectedStudent?.full_name} />
+                )}
+                <AvatarFallback className="bg-primary/10 text-primary text-xl">
+                  {selectedStudent ? getInitials(selectedStudent.full_name) : ''}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <DialogTitle className="text-xl">{selectedStudent?.full_name}</DialogTitle>
+                <DialogDescription>
+                  {selectedStudent?.subscription?.plan_name || 'Sem plano ativo'}
+                </DialogDescription>
               </div>
+            </div>
+          </DialogHeader>
+          
+          <ScrollArea className="max-h-[60vh]">
+            <Tabs defaultValue="info" className="w-full">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="info" className="text-xs">
+                  <User className="h-3.5 w-3.5 mr-1" />
+                  Info
+                </TabsTrigger>
+                <TabsTrigger value="training" className="text-xs">
+                  <Dumbbell className="h-3.5 w-3.5 mr-1" />
+                  Treino
+                </TabsTrigger>
+                <TabsTrigger value="nutrition" className="text-xs">
+                  <Apple className="h-3.5 w-3.5 mr-1" />
+                  Nutrição
+                </TabsTrigger>
+              </TabsList>
 
-              <div className="pt-2">
-                <div className="flex items-center justify-between text-xs mb-1">
-                  <span className="text-muted-foreground">Progresso</span>
-                  <span className="font-medium">{student.progress}%</span>
+              <TabsContent value="info" className="space-y-4 mt-4">
+                <div className="grid gap-4">
+                  {selectedStudent?.email && (
+                    <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+                      <Mail className="h-4 w-4 text-muted-foreground" />
+                      <div>
+                        <p className="text-xs text-muted-foreground">Email</p>
+                        <p className="text-sm font-medium">{selectedStudent.email}</p>
+                      </div>
+                    </div>
+                  )}
+                  {selectedStudent?.phone && (
+                    <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+                      <Phone className="h-4 w-4 text-muted-foreground" />
+                      <div>
+                        <p className="text-xs text-muted-foreground">Telefone</p>
+                        <p className="text-sm font-medium">{selectedStudent.phone}</p>
+                      </div>
+                    </div>
+                  )}
+                  {selectedStudent?.birth_date && (
+                    <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                      <div>
+                        <p className="text-xs text-muted-foreground">Data de Nascimento</p>
+                        <p className="text-sm font-medium">
+                          {format(new Date(selectedStudent.birth_date), "dd/MM/yyyy")}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  {selectedStudent?.health_notes && (
+                    <div className="p-3 rounded-lg bg-muted/50">
+                      <div className="flex items-center gap-2 mb-2">
+                        <FileText className="h-4 w-4 text-muted-foreground" />
+                        <p className="text-xs text-muted-foreground">Notas de Saúde</p>
+                      </div>
+                      <p className="text-sm">{selectedStudent.health_notes}</p>
+                    </div>
+                  )}
                 </div>
-                <div className="h-2 bg-muted rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-primary rounded-full transition-all"
-                    style={{ width: `${student.progress}%` }}
-                  />
+              </TabsContent>
+
+              <TabsContent value="training" className="mt-4">
+                <div className="text-center py-8 text-muted-foreground">
+                  <Dumbbell className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                  <p className="text-sm">Planos de treino serão exibidos aqui</p>
+                  <Button variant="outline" size="sm" className="mt-4">
+                    Criar Plano de Treino
+                  </Button>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+              </TabsContent>
+
+              <TabsContent value="nutrition" className="mt-4">
+                <div className="text-center py-8 text-muted-foreground">
+                  <Apple className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                  <p className="text-sm">Planos nutricionais serão exibidos aqui</p>
+                  <Button variant="outline" size="sm" className="mt-4">
+                    Criar Plano Nutricional
+                  </Button>
+                </div>
+              </TabsContent>
+            </Tabs>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
