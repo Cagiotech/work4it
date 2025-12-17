@@ -1656,36 +1656,54 @@ export type Database = {
       }
       student_subscriptions: {
         Row: {
+          auto_renewal: boolean | null
           created_at: string
           end_date: string
           id: string
+          installment_amount: number | null
+          last_payment_date: string | null
+          next_payment_date: string | null
+          paid_installments: number | null
           payment_status: string | null
           plan_id: string
           start_date: string
           status: string | null
           student_id: string
+          total_installments: number | null
           updated_at: string
         }
         Insert: {
+          auto_renewal?: boolean | null
           created_at?: string
           end_date: string
           id?: string
+          installment_amount?: number | null
+          last_payment_date?: string | null
+          next_payment_date?: string | null
+          paid_installments?: number | null
           payment_status?: string | null
           plan_id: string
           start_date?: string
           status?: string | null
           student_id: string
+          total_installments?: number | null
           updated_at?: string
         }
         Update: {
+          auto_renewal?: boolean | null
           created_at?: string
           end_date?: string
           id?: string
+          installment_amount?: number | null
+          last_payment_date?: string | null
+          next_payment_date?: string | null
+          paid_installments?: number | null
           payment_status?: string | null
           plan_id?: string
           start_date?: string
           status?: string | null
           student_id?: string
+          total_installments?: number | null
           updated_at?: string
         }
         Relationships: [
@@ -1812,6 +1830,66 @@ export type Database = {
             columns: ["personal_trainer_id"]
             isOneToOne: false
             referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscription_payments: {
+        Row: {
+          amount: number
+          created_at: string
+          due_date: string
+          id: string
+          installment_number: number
+          notes: string | null
+          paid_at: string | null
+          payment_method: string | null
+          proof_id: string | null
+          status: string
+          subscription_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          due_date: string
+          id?: string
+          installment_number: number
+          notes?: string | null
+          paid_at?: string | null
+          payment_method?: string | null
+          proof_id?: string | null
+          status?: string
+          subscription_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          due_date?: string
+          id?: string
+          installment_number?: number
+          notes?: string | null
+          paid_at?: string | null
+          payment_method?: string | null
+          proof_id?: string | null
+          status?: string
+          subscription_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_payments_proof_id_fkey"
+            columns: ["proof_id"]
+            isOneToOne: false
+            referencedRelation: "payment_proofs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscription_payments_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "student_subscriptions"
             referencedColumns: ["id"]
           },
         ]

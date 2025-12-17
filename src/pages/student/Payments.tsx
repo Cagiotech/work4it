@@ -1,8 +1,19 @@
 import { useState, useEffect } from "react";
-import { CreditCard, CheckCircle, Loader2, Calendar } from "lucide-react";
+import { CreditCard, CheckCircle, Loader2, Calendar, RefreshCw, Clock, AlertTriangle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
+
+interface SubscriptionPayment {
+  id: string;
+  installment_number: number;
+  amount: number;
+  due_date: string;
+  paid_at: string | null;
+  status: string;
+  payment_method: string | null;
+}
 
 interface Subscription {
   id: string;
@@ -10,12 +21,19 @@ interface Subscription {
   start_date: string;
   end_date: string;
   payment_status: string | null;
+  total_installments: number | null;
+  paid_installments: number | null;
+  installment_amount: number | null;
+  auto_renewal: boolean | null;
+  next_payment_date: string | null;
   subscription_plans: {
     name: string;
     price: number;
     description: string | null;
     duration_days: number;
+    billing_frequency: string | null;
   };
+  subscription_payments?: SubscriptionPayment[];
 }
 
 export default function Payments() {
@@ -28,7 +46,6 @@ export default function Payments() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Get student ID
       const { data: studentData } = await supabase
         .from('students')
         .select('id')
@@ -36,18 +53,21 @@ export default function Payments() {
         .maybeSingle();
 
       if (studentData) {
-        // Fetch all subscriptions
         const { data: subsData } = await supabase
           .from('student_subscriptions')
-          .select('*, subscription_plans(name, price, description, duration_days)')
+          .select(`
+            *,
+            subscription_plans(name, price, description, duration_days, billing_frequency),
+            subscription_payments(*)
+          `)
           .eq('student_id', studentData.id)
           .order('created_at', { ascending: false });
 
         if (subsData) {
-          setSubscriptions(subsData);
+          setSubscriptions(subsData as Subscription[]);
           const active = subsData.find(s => s.status === 'active');
           if (active) {
-            setActiveSubscription(active);
+            setActiveSubscription(active as Subscription);
           }
         }
       }
@@ -74,9 +94,9 @@ export default function Payments() {
       case 'active':
         return <Badge className="bg-success text-success-foreground">Ativo</Badge>;
       case 'expired':
-        return <Badge variant="outline" className="border-gray-500 text-gray-500">Expirado</Badge>;
+        return <Badge variant="outline" className="border-muted-foreground text-muted-foreground">Expirado</Badge>;
       case 'cancelled':
-        return <Badge variant="outline" className="border-red-500 text-red-500">Cancelado</Badge>;
+        return <Badge variant="destructive">Cancelado</Badge>;
       default:
         return <Badge variant="outline">{status || 'Pendente'}</Badge>;
     }
@@ -94,10 +114,23 @@ export default function Payments() {
       case 'pending':
         return <Badge variant="outline" className="border-yellow-500 text-yellow-600">Pendente</Badge>;
       case 'overdue':
-        return <Badge variant="outline" className="border-red-500 text-red-500">Em Atraso</Badge>;
+        return <Badge variant="destructive">Em Atraso</Badge>;
       default:
         return <Badge variant="outline">{status || '-'}</Badge>;
     }
+  };
+
+  const getBillingLabel = (frequency: string | null) => {
+    const labels: Record<string, string> = {
+      daily: 'Diário',
+      weekly: 'Semanal',
+      biweekly: 'Quinzenal',
+      monthly: 'Mensal',
+      quarterly: 'Trimestral',
+      semiannual: 'Semestral',
+      annual: 'Anual',
+    };
+    return labels[frequency || ''] || frequency || 'Único';
   };
 
   if (loading) {
@@ -107,6 +140,10 @@ export default function Payments() {
       </div>
     );
   }
+
+  const totalInstallments = activeSubscription?.total_installments || 1;
+  const paidInstallments = activeSubscription?.paid_installments || 0;
+  const progressPercent = totalInstallments > 0 ? (paidInstallments / totalInstallments) * 100 : 0;
 
   return (
     <div className="space-y-6">
@@ -125,8 +162,15 @@ export default function Payments() {
                       {activeSubscription.subscription_plans?.name || 'Plano Ativo'}
                     </h2>
                     {getStatusBadge(activeSubscription.status)}
+                    {activeSubscription.auto_renewal && (
+                      <Badge variant="outline" className="border-primary text-primary">
+                        <RefreshCw className="h-3 w-3 mr-1" />
+                        Renovação Auto.
+                      </Badge>
+                    )}
                   </div>
                   <p className="text-muted-foreground mt-1 text-sm md:text-base">
+                    {getBillingLabel(activeSubscription.subscription_plans?.billing_frequency)} • 
                     Válido até: {formatDate(activeSubscription.end_date)}
                   </p>
                 </div>
@@ -140,6 +184,29 @@ export default function Payments() {
                 </p>
               </div>
             </div>
+            
+            {/* Installments Progress */}
+            {totalInstallments > 1 && (
+              <div className="mt-6 p-4 bg-muted/30 rounded-xl border">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-sm font-medium">Parcelas Pagas</span>
+                  <span className="text-sm font-bold text-primary">
+                    {paidInstallments} de {totalInstallments}
+                  </span>
+                </div>
+                <Progress value={progressPercent} className="h-2" />
+                {activeSubscription.installment_amount && activeSubscription.installment_amount > 0 && (
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Valor por parcela: €{activeSubscription.installment_amount.toFixed(2)}
+                  </p>
+                )}
+                {activeSubscription.next_payment_date && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Próximo vencimento: {formatDate(activeSubscription.next_payment_date)}
+                  </p>
+                )}
+              </div>
+            )}
             
             <div className="mt-4 md:mt-6 pt-4 md:pt-6 border-t border-border">
               <div className="flex flex-wrap gap-4">
@@ -158,11 +225,6 @@ export default function Payments() {
                   </Badge>
                 </div>
               </div>
-              {activeSubscription.subscription_plans?.description && (
-                <p className="text-sm text-muted-foreground mt-3">
-                  {activeSubscription.subscription_plans.description}
-                </p>
-              )}
             </div>
           </CardContent>
         </Card>
@@ -175,6 +237,66 @@ export default function Payments() {
               Não tem nenhum plano de subscrição ativo. 
               Contacte a receção para ativar um plano.
             </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Installment Payments for Active Subscription */}
+      {activeSubscription && activeSubscription.subscription_payments && activeSubscription.subscription_payments.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base md:text-lg">
+              <Clock className="h-5 w-5 text-primary" />
+              Parcelas do Plano Atual
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {activeSubscription.subscription_payments
+                .sort((a, b) => a.installment_number - b.installment_number)
+                .map((payment) => {
+                  const isOverdue = payment.status === 'pending' && new Date(payment.due_date) < new Date();
+                  return (
+                    <div 
+                      key={payment.id}
+                      className={`flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl border gap-3 ${
+                        isOverdue ? 'bg-destructive/5 border-destructive/20' : 'bg-muted/30'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`h-10 w-10 rounded-lg flex items-center justify-center ${
+                          payment.status === 'paid' 
+                            ? 'bg-success/10' 
+                            : isOverdue 
+                              ? 'bg-destructive/10' 
+                              : 'bg-primary/10'
+                        }`}>
+                          {payment.status === 'paid' ? (
+                            <CheckCircle className="h-5 w-5 text-success" />
+                          ) : isOverdue ? (
+                            <AlertTriangle className="h-5 w-5 text-destructive" />
+                          ) : (
+                            <Clock className="h-5 w-5 text-primary" />
+                          )}
+                        </div>
+                        <div>
+                          <p className="font-medium">
+                            Parcela {payment.installment_number} de {totalInstallments}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            Vencimento: {formatDate(payment.due_date)}
+                            {payment.paid_at && ` • Pago em: ${formatDate(payment.paid_at)}`}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between sm:justify-end gap-3">
+                        <span className="font-semibold">€{payment.amount.toFixed(2)}</span>
+                        {getPaymentStatusBadge(isOverdue ? 'overdue' : payment.status)}
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
           </CardContent>
         </Card>
       )}
@@ -200,11 +322,19 @@ export default function Payments() {
                       <CreditCard className="h-5 w-5 text-primary" />
                     </div>
                     <div>
-                      <p className="font-medium text-foreground">
-                        {sub.subscription_plans?.name || 'Plano'}
-                      </p>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="font-medium text-foreground">
+                          {sub.subscription_plans?.name || 'Plano'}
+                        </p>
+                        {sub.auto_renewal && (
+                          <RefreshCw className="h-3 w-3 text-primary" />
+                        )}
+                      </div>
                       <p className="text-sm text-muted-foreground">
                         {formatDate(sub.start_date)} - {formatDate(sub.end_date)}
+                        {sub.total_installments && sub.total_installments > 1 && (
+                          <span> • {sub.paid_installments || 0}/{sub.total_installments} parcelas</span>
+                        )}
                       </p>
                     </div>
                   </div>

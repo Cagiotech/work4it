@@ -6,10 +6,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { CreditCard, Calendar, UserCheck, Plus, Trash2, Settings, Users } from "lucide-react";
-import { format } from "date-fns";
+import { CreditCard, Calendar, UserCheck, Plus, Trash2, Settings, Users, RefreshCw, Eye } from "lucide-react";
+import { format, addDays } from "date-fns";
 import { pt } from "date-fns/locale";
 import {
   AlertDialog,
@@ -21,6 +22,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface Plan {
   id: string;
@@ -28,6 +35,16 @@ interface Plan {
   description: string | null;
   price: number;
   duration_days: number;
+  billing_frequency: string | null;
+}
+
+interface SubscriptionPayment {
+  id: string;
+  installment_number: number;
+  amount: number;
+  due_date: string;
+  paid_at: string | null;
+  status: string;
 }
 
 interface Subscription {
@@ -37,7 +54,13 @@ interface Subscription {
   end_date: string;
   status: string;
   payment_status: string;
+  total_installments: number | null;
+  paid_installments: number | null;
+  installment_amount: number | null;
+  auto_renewal: boolean | null;
+  next_payment_date: string | null;
   subscription_plans: Plan;
+  subscription_payments?: SubscriptionPayment[];
 }
 
 interface Staff {
@@ -63,10 +86,13 @@ export function StudentPlansTab({ studentId, personalTrainerId, companyId, canEd
   const [selectedTrainer, setSelectedTrainer] = useState<string>(personalTrainerId || "__none__");
   const [selectedPlan, setSelectedPlan] = useState<string>("");
   const [startDate, setStartDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [totalInstallments, setTotalInstallments] = useState<number>(1);
+  const [autoRenewal, setAutoRenewal] = useState<boolean>(false);
   const [isAddingPlan, setIsAddingPlan] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [confirmSaveTrainer, setConfirmSaveTrainer] = useState(false);
   const [confirmAddPlan, setConfirmAddPlan] = useState(false);
+  const [viewPaymentsId, setViewPaymentsId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -82,7 +108,7 @@ export function StudentPlansTab({ studentId, personalTrainerId, companyId, canEd
 
       const { data: subsData } = await supabase
         .from('student_subscriptions')
-        .select('*, subscription_plans(*)')
+        .select('*, subscription_plans(*), subscription_payments(*)')
         .eq('student_id', studentId)
         .order('created_at', { ascending: false });
 
@@ -92,8 +118,8 @@ export function StudentPlansTab({ studentId, personalTrainerId, companyId, canEd
         .eq('company_id', companyId)
         .eq('is_active', true);
 
-      setPlans(plansData || []);
-      setSubscriptions((subsData as any) || []);
+      setPlans((plansData as Plan[]) || []);
+      setSubscriptions((subsData as Subscription[]) || []);
       setTrainers(trainersData || []);
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -128,11 +154,12 @@ export function StudentPlansTab({ studentId, personalTrainerId, companyId, canEd
     const plan = plans.find(p => p.id === selectedPlan);
     if (!plan) return;
 
-    const endDate = new Date(startDate);
-    endDate.setDate(endDate.getDate() + plan.duration_days);
+    const endDate = addDays(new Date(startDate), plan.duration_days);
+    const installmentAmount = plan.price / totalInstallments;
 
     try {
-      const { error } = await supabase
+      // Create the subscription
+      const { data: subData, error: subError } = await supabase
         .from('student_subscriptions')
         .insert({
           student_id: studentId,
@@ -140,13 +167,48 @@ export function StudentPlansTab({ studentId, personalTrainerId, companyId, canEd
           start_date: startDate,
           end_date: format(endDate, 'yyyy-MM-dd'),
           status: 'active',
-          payment_status: 'pending'
-        });
+          payment_status: 'pending',
+          total_installments: totalInstallments,
+          paid_installments: 0,
+          installment_amount: installmentAmount,
+          auto_renewal: autoRenewal,
+          next_payment_date: startDate,
+        })
+        .select()
+        .single();
 
-      if (error) throw error;
+      if (subError) throw subError;
+
+      // Create installment payments
+      if (subData && totalInstallments > 0) {
+        const payments = [];
+        const daysPerInstallment = Math.floor(plan.duration_days / totalInstallments);
+        
+        for (let i = 0; i < totalInstallments; i++) {
+          const dueDate = addDays(new Date(startDate), i * daysPerInstallment);
+          payments.push({
+            subscription_id: subData.id,
+            installment_number: i + 1,
+            amount: installmentAmount,
+            due_date: format(dueDate, 'yyyy-MM-dd'),
+            status: 'pending',
+          });
+        }
+
+        const { error: paymentsError } = await supabase
+          .from('subscription_payments')
+          .insert(payments);
+
+        if (paymentsError) {
+          console.error('Error creating payments:', paymentsError);
+        }
+      }
+
       toast.success("Plano adicionado com sucesso");
       setIsAddingPlan(false);
       setSelectedPlan("");
+      setTotalInstallments(1);
+      setAutoRenewal(false);
       fetchData();
     } catch (error: any) {
       toast.error(error.message || "Erro ao adicionar plano");
@@ -170,35 +232,82 @@ export function StudentPlansTab({ studentId, personalTrainerId, companyId, canEd
     }
   };
 
+  const handlePaymentStatusChange = async (paymentId: string, newStatus: string) => {
+    try {
+      const updates: any = { status: newStatus };
+      if (newStatus === 'paid') {
+        updates.paid_at = new Date().toISOString();
+      }
+
+      const { error } = await supabase
+        .from('subscription_payments')
+        .update(updates)
+        .eq('id', paymentId);
+
+      if (error) throw error;
+
+      // Update subscription paid_installments count
+      const subscription = subscriptions.find(s => 
+        s.subscription_payments?.some(p => p.id === paymentId)
+      );
+      
+      if (subscription) {
+        const paidCount = (subscription.subscription_payments?.filter(p => 
+          p.id === paymentId ? newStatus === 'paid' : p.status === 'paid'
+        ).length || 0);
+
+        await supabase
+          .from('student_subscriptions')
+          .update({ 
+            paid_installments: paidCount,
+            payment_status: paidCount >= (subscription.total_installments || 1) ? 'paid' : 'pending'
+          })
+          .eq('id', subscription.id);
+      }
+
+      toast.success("Pagamento atualizado");
+      fetchData();
+    } catch (error: any) {
+      toast.error(error.message || "Erro ao atualizar pagamento");
+    }
+  };
+
   const getStatusBadge = (status: string) => {
-    const styles = {
+    const styles: Record<string, string> = {
       active: "bg-green-500/10 text-green-600 border-green-500/20",
       expired: "bg-gray-500/10 text-gray-600 border-gray-500/20",
       cancelled: "bg-red-500/10 text-red-600 border-red-500/20",
       suspended: "bg-yellow-500/10 text-yellow-600 border-yellow-500/20",
     };
-    const labels = {
+    const labels: Record<string, string> = {
       active: "Ativo",
       expired: "Expirado",
       cancelled: "Cancelado",
       suspended: "Suspenso",
     };
-    return <Badge variant="outline" className={styles[status as keyof typeof styles]}>{labels[status as keyof typeof labels]}</Badge>;
+    return <Badge variant="outline" className={styles[status]}>{labels[status] || status}</Badge>;
   };
 
   const getPaymentBadge = (status: string) => {
-    const styles = {
+    const styles: Record<string, string> = {
       pending: "bg-yellow-500/10 text-yellow-600 border-yellow-500/20",
       paid: "bg-green-500/10 text-green-600 border-green-500/20",
       overdue: "bg-red-500/10 text-red-600 border-red-500/20",
     };
-    const labels = {
+    const labels: Record<string, string> = {
       pending: "Pendente",
       paid: "Pago",
       overdue: "Em Atraso",
     };
-    return <Badge variant="outline" className={styles[status as keyof typeof styles]}>{labels[status as keyof typeof labels]}</Badge>;
+    return <Badge variant="outline" className={styles[status]}>{labels[status] || status}</Badge>;
   };
+
+  const selectedPlanData = plans.find(p => p.id === selectedPlan);
+  const calculatedInstallmentAmount = selectedPlanData 
+    ? (selectedPlanData.price / totalInstallments).toFixed(2) 
+    : "0.00";
+
+  const viewingSubscription = subscriptions.find(s => s.id === viewPaymentsId);
 
   if (loading) {
     return <div className="text-center py-8 text-muted-foreground">A carregar...</div>;
@@ -252,7 +361,7 @@ export function StudentPlansTab({ studentId, personalTrainerId, companyId, canEd
                 <Button 
                   variant="outline" 
                   size="sm"
-                  onClick={() => navigate('/company/human-resources')}
+                  onClick={() => navigate('/company/hr')}
                 >
                   <Plus className="h-4 w-4 mr-1" />
                   Ir para Recursos Humanos
@@ -306,11 +415,55 @@ export function StudentPlansTab({ studentId, personalTrainerId, companyId, canEd
                     />
                   </div>
                 </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Número de Parcelas</Label>
+                    <Select 
+                      value={totalInstallments.toString()} 
+                      onValueChange={(v) => setTotalInstallments(parseInt(v))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {[1, 2, 3, 4, 5, 6, 9, 12, 18, 24].map((n) => (
+                          <SelectItem key={n} value={n.toString()}>
+                            {n === 1 ? "À vista" : `${n}x`}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {selectedPlanData && totalInstallments > 1 && (
+                      <p className="text-xs text-muted-foreground">
+                        {totalInstallments}x de €{calculatedInstallmentAmount}
+                      </p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Renovação Automática</Label>
+                    <div className="flex items-center gap-3 pt-2">
+                      <Switch
+                        checked={autoRenewal}
+                        onCheckedChange={setAutoRenewal}
+                      />
+                      <span className="text-sm text-muted-foreground">
+                        {autoRenewal ? "Ativada" : "Desativada"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
                 <div className="flex justify-end gap-2">
-                  <Button variant="outline" onClick={() => setIsAddingPlan(false)}>
+                  <Button variant="outline" onClick={() => {
+                    setIsAddingPlan(false);
+                    setSelectedPlan("");
+                    setTotalInstallments(1);
+                    setAutoRenewal(false);
+                  }}>
                     Cancelar
                   </Button>
-                  <Button onClick={() => setConfirmAddPlan(true)}>
+                  <Button onClick={() => setConfirmAddPlan(true)} disabled={!selectedPlan}>
                     Adicionar Plano
                   </Button>
                 </div>
@@ -342,37 +495,120 @@ export function StudentPlansTab({ studentId, personalTrainerId, companyId, canEd
             {subscriptions.map((sub) => (
               <div
                 key={sub.id}
-                className="flex items-center justify-between p-4 border rounded-lg"
+                className="p-4 border rounded-lg space-y-3"
               >
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium">{sub.subscription_plans?.name}</span>
-                    {getStatusBadge(sub.status)}
-                    {getPaymentBadge(sub.payment_status)}
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-medium">{sub.subscription_plans?.name}</span>
+                      {getStatusBadge(sub.status)}
+                      {getPaymentBadge(sub.payment_status)}
+                      {sub.auto_renewal && (
+                        <Badge variant="outline" className="border-primary/50 text-primary">
+                          <RefreshCw className="h-3 w-3 mr-1" />
+                          Auto
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
+                      <span className="flex items-center gap-1">
+                        <Calendar className="h-3 w-3" />
+                        {format(new Date(sub.start_date), "dd MMM yyyy", { locale: pt })} - {format(new Date(sub.end_date), "dd MMM yyyy", { locale: pt })}
+                      </span>
+                      <span>€{sub.subscription_plans?.price}</span>
+                      {sub.total_installments && sub.total_installments > 1 && (
+                        <span className="text-primary font-medium">
+                          {sub.paid_installments || 0}/{sub.total_installments} parcelas
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                    <span className="flex items-center gap-1">
-                      <Calendar className="h-3 w-3" />
-                      {format(new Date(sub.start_date), "dd MMM yyyy", { locale: pt })} - {format(new Date(sub.end_date), "dd MMM yyyy", { locale: pt })}
-                    </span>
-                    <span>€{sub.subscription_plans?.price}</span>
+                  <div className="flex items-center gap-2">
+                    {sub.total_installments && sub.total_installments > 1 && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setViewPaymentsId(sub.id)}
+                      >
+                        <Eye className="h-4 w-4 mr-1" />
+                        Parcelas
+                      </Button>
+                    )}
+                    {canEdit && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-destructive hover:text-destructive"
+                        onClick={() => setConfirmDeleteId(sub.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
                   </div>
                 </div>
-                {canEdit && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="text-destructive hover:text-destructive"
-                    onClick={() => setConfirmDeleteId(sub.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                )}
               </div>
             ))}
           </CardContent>
         </Card>
       </div>
+
+      {/* View Payments Dialog */}
+      <Dialog open={!!viewPaymentsId} onOpenChange={(open) => !open && setViewPaymentsId(null)}>
+        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Parcelas - {viewingSubscription?.subscription_plans?.name}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            {viewingSubscription?.subscription_payments
+              ?.sort((a, b) => a.installment_number - b.installment_number)
+              .map((payment) => {
+                const isOverdue = payment.status === 'pending' && new Date(payment.due_date) < new Date();
+                return (
+                  <div 
+                    key={payment.id}
+                    className={`flex items-center justify-between p-3 rounded-lg border ${
+                      isOverdue ? 'bg-destructive/5 border-destructive/20' : 'bg-muted/30'
+                    }`}
+                  >
+                    <div>
+                      <p className="font-medium">
+                        Parcela {payment.installment_number}/{viewingSubscription.total_installments}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Vencimento: {format(new Date(payment.due_date), "dd/MM/yyyy")}
+                      </p>
+                      {payment.paid_at && (
+                        <p className="text-xs text-success">
+                          Pago em: {format(new Date(payment.paid_at), "dd/MM/yyyy")}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="font-semibold">€{payment.amount.toFixed(2)}</span>
+                      {canEdit ? (
+                        <Select
+                          value={payment.status}
+                          onValueChange={(v) => handlePaymentStatusChange(payment.id, v)}
+                        >
+                          <SelectTrigger className="w-[120px]">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="pending">Pendente</SelectItem>
+                            <SelectItem value="paid">Pago</SelectItem>
+                            <SelectItem value="overdue">Em Atraso</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        getPaymentBadge(isOverdue ? 'overdue' : payment.status)
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Confirm Save Trainer */}
       <AlertDialog open={confirmSaveTrainer} onOpenChange={setConfirmSaveTrainer}>
@@ -396,7 +632,14 @@ export function StudentPlansTab({ studentId, personalTrainerId, companyId, canEd
           <AlertDialogHeader>
             <AlertDialogTitle>Confirmar Adição</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja adicionar este plano ao aluno?
+              {selectedPlanData && (
+                <div className="space-y-2 text-left mt-2">
+                  <p><strong>Plano:</strong> {selectedPlanData.name}</p>
+                  <p><strong>Valor Total:</strong> €{selectedPlanData.price}</p>
+                  <p><strong>Parcelas:</strong> {totalInstallments === 1 ? "À vista" : `${totalInstallments}x de €${calculatedInstallmentAmount}`}</p>
+                  <p><strong>Renovação Automática:</strong> {autoRenewal ? "Sim" : "Não"}</p>
+                </div>
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
