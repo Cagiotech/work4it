@@ -235,12 +235,29 @@ export function StaffProfileTab({ staff, roles, canEdit, isNewStaff, onSaved }: 
           </div>
           <div className="space-y-2">
             <Label>Cargo</Label>
-            <Input
-              value={formData.position}
-              onChange={(e) => setFormData({ ...formData, position: e.target.value })}
-              placeholder="Ex: Personal Trainer"
+            <Select
+              value={formData.position || "__none__"}
+              onValueChange={(v) => setFormData({ ...formData, position: v === "__none__" ? "" : v })}
               disabled={!canEdit}
-            />
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecionar cargo" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">Selecionar...</SelectItem>
+                <SelectItem value="Personal Trainer">Personal Trainer</SelectItem>
+                <SelectItem value="Instrutor">Instrutor</SelectItem>
+                <SelectItem value="Rececionista">Rececionista</SelectItem>
+                <SelectItem value="Gerente">Gerente</SelectItem>
+                <SelectItem value="Nutricionista">Nutricionista</SelectItem>
+                <SelectItem value="Fisioterapeuta">Fisioterapeuta</SelectItem>
+                <SelectItem value="Coordenador">Coordenador</SelectItem>
+                <SelectItem value="Administrativo">Administrativo</SelectItem>
+                <SelectItem value="Limpeza">Limpeza</SelectItem>
+                <SelectItem value="Manutenção">Manutenção</SelectItem>
+                <SelectItem value="Outro">Outro</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-2">
             <Label>Função (Permissões)</Label>

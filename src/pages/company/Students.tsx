@@ -4,7 +4,7 @@ import { Plus, Search, LayoutGrid, List, ArrowUpAZ, ArrowDownAZ, Download, Trash
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -71,6 +71,7 @@ interface Student {
   updated_at: string;
   company_id: string;
   personal_trainer_id: string | null;
+  profile_photo_url: string | null;
   // Joined data
   trainer?: Trainer | null;
   activeSubscription?: Subscription | null;
@@ -699,8 +700,11 @@ export default function Students() {
             >
               <CardContent className="p-4 space-y-3">
                 <div className="flex items-center gap-3">
-                  <Avatar>
-                    <AvatarFallback className="bg-primary/10 text-primary">
+                  <Avatar className="h-12 w-12 border-2 border-primary/20">
+                    {student.profile_photo_url && (
+                      <AvatarImage src={student.profile_photo_url} alt={student.full_name} />
+                    )}
+                    <AvatarFallback className="bg-primary/10 text-primary font-medium">
                       {getInitials(student.full_name)}
                     </AvatarFallback>
                   </Avatar>
@@ -813,7 +817,10 @@ export default function Students() {
                 >
                   <TableCell>
                     <div className="flex items-center gap-2">
-                      <Avatar className="h-8 w-8">
+                      <Avatar className="h-9 w-9 border border-primary/20">
+                        {student.profile_photo_url && (
+                          <AvatarImage src={student.profile_photo_url} alt={student.full_name} />
+                        )}
                         <AvatarFallback className="bg-primary/10 text-primary text-xs">
                           {getInitials(student.full_name)}
                         </AvatarFallback>
