@@ -66,26 +66,28 @@ export function CompanySidebar() {
 
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
+      {/* Toggle button - always visible */}
+      <Button
+        variant="outline"
+        size="icon"
+        onClick={toggleSidebar}
+        className="absolute -right-3 top-6 z-50 h-6 w-6 rounded-full border bg-background shadow-md hover:bg-accent"
+      >
+        <ChevronLeft className={`h-3 w-3 transition-transform duration-200 ${collapsed ? 'rotate-180' : ''}`} />
+      </Button>
+      
       <SidebarContent className="bg-sidebar flex flex-col">
         {/* Header with logo and user info */}
-        <div className="p-4">
-          <div className="flex items-center justify-between">
+        <div className={`p-4 ${collapsed ? 'px-2' : ''}`}>
+          <div className="flex items-center justify-center">
             <div className="flex items-center gap-2">
-              <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center">
+              <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
                 <img src={logoLight} alt="Cagiotech" className="h-6" />
               </div>
               {!collapsed && (
                 <span className="text-lg font-bold text-sidebar-foreground">Cagiotech</span>
               )}
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={toggleSidebar}
-              className="h-8 w-8 text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent"
-            >
-              <ChevronLeft className={`h-4 w-4 transition-transform ${collapsed ? 'rotate-180' : ''}`} />
-            </Button>
           </div>
           
           {!collapsed && (
