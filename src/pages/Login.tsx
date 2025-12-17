@@ -64,24 +64,22 @@ const Login = () => {
 
     const { data: staff } = await supabase
       .from('staff')
-      .select('id, role_id, company_id')
+      .select('id, role_id, company_id, position, password_changed')
       .eq('user_id', userId)
       .maybeSingle();
 
     if (staff) {
-      if (staff.role_id) {
-        const { data: role } = await supabase
-          .from('roles')
-          .select('name')
-          .eq('id', staff.role_id)
-          .single();
-        
-        if (role?.name?.toLowerCase().includes('personal') || 
-            role?.name?.toLowerCase().includes('trainer') ||
-            role?.name?.toLowerCase().includes('pt')) {
-          navigate('/personal');
-          return;
-        }
+      // Check if password needs to be changed (first login)
+      if (!staff.password_changed) {
+        navigate('/onboarding-staff');
+        return;
+      }
+
+      // Check position for routing (Personal Trainer or Instrutor go to /personal)
+      const personalPositions = ['personal trainer', 'instrutor'];
+      if (staff.position && personalPositions.includes(staff.position.toLowerCase())) {
+        navigate('/personal');
+        return;
       }
       
       navigate('/company');
