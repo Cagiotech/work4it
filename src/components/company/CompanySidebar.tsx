@@ -66,28 +66,16 @@ export function CompanySidebar() {
 
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
-      {/* Toggle button - always visible */}
-      <Button
-        variant="outline"
-        size="icon"
-        onClick={toggleSidebar}
-        className="absolute -right-3 top-6 z-50 h-6 w-6 rounded-full border bg-background shadow-md hover:bg-accent"
-      >
-        <ChevronLeft className={`h-3 w-3 transition-transform duration-200 ${collapsed ? 'rotate-180' : ''}`} />
-      </Button>
-      
-      <SidebarContent className="bg-sidebar flex flex-col">
-        {/* Header with logo and user info */}
-        <div className={`p-4 ${collapsed ? 'px-2' : ''}`}>
-          <div className="flex items-center justify-center">
-            <div className="flex items-center gap-2">
-              <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                <img src={logoLight} alt="Cagiotech" className="h-6" />
-              </div>
-              {!collapsed && (
-                <span className="text-lg font-bold text-sidebar-foreground">Cagiotech</span>
-              )}
+      <SidebarContent className="bg-sidebar flex flex-col relative">
+        {/* Header with logo */}
+        <div className="p-4 pb-2">
+          <div className="flex items-center gap-2">
+            <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+              <img src={logoLight} alt="Cagiotech" className="h-6" />
             </div>
+            {!collapsed && (
+              <span className="text-lg font-bold text-sidebar-foreground">Cagiotech</span>
+            )}
           </div>
           
           {!collapsed && (
@@ -100,8 +88,23 @@ export function CompanySidebar() {
           )}
         </div>
 
+        {/* Toggle button */}
+        <div className={`px-3 pb-2 ${collapsed ? 'flex justify-center' : ''}`}>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={toggleSidebar}
+            className="w-full h-8 text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent"
+          >
+            <ChevronLeft className={`h-4 w-4 transition-transform duration-200 ${collapsed ? 'rotate-180' : ''}`} />
+            {!collapsed && <span className="ml-2 text-xs">Minimizar</span>}
+          </Button>
+        </div>
+
+        <Separator className="bg-sidebar-border" />
+
         {/* Menu Items */}
-        <SidebarGroup className="flex-1 px-3">
+        <SidebarGroup className="flex-1 px-2 pt-2">
           <SidebarGroupContent>
             <SidebarMenu className="space-y-1">
               {menuItems.map((item) => {
@@ -111,7 +114,7 @@ export function CompanySidebar() {
                     <SidebarMenuButton
                       asChild
                       isActive={active}
-                      tooltip={item.key === "settings" ? "Configurações" : t(`dashboard.${item.key === "dashboard" ? "title" : item.key}`)}
+                      tooltip={collapsed ? (item.key === "settings" ? "Configurações" : t(`dashboard.${item.key === "dashboard" ? "title" : item.key}`)) : undefined}
                     >
                       <NavLink
                         to={item.url}
@@ -120,7 +123,7 @@ export function CompanySidebar() {
                           active 
                             ? 'bg-primary text-primary-foreground font-medium shadow-md shadow-primary/20' 
                             : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground'
-                        }`}
+                        } ${collapsed ? 'justify-center px-2' : ''}`}
                         activeClassName=""
                       >
                         <item.icon className="h-5 w-5 shrink-0" />
@@ -137,14 +140,14 @@ export function CompanySidebar() {
         </SidebarGroup>
 
         {/* Footer with logout */}
-        <SidebarFooter className="p-3">
-          <Separator className="mb-3 bg-sidebar-border" />
+        <SidebarFooter className="p-2">
+          <Separator className="mb-2 bg-sidebar-border" />
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton
                 onClick={handleLogout}
-                tooltip={t("common.logout")}
-                className="flex items-center gap-3 px-3 py-2.5 text-sidebar-foreground/70 hover:bg-destructive/20 hover:text-destructive rounded-lg transition-all duration-200"
+                tooltip={collapsed ? t("common.logout") : undefined}
+                className={`flex items-center gap-3 px-3 py-2.5 text-sidebar-foreground/70 hover:bg-destructive/20 hover:text-destructive rounded-lg transition-all duration-200 ${collapsed ? 'justify-center px-2' : ''}`}
               >
                 <LogOut className="h-5 w-5 shrink-0" />
                 {!collapsed && <span>{t("common.logout")}</span>}
