@@ -5,9 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
+import { ThemeSwitcher } from '@/components/ThemeSwitcher';
 import { DeveloperFooter } from '@/components/DeveloperFooter';
 import logo from '@/assets/logo-light.png';
-import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -72,116 +73,188 @@ const Register = () => {
     }
   };
 
-  return (
-    <div className="min-h-screen bg-gradient-hero flex flex-col">
-      <div className="flex flex-1">
-        {/* Left side - Decorative */}
-        <div className="relative hidden flex-1 lg:block">
-          <div className="absolute inset-0 bg-gradient-primary opacity-90" />
-          <div className="absolute inset-0 flex items-center justify-center p-12">
-            <div className="max-w-lg text-center">
-              <img src={logo} alt="Cagiotech" className="mx-auto h-24 w-auto brightness-0 invert" />
-              <h2 className="mt-8 font-heading text-3xl font-bold text-primary-foreground">
-                Comece a Transformar o Seu Negócio
-              </h2>
-              <p className="mt-4 text-lg text-primary-foreground/80">
-                Junte-se a centenas de empresas que já usam a Cagiotech para gerir os seus espaços fitness.
-              </p>
-            </div>
-          </div>
-        </div>
+  const benefits = [
+    'Gestão completa de alunos e staff',
+    'Planos de treino e nutrição',
+    'Controlo financeiro integrado',
+    'Comunicação em tempo real',
+  ];
 
-        {/* Right side - Form */}
-        <div className="flex flex-1 flex-col justify-center px-4 py-12 sm:px-6 lg:flex-none lg:px-20 xl:px-24">
-          <div className="mx-auto w-full max-w-sm lg:w-96">
-            <div className="flex items-center justify-between">
-              <Link to="/" className="flex items-center gap-2">
-                <img src={logo} alt="Cagiotech" className="h-10 w-auto" />
+  return (
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-background via-muted/30 to-background">
+      {/* Decorative elements */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-40 -left-40 w-80 h-80 bg-primary/20 rounded-full blur-3xl" />
+        <div className="absolute -bottom-40 -right-40 w-80 h-80 bg-primary/10 rounded-full blur-3xl" />
+      </div>
+
+      <div className="flex flex-1 relative z-10">
+        {/* Left side - Form */}
+        <div className="flex flex-1 flex-col justify-center px-4 py-12 sm:px-6 lg:px-12 xl:px-20">
+          <div className="mx-auto w-full max-w-md">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-8">
+              <Link to="/" className="flex items-center gap-3 group">
+                <div className="p-2 rounded-xl bg-primary/10 group-hover:bg-primary/20 transition-colors">
+                  <img src={logo} alt="Cagiotech" className="h-8 w-auto" />
+                </div>
                 <span className="font-heading text-xl font-bold text-foreground">
                   Cagiotech
                 </span>
               </Link>
-              <LanguageSwitcher />
+              <div className="flex items-center gap-2">
+                <ThemeSwitcher />
+                <LanguageSwitcher />
+              </div>
             </div>
 
-            <div className="mt-10">
-              <h2 className="font-heading text-2xl font-bold text-foreground">
-                {t('auth.registerTitle')}
-              </h2>
-              <p className="mt-2 text-sm text-muted-foreground">
-                {t('auth.hasAccount')}{' '}
-                <Link to="/login" className="font-medium text-primary hover:text-primary/80">
-                  {t('common.login')}
-                </Link>
-              </p>
+            {/* Form Card */}
+            <div className="bg-card rounded-2xl border border-border/50 shadow-xl shadow-primary/5 p-8 animate-scale-in">
+              <div className="mb-8">
+                <h2 className="font-heading text-2xl font-bold text-foreground">
+                  {t('auth.registerTitle')}
+                </h2>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {t('auth.hasAccount')}{' '}
+                  <Link to="/login" className="font-semibold text-primary hover:text-primary/80 transition-colors">
+                    {t('common.login')}
+                  </Link>
+                </p>
+              </div>
+
+              <form onSubmit={handleSubmit} className="space-y-5">
+                <div className="space-y-2">
+                  <Label htmlFor="email" className="text-foreground font-medium">
+                    {t('common.email')}
+                  </Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      id="email"
+                      name="email"
+                      type="email"
+                      value={formData.email}
+                      onChange={handleChange}
+                      placeholder="nome@empresa.pt"
+                      className="pl-10 h-12 bg-muted/50 border-border/50 focus:border-primary focus:ring-primary/20"
+                      required
+                      disabled={loading}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="password" className="text-foreground font-medium">
+                    {t('common.password')}
+                  </Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      id="password"
+                      name="password"
+                      type={showPassword ? 'text' : 'password'}
+                      value={formData.password}
+                      onChange={handleChange}
+                      placeholder="••••••••"
+                      className="pl-10 pr-10 h-12 bg-muted/50 border-border/50 focus:border-primary focus:ring-primary/20"
+                      required
+                      disabled={loading}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword" className="text-foreground font-medium">
+                    {t('common.confirmPassword')}
+                  </Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      id="confirmPassword"
+                      name="confirmPassword"
+                      type={showPassword ? 'text' : 'password'}
+                      value={formData.confirmPassword}
+                      onChange={handleChange}
+                      placeholder="••••••••"
+                      className="pl-10 h-12 bg-muted/50 border-border/50 focus:border-primary focus:ring-primary/20"
+                      required
+                      disabled={loading}
+                    />
+                  </div>
+                </div>
+
+                <Button 
+                  type="submit" 
+                  className="w-full h-12 text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 transition-all" 
+                  size="lg" 
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <span className="flex items-center gap-2">
+                      <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      Criando conta...
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-2">
+                      {t('common.register')}
+                      <ArrowRight className="h-5 w-5" />
+                    </span>
+                  )}
+                </Button>
+              </form>
             </div>
 
-            <form onSubmit={handleSubmit} className="mt-8 space-y-5">
-              <div>
-                <Label htmlFor="email">{t('common.email')}</Label>
-                <div className="relative mt-2">
-                  <Mail className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    id="email"
-                    name="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    placeholder="nome@empresa.pt"
-                    className="pl-10"
-                    required
-                    disabled={loading}
-                  />
+            {/* Mobile benefits */}
+            <div className="mt-8 space-y-3 lg:hidden">
+              {benefits.map((benefit, index) => (
+                <div key={index} className="flex items-center gap-3 text-sm text-muted-foreground">
+                  <CheckCircle2 className="h-5 w-5 text-primary flex-shrink-0" />
+                  <span>{benefit}</span>
                 </div>
-              </div>
+              ))}
+            </div>
+          </div>
+        </div>
 
-              <div>
-                <Label htmlFor="password">{t('common.password')}</Label>
-                <div className="relative mt-2">
-                  <Lock className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    id="password"
-                    name="password"
-                    type={showPassword ? 'text' : 'password'}
-                    value={formData.password}
-                    onChange={handleChange}
-                    placeholder="••••••••"
-                    className="pl-10 pr-10"
-                    required
-                    disabled={loading}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  >
-                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                  </button>
+        {/* Right side - Decorative */}
+        <div className="relative hidden lg:flex lg:flex-1 lg:flex-col lg:justify-center lg:items-center bg-gradient-to-br from-primary via-primary/90 to-primary/80 p-12">
+          <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2260%22%20height%3D%2260%22%20viewBox%3D%220%200%2060%2060%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cg%20fill%3D%22none%22%20fill-rule%3D%22evenodd%22%3E%3Cg%20fill%3D%22%23ffffff%22%20fill-opacity%3D%220.05%22%3E%3Cpath%20d%3D%22M36%2034v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6%2034v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6%204V0H4v4H0v2h4v4h2V6h4V4H6z%22%2F%3E%3C%2Fg%3E%3C%2Fg%3E%3C%2Fsvg%3E')] opacity-50" />
+          <div className="relative max-w-md text-center animate-fade-in">
+            <div className="inline-flex p-4 rounded-2xl bg-white/10 backdrop-blur-sm mb-8">
+              <img src={logo} alt="Cagiotech" className="h-20 w-auto brightness-0 invert" />
+            </div>
+            <h1 className="font-heading text-4xl font-bold text-primary-foreground mb-4">
+              Comece a Transformar o Seu Negócio
+            </h1>
+            <p className="text-lg text-primary-foreground/80 mb-8">
+              Junte-se a centenas de empresas que já usam a Cagiotech para gerir os seus espaços fitness.
+            </p>
+            
+            {/* Benefits list */}
+            <div className="space-y-4 text-left">
+              {benefits.map((benefit, index) => (
+                <div 
+                  key={index} 
+                  className="flex items-center gap-3 p-3 rounded-xl bg-white/10 backdrop-blur-sm"
+                  style={{ animationDelay: `${index * 100}ms` }}
+                >
+                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
+                    <CheckCircle2 className="h-5 w-5 text-primary-foreground" />
+                  </div>
+                  <span className="text-primary-foreground font-medium">{benefit}</span>
                 </div>
-              </div>
-
-              <div>
-                <Label htmlFor="confirmPassword">{t('common.confirmPassword')}</Label>
-                <div className="relative mt-2">
-                  <Lock className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    id="confirmPassword"
-                    name="confirmPassword"
-                    type={showPassword ? 'text' : 'password'}
-                    value={formData.confirmPassword}
-                    onChange={handleChange}
-                    placeholder="••••••••"
-                    className="pl-10"
-                    required
-                    disabled={loading}
-                  />
-                </div>
-              </div>
-
-              <Button type="submit" variant="hero" className="w-full" size="lg" disabled={loading}>
-                {loading ? 'Criando conta...' : t('common.register')}
-              </Button>
-            </form>
+              ))}
+            </div>
           </div>
         </div>
       </div>
