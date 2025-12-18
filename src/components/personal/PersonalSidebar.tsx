@@ -31,15 +31,15 @@ import logoLight from "@/assets/logo-light.png";
 import { useAuth } from "@/hooks/useAuth";
 
 const menuItems = [
-  { title: "Dashboard", url: "/personal", icon: LayoutDashboard },
-  { title: "Meus Alunos", url: "/personal/students", icon: Users },
-  { title: "Agenda", url: "/personal/schedule", icon: Calendar },
-  { title: "Planos de Treino", url: "/personal/training-plans", icon: Dumbbell },
-  { title: "Planos Nutricionais", url: "/personal/nutrition", icon: Apple },
-  { title: "Financeiro", url: "/personal/financial", icon: DollarSign },
-  { title: "Lista de Presença", url: "/personal/attendance", icon: ClipboardCheck },
-  { title: "Mensagens", url: "/personal/chat", icon: MessageCircle },
-  { title: "Definições", url: "/personal/settings", icon: Settings },
+  { key: "dashboard", title: "Dashboard", url: "/personal", icon: LayoutDashboard },
+  { key: "students", title: "Meus Alunos", url: "/personal/students", icon: Users },
+  { key: "schedule", title: "Agenda", url: "/personal/schedule", icon: Calendar },
+  { key: "training", title: "Planos de Treino", url: "/personal/training-plans", icon: Dumbbell },
+  { key: "nutrition", title: "Planos Nutricionais", url: "/personal/nutrition", icon: Apple },
+  { key: "financial", title: "Financeiro", url: "/personal/financial", icon: DollarSign },
+  { key: "attendance", title: "Lista de Presença", url: "/personal/attendance", icon: ClipboardCheck },
+  { key: "chat", title: "Mensagens", url: "/personal/chat", icon: MessageCircle },
+  { key: "settings", title: "Definições", url: "/personal/settings", icon: Settings },
 ];
 
 export function PersonalSidebar() {
@@ -106,7 +106,7 @@ export function PersonalSidebar() {
               {menuItems.map((item) => {
                 const active = isActive(item.url);
                 return (
-                  <SidebarMenuItem key={item.title}>
+                  <SidebarMenuItem key={item.key}>
                     <SidebarMenuButton
                       asChild
                       isActive={active}
