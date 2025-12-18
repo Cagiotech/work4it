@@ -419,6 +419,65 @@ export type Database = {
           },
         ]
       }
+      events: {
+        Row: {
+          company_id: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          end_time: string | null
+          event_date: string
+          event_type: string | null
+          id: string
+          is_public: boolean | null
+          location: string | null
+          max_participants: number | null
+          start_time: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          end_time?: string | null
+          event_date: string
+          event_type?: string | null
+          id?: string
+          is_public?: boolean | null
+          location?: string | null
+          max_participants?: number | null
+          start_time?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          end_time?: string | null
+          event_date?: string
+          event_type?: string | null
+          id?: string
+          is_public?: boolean | null
+          location?: string | null
+          max_participants?: number | null
+          start_time?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "events_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       financial_categories: {
         Row: {
           color: string | null
@@ -549,6 +608,56 @@ export type Database = {
             columns: ["subscription_id"]
             isOneToOne: false
             referencedRelation: "student_subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      messages: {
+        Row: {
+          company_id: string
+          content: string
+          created_at: string
+          id: string
+          is_read: boolean | null
+          read_at: string | null
+          receiver_id: string
+          receiver_type: string
+          sender_id: string
+          sender_type: string
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          content: string
+          created_at?: string
+          id?: string
+          is_read?: boolean | null
+          read_at?: string | null
+          receiver_id: string
+          receiver_type: string
+          sender_id: string
+          sender_type: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          content?: string
+          created_at?: string
+          id?: string
+          is_read?: boolean | null
+          read_at?: string | null
+          receiver_id?: string
+          receiver_type?: string
+          sender_id?: string
+          sender_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
         ]
@@ -2284,6 +2393,56 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      training_exercises: {
+        Row: {
+          created_at: string
+          day_of_week: number | null
+          exercise_name: string
+          id: string
+          notes: string | null
+          plan_id: string
+          reps: string | null
+          rest_seconds: number | null
+          sets: number | null
+          sort_order: number | null
+          weight: string | null
+        }
+        Insert: {
+          created_at?: string
+          day_of_week?: number | null
+          exercise_name: string
+          id?: string
+          notes?: string | null
+          plan_id: string
+          reps?: string | null
+          rest_seconds?: number | null
+          sets?: number | null
+          sort_order?: number | null
+          weight?: string | null
+        }
+        Update: {
+          created_at?: string
+          day_of_week?: number | null
+          exercise_name?: string
+          id?: string
+          notes?: string | null
+          plan_id?: string
+          reps?: string | null
+          rest_seconds?: number | null
+          sets?: number | null
+          sort_order?: number | null
+          weight?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_exercises_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "training_plans"
             referencedColumns: ["id"]
           },
         ]
