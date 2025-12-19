@@ -45,14 +45,15 @@ export default function StudentRegister() {
       }
 
       try {
+        // Use secure RPC function to fetch only necessary company info
         const { data, error } = await supabase
-          .from('companies')
-          .select('id, name, registration_code, require_student_approval')
-          .eq('registration_code', code)
-          .maybeSingle();
+          .rpc('get_company_registration_info', { p_registration_code: code });
 
         if (error) throw error;
-        setCompany(data);
+        
+        // RPC returns array, get first result
+        const companyData = Array.isArray(data) && data.length > 0 ? data[0] : null;
+        setCompany(companyData);
       } catch (error) {
         console.error('Error fetching company:', error);
       } finally {
