@@ -2600,6 +2600,15 @@ export type Database = {
         Args: { p_company_id: string }
         Returns: undefined
       }
+      get_company_registration_info: {
+        Args: { p_registration_code: string }
+        Returns: {
+          id: string
+          name: string
+          registration_code: string
+          require_student_approval: boolean
+        }[]
+      }
     }
     Enums: {
       permission_action:
