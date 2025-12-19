@@ -13,6 +13,31 @@ interface CreateAccountRequest {
   recordType: "student" | "staff";
 }
 
+// Generate a cryptographically secure random password
+function generateSecurePassword(length: number = 16): string {
+  const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
+  const randomValues = new Uint8Array(length);
+  crypto.getRandomValues(randomValues);
+  
+  let password = "";
+  for (let i = 0; i < length; i++) {
+    password += charset[randomValues[i] % charset.length];
+  }
+  
+  // Ensure at least one of each required character type
+  const hasLower = /[a-z]/.test(password);
+  const hasUpper = /[A-Z]/.test(password);
+  const hasNumber = /[0-9]/.test(password);
+  const hasSpecial = /[!@#$%^&*]/.test(password);
+  
+  // If missing any type, regenerate (rare case)
+  if (!hasLower || !hasUpper || !hasNumber || !hasSpecial) {
+    return generateSecurePassword(length);
+  }
+  
+  return password;
+}
+
 const handler = async (req: Request): Promise<Response> => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
@@ -35,10 +60,13 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log(`Creating account for ${recordType}: ${email}`);
 
-    // Create the user with temporary password
+    // Generate a cryptographically secure random password
+    const temporaryPassword = generateSecurePassword(16);
+
+    // Create the user with secure temporary password
     const { data: userData, error: createError } = await supabaseAdmin.auth.admin.createUser({
       email,
-      password: "12345678",
+      password: temporaryPassword,
       email_confirm: true,
       user_metadata: {
         full_name: fullName,
@@ -91,7 +119,8 @@ const handler = async (req: Request): Promise<Response> => {
       JSON.stringify({ 
         success: true, 
         userId: userData.user?.id,
-        message: "Conta criada com sucesso. Senha temporária: 12345678"
+        temporaryPassword: temporaryPassword,
+        message: `Conta criada com sucesso. Senha temporária: ${temporaryPassword}`
       }),
       {
         status: 200,
