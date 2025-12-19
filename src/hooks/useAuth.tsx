@@ -38,26 +38,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const fetchProfile = async (userId: string) => {
-    const { data: profileData } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('user_id', userId)
-      .maybeSingle();
+    try {
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', userId)
+        .maybeSingle();
 
-    if (profileData) {
-      setProfile(profileData as Profile);
+      if (profileData) {
+        setProfile(profileData as Profile);
 
-      if (profileData.company_id) {
-        const { data: companyData } = await supabase
-          .from('companies')
-          .select('*')
-          .eq('id', profileData.company_id)
-          .maybeSingle();
+        if (profileData.company_id) {
+          const { data: companyData } = await supabase
+            .from('companies')
+            .select('id, name, address')
+            .eq('id', profileData.company_id)
+            .maybeSingle();
 
-        if (companyData) {
-          setCompany(companyData as Company);
+          if (companyData) {
+            setCompany(companyData as Company);
+          }
         }
       }
+    } catch (error) {
+      console.error('Error fetching profile:', error);
     }
   };
 
