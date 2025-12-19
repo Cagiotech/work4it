@@ -136,43 +136,70 @@ export function StudentNutritionTabNew({ studentId, canEdit }: StudentNutritionT
   const fetchPlans = async () => {
     setLoading(true);
     try {
-      const { data: plansData, error: plansError } = await supabase
-        .from('nutrition_meal_plans')
-        .select('*')
-        .eq('student_id', studentId)
-        .order('created_at', { ascending: false });
-
-      if (plansError) throw plansError;
-
-      const plansWithDays: NutritionPlan[] = [];
-
-      for (const plan of plansData || []) {
-        const { data: daysData } = await supabase
+      // Fetch all data in parallel for better performance
+      const [plansResult, daysResult, mealsResult] = await Promise.all([
+        supabase
+          .from('nutrition_meal_plans')
+          .select('*')
+          .eq('student_id', studentId)
+          .order('created_at', { ascending: false }),
+        supabase
           .from('nutrition_plan_days')
           .select('*')
-          .eq('plan_id', plan.id)
-          .order('day_of_week');
+          .order('day_of_week'),
+        supabase
+          .from('nutrition_plan_meals')
+          .select('*')
+          .order('sort_order'),
+      ]);
 
-        const daysWithMeals: NutritionDay[] = [];
+      if (plansResult.error) throw plansResult.error;
 
-        for (const day of daysData || []) {
-          const { data: mealsData } = await supabase
-            .from('nutrition_plan_meals')
-            .select('*')
-            .eq('day_id', day.id)
-            .order('sort_order');
+      const plansData = plansResult.data || [];
+      const allDays = daysResult.data || [];
+      const allMeals = mealsResult.data || [];
 
-          daysWithMeals.push({
-            ...day,
-            meals: mealsData || [],
-          });
-        }
+      // Create lookup maps for efficient data organization
+      const planIds = new Set(plansData.map(p => p.id));
+      const daysByPlanId = new Map<string, typeof allDays>();
+      const mealsByDayId = new Map<string, typeof allMeals>();
 
-        plansWithDays.push({
+      // Filter and group days by plan_id
+      allDays
+        .filter(day => planIds.has(day.plan_id))
+        .forEach(day => {
+          if (!daysByPlanId.has(day.plan_id)) {
+            daysByPlanId.set(day.plan_id, []);
+          }
+          daysByPlanId.get(day.plan_id)!.push(day);
+        });
+
+      // Get all day IDs for this student's plans
+      const dayIds = new Set(Array.from(daysByPlanId.values()).flat().map(d => d.id));
+
+      // Filter and group meals by day_id
+      allMeals
+        .filter(meal => dayIds.has(meal.day_id))
+        .forEach(meal => {
+          if (!mealsByDayId.has(meal.day_id)) {
+            mealsByDayId.set(meal.day_id, []);
+          }
+          mealsByDayId.get(meal.day_id)!.push(meal);
+        });
+
+      // Assemble the complete plan structure
+      const plansWithDays: NutritionPlan[] = plansData.map(plan => {
+        const planDays = daysByPlanId.get(plan.id) || [];
+        const daysWithMeals: NutritionDay[] = planDays.map(day => ({
+          ...day,
+          meals: mealsByDayId.get(day.id) || [],
+        }));
+
+        return {
           ...plan,
           days: daysWithMeals,
-        });
-      }
+        };
+      });
 
       setPlans(plansWithDays);
       if (plansWithDays.length > 0 && !selectedPlan) {
