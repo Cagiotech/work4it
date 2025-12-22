@@ -136,35 +136,59 @@ export default function PersonalChat() {
 
       // Load last messages and unread counts for each contact
       for (const contact of contactsList) {
-        // For company contacts, the company sends with its company_id as sender_id
-        // For other contacts, they use their own id
         const myId = staff.id;
-        const theirId = contact.id;
         
-        const { data: lastMsg } = await supabase
-          .from('messages')
-          .select('content, created_at')
-          .eq('company_id', staff.company_id)
-          .or(`and(sender_id.eq.${myId},receiver_id.eq.${theirId}),and(sender_id.eq.${theirId},receiver_id.eq.${myId})`)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
+        let lastMsgQuery;
+        let unreadQuery;
+        
+        if (contact.type === 'company') {
+          // For company contacts: company sends with sender_type='company' and I'm the receiver
+          // OR I send with receiver_type='company'
+          lastMsgQuery = await supabase
+            .from('messages')
+            .select('content, created_at')
+            .eq('company_id', staff.company_id)
+            .or(`and(sender_type.eq.company,receiver_id.eq.${myId},receiver_type.eq.staff),and(sender_id.eq.${myId},sender_type.eq.staff,receiver_type.eq.company)`)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
 
-        if (lastMsg) {
-          contact.lastMessage = lastMsg.content;
-          contact.lastMessageTime = lastMsg.created_at;
+          // Count unread messages FROM company TO me
+          unreadQuery = await supabase
+            .from('messages')
+            .select('*', { count: 'exact', head: true })
+            .eq('receiver_id', myId)
+            .eq('receiver_type', 'staff')
+            .eq('sender_type', 'company')
+            .eq('is_read', false);
+        } else {
+          // For student contacts, use their ID directly
+          const theirId = contact.id;
+          
+          lastMsgQuery = await supabase
+            .from('messages')
+            .select('content, created_at')
+            .eq('company_id', staff.company_id)
+            .or(`and(sender_id.eq.${myId},receiver_id.eq.${theirId}),and(sender_id.eq.${theirId},receiver_id.eq.${myId})`)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          unreadQuery = await supabase
+            .from('messages')
+            .select('*', { count: 'exact', head: true })
+            .eq('receiver_id', myId)
+            .eq('receiver_type', 'staff')
+            .eq('sender_id', theirId)
+            .eq('is_read', false);
         }
 
-        // Count unread messages sent TO me (receiver_id is my staff id, receiver_type is staff)
-        const { count } = await supabase
-          .from('messages')
-          .select('*', { count: 'exact', head: true })
-          .eq('receiver_id', myId)
-          .eq('receiver_type', 'staff')
-          .eq('sender_id', theirId)
-          .eq('is_read', false);
+        if (lastMsgQuery.data) {
+          contact.lastMessage = lastMsgQuery.data.content;
+          contact.lastMessageTime = lastMsgQuery.data.created_at;
+        }
 
-        contact.unreadCount = count || 0;
+        contact.unreadCount = unreadQuery.count || 0;
       }
 
       // Sort contacts by last message time
@@ -186,20 +210,32 @@ export default function PersonalChat() {
     if (!staffInfo) return;
 
     const myId = staffInfo.id;
-    const theirId = contact.id;
+    let query;
+    
+    if (contact.type === 'company') {
+      // For company: get messages where company sent to me OR I sent to company
+      query = await supabase
+        .from('messages')
+        .select('*')
+        .eq('company_id', staffInfo.company_id)
+        .or(`and(sender_type.eq.company,receiver_id.eq.${myId},receiver_type.eq.staff),and(sender_id.eq.${myId},sender_type.eq.staff,receiver_type.eq.company)`)
+        .order('created_at', { ascending: true });
+    } else {
+      // For students: use their ID directly
+      const theirId = contact.id;
+      query = await supabase
+        .from('messages')
+        .select('*')
+        .eq('company_id', staffInfo.company_id)
+        .or(`and(sender_id.eq.${myId},receiver_id.eq.${theirId}),and(sender_id.eq.${theirId},receiver_id.eq.${myId})`)
+        .order('created_at', { ascending: true });
+    }
 
-    const { data } = await supabase
-      .from('messages')
-      .select('*')
-      .eq('company_id', staffInfo.company_id)
-      .or(`and(sender_id.eq.${myId},receiver_id.eq.${theirId}),and(sender_id.eq.${theirId},receiver_id.eq.${myId})`)
-      .order('created_at', { ascending: true });
-
-    if (data) {
-      setMessages(data);
+    if (query.data) {
+      setMessages(query.data);
       
       // Mark messages as read (only messages where I am the receiver)
-      const unreadIds = data
+      const unreadIds = query.data
         .filter(m => !m.is_read && m.receiver_id === myId && m.receiver_type === 'staff')
         .map(m => m.id);
 
@@ -240,17 +276,20 @@ export default function PersonalChat() {
           
           if (!isForMe) return;
 
-          // If message is from selected contact, add to current chat
-          if (selectedContact && 
-              ((newMsg.sender_id === selectedContact.id) || 
-               (newMsg.receiver_id === selectedContact.id))) {
+          // Determine if message is for selected contact
+          const isForSelectedContact = selectedContact && (
+            (selectedContact.type === 'company' && (newMsg.sender_type === 'company' || newMsg.receiver_type === 'company')) ||
+            (selectedContact.type !== 'company' && (newMsg.sender_id === selectedContact.id || newMsg.receiver_id === selectedContact.id))
+          );
+
+          if (isForSelectedContact) {
             setMessages(prev => {
               if (prev.some(m => m.id === newMsg.id)) return prev;
               return [...prev, newMsg];
             });
             
             // Mark as read if it's from the other party
-            if (newMsg.sender_id === selectedContact.id) {
+            if (newMsg.receiver_id === staffInfo.id && newMsg.receiver_type === 'staff') {
               supabase
                 .from('messages')
                 .update({ is_read: true, read_at: new Date().toISOString() })
@@ -258,9 +297,16 @@ export default function PersonalChat() {
             }
           } else if (newMsg.receiver_id === staffInfo.id && newMsg.receiver_type === 'staff') {
             // Update unread count for other contacts
-            setContacts(prev => prev.map(c => 
-              c.id === newMsg.sender_id ? { ...c, unreadCount: c.unreadCount + 1, lastMessage: newMsg.content, lastMessageTime: newMsg.created_at } : c
-            ));
+            // For company messages, find the company contact
+            const contactId = newMsg.sender_type === 'company' 
+              ? contacts.find(c => c.type === 'company')?.id 
+              : newMsg.sender_id;
+            
+            if (contactId) {
+              setContacts(prev => prev.map(c => 
+                c.id === contactId ? { ...c, unreadCount: c.unreadCount + 1, lastMessage: newMsg.content, lastMessageTime: newMsg.created_at } : c
+              ));
+            }
           }
         }
       )
