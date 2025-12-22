@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, type ReactNode, type Context } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
@@ -28,7 +28,16 @@ interface AuthContextType {
   refreshProfile: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+// Prevent dev/HMR from recreating the context (provider/consumer mismatch)
+const globalForAuth = globalThis as unknown as {
+  __cagiotech_auth_context__?: Context<AuthContextType | undefined>;
+};
+
+const AuthContext: Context<AuthContextType | undefined> = import.meta.env.DEV
+  ? (globalForAuth.__cagiotech_auth_context__ ??
+      (globalForAuth.__cagiotech_auth_context__ =
+        createContext<AuthContextType | undefined>(undefined)))
+  : createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
