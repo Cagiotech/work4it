@@ -9,6 +9,7 @@ import {
   DollarSign,
   ClipboardCheck,
   MessageCircle,
+  CalendarDays,
   Settings,
   LogOut,
   ChevronLeft,
@@ -39,6 +40,7 @@ const menuItems = [
   { key: "financial", title: "Financeiro", url: "/personal/financial", icon: DollarSign },
   { key: "attendance", title: "Lista de Presença", url: "/personal/attendance", icon: ClipboardCheck },
   { key: "chat", title: "Mensagens", url: "/personal/chat", icon: MessageCircle },
+  { key: "events", title: "Eventos", url: "/personal/events", icon: CalendarDays },
   { key: "settings", title: "Definições", url: "/personal/settings", icon: Settings },
 ];
 
