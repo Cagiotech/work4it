@@ -1,11 +1,18 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { format } from "date-fns";
+import { pt } from "date-fns/locale";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { CalendarIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
@@ -45,6 +52,13 @@ export function EquipmentDialog({ open, onOpenChange, equipment, categories, onS
   const { t } = useTranslation();
   const { profile } = useAuth();
   const [loading, setLoading] = useState(false);
+  
+  // Date states
+  const [purchaseDate, setPurchaseDate] = useState<Date | undefined>();
+  const [warrantyExpiry, setWarrantyExpiry] = useState<Date | undefined>();
+  const [purchaseDateOpen, setPurchaseDateOpen] = useState(false);
+  const [warrantyExpiryOpen, setWarrantyExpiryOpen] = useState(false);
+  
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -52,14 +66,26 @@ export function EquipmentDialog({ open, onOpenChange, equipment, categories, onS
     model: "",
     serial_number: "",
     status: "operational",
-    purchase_date: "",
-    purchase_value: "",
-    current_value: "",
-    warranty_expiry: "",
+    purchase_value: 0,
+    current_value: 0,
     location: "",
     notes: "",
     category_id: "",
   });
+
+  const parseDate = (dateStr: string | null | undefined): Date | undefined => {
+    if (!dateStr) return undefined;
+    const [year, month, day] = dateStr.split('-').map(Number);
+    return new Date(year, month - 1, day);
+  };
+
+  const formatDateISO = (date: Date | undefined): string | null => {
+    if (!date) return null;
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
 
   useEffect(() => {
     if (equipment) {
@@ -70,14 +96,14 @@ export function EquipmentDialog({ open, onOpenChange, equipment, categories, onS
         model: equipment.model || "",
         serial_number: equipment.serial_number || "",
         status: equipment.status || "operational",
-        purchase_date: equipment.purchase_date || "",
-        purchase_value: equipment.purchase_value?.toString() || "",
-        current_value: equipment.current_value?.toString() || "",
-        warranty_expiry: equipment.warranty_expiry || "",
+        purchase_value: equipment.purchase_value || 0,
+        current_value: equipment.current_value || 0,
         location: equipment.location || "",
         notes: equipment.notes || "",
         category_id: equipment.category_id || "",
       });
+      setPurchaseDate(parseDate(equipment.purchase_date));
+      setWarrantyExpiry(parseDate(equipment.warranty_expiry));
     } else {
       setFormData({
         name: "",
@@ -86,14 +112,14 @@ export function EquipmentDialog({ open, onOpenChange, equipment, categories, onS
         model: "",
         serial_number: "",
         status: "operational",
-        purchase_date: "",
-        purchase_value: "",
-        current_value: "",
-        warranty_expiry: "",
+        purchase_value: 0,
+        current_value: 0,
         location: "",
         notes: "",
         category_id: "",
       });
+      setPurchaseDate(undefined);
+      setWarrantyExpiry(undefined);
     }
   }, [equipment, open]);
 
@@ -111,10 +137,10 @@ export function EquipmentDialog({ open, onOpenChange, equipment, categories, onS
         model: formData.model || null,
         serial_number: formData.serial_number || null,
         status: formData.status,
-        purchase_date: formData.purchase_date || null,
-        purchase_value: formData.purchase_value ? parseFloat(formData.purchase_value) : 0,
-        current_value: formData.current_value ? parseFloat(formData.current_value) : 0,
-        warranty_expiry: formData.warranty_expiry || null,
+        purchase_date: formatDateISO(purchaseDate),
+        purchase_value: formData.purchase_value,
+        current_value: formData.current_value,
+        warranty_expiry: formatDateISO(warrantyExpiry),
         location: formData.location || null,
         notes: formData.notes || null,
         category_id: formData.category_id || null,
@@ -220,42 +246,78 @@ export function EquipmentDialog({ open, onOpenChange, equipment, categories, onS
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="purchase_date">Data de Compra</Label>
-              <Input
-                id="purchase_date"
-                type="date"
-                value={formData.purchase_date}
-                onChange={(e) => setFormData({ ...formData, purchase_date: e.target.value })}
-              />
+              <Label>Data de Compra</Label>
+              <Popover open={purchaseDateOpen} onOpenChange={setPurchaseDateOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    type="button"
+                    className={cn("w-full justify-start text-left font-normal", !purchaseDate && "text-muted-foreground")}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {purchaseDate ? format(purchaseDate, "dd/MM/yyyy") : "Selecionar"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={purchaseDate}
+                    onSelect={(date) => {
+                      setPurchaseDate(date);
+                      setPurchaseDateOpen(false);
+                    }}
+                    locale={pt}
+                    className="pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
             <div className="space-y-2">
               <Label htmlFor="purchase_value">Valor de Compra (€)</Label>
-              <Input
+              <CurrencyInput
                 id="purchase_value"
-                type="number"
-                step="0.01"
                 value={formData.purchase_value}
-                onChange={(e) => setFormData({ ...formData, purchase_value: e.target.value })}
+                onChange={(val) => setFormData({ ...formData, purchase_value: val })}
+                placeholder="0,00"
+                allowEmpty
               />
             </div>
             <div className="space-y-2">
               <Label htmlFor="current_value">Valor Atual (€)</Label>
-              <Input
+              <CurrencyInput
                 id="current_value"
-                type="number"
-                step="0.01"
                 value={formData.current_value}
-                onChange={(e) => setFormData({ ...formData, current_value: e.target.value })}
+                onChange={(val) => setFormData({ ...formData, current_value: val })}
+                placeholder="0,00"
+                allowEmpty
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="warranty_expiry">Garantia até</Label>
-              <Input
-                id="warranty_expiry"
-                type="date"
-                value={formData.warranty_expiry}
-                onChange={(e) => setFormData({ ...formData, warranty_expiry: e.target.value })}
-              />
+              <Label>Garantia até</Label>
+              <Popover open={warrantyExpiryOpen} onOpenChange={setWarrantyExpiryOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    type="button"
+                    className={cn("w-full justify-start text-left font-normal", !warrantyExpiry && "text-muted-foreground")}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {warrantyExpiry ? format(warrantyExpiry, "dd/MM/yyyy") : "Selecionar"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={warrantyExpiry}
+                    onSelect={(date) => {
+                      setWarrantyExpiry(date);
+                      setWarrantyExpiryOpen(false);
+                    }}
+                    locale={pt}
+                    className="pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
             <div className="space-y-2 md:col-span-2">
               <Label htmlFor="location">Localização</Label>

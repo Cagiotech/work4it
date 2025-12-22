@@ -1,5 +1,7 @@
 import { useState, useEffect, useContext } from "react";
 import { Input } from "@/components/ui/input";
+import { CurrencyInput } from "@/components/ui/currency-input";
+import { NumberInput } from "@/components/ui/number-input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -202,71 +204,61 @@ export function StaffPaymentTab({ staffId, canEdit }: StaffPaymentTabProps) {
           {formData.payment_type === "monthly" && (
             <div className="space-y-2">
               <Label>Salário Base (€)</Label>
-              <Input
-                type="number"
-                min="0"
-                step="0.01"
+              <CurrencyInput
                 value={formData.base_salary}
-                onChange={(e) => setFormData({ ...formData, base_salary: parseFloat(e.target.value) || 0 })}
-                placeholder="0.00"
+                onChange={(val) => setFormData({ ...formData, base_salary: val })}
+                placeholder="0,00"
                 disabled={!canEdit}
+                allowEmpty
               />
             </div>
           )}
           {formData.payment_type === "hourly" && (
             <div className="space-y-2">
               <Label>Valor por Hora (€)</Label>
-              <Input
-                type="number"
-                min="0"
-                step="0.01"
+              <CurrencyInput
                 value={formData.hourly_rate}
-                onChange={(e) => setFormData({ ...formData, hourly_rate: parseFloat(e.target.value) || 0 })}
-                placeholder="0.00"
+                onChange={(val) => setFormData({ ...formData, hourly_rate: val })}
+                placeholder="0,00"
                 disabled={!canEdit}
+                allowEmpty
               />
             </div>
           )}
           {formData.payment_type === "daily" && (
             <div className="space-y-2">
               <Label>Valor Diário (€)</Label>
-              <Input
-                type="number"
-                min="0"
-                step="0.01"
+              <CurrencyInput
                 value={formData.daily_rate}
-                onChange={(e) => setFormData({ ...formData, daily_rate: parseFloat(e.target.value) || 0 })}
-                placeholder="0.00"
+                onChange={(val) => setFormData({ ...formData, daily_rate: val })}
+                placeholder="0,00"
                 disabled={!canEdit}
+                allowEmpty
               />
             </div>
           )}
           {formData.payment_type === "per_class" && (
             <div className="space-y-2">
               <Label>Valor por Aula (€)</Label>
-              <Input
-                type="number"
-                min="0"
-                step="0.01"
+              <CurrencyInput
                 value={formData.per_class_rate}
-                onChange={(e) => setFormData({ ...formData, per_class_rate: parseFloat(e.target.value) || 0 })}
-                placeholder="0.00"
+                onChange={(val) => setFormData({ ...formData, per_class_rate: val })}
+                placeholder="0,00"
                 disabled={!canEdit}
+                allowEmpty
               />
             </div>
           )}
           {formData.payment_type === "commission" && (
             <div className="space-y-2">
               <Label>Comissão (%)</Label>
-              <Input
-                type="number"
-                min="0"
-                max="100"
-                step="0.1"
+              <NumberInput
                 value={formData.commission_percentage}
-                onChange={(e) => setFormData({ ...formData, commission_percentage: parseFloat(e.target.value) || 0 })}
+                onChange={(val) => setFormData({ ...formData, commission_percentage: typeof val === 'number' ? val : 0 })}
                 placeholder="0"
                 disabled={!canEdit}
+                allowEmpty
+                decimals={1}
               />
             </div>
           )}

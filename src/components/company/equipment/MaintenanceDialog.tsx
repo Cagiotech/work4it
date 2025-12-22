@@ -1,10 +1,17 @@
 import { useState, useEffect } from "react";
+import { format } from "date-fns";
+import { pt } from "date-fns/locale";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { CalendarIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
@@ -41,16 +48,32 @@ export function MaintenanceDialog({
 }: MaintenanceDialogProps) {
   const { profile } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [performedAtDate, setPerformedAtDate] = useState<Date | undefined>(new Date());
+  const [nextMaintenanceDate, setNextMaintenanceDate] = useState<Date | undefined>();
+  const [performedAtOpen, setPerformedAtOpen] = useState(false);
+  const [nextMaintenanceOpen, setNextMaintenanceOpen] = useState(false);
   const [formData, setFormData] = useState({
     maintenance_type: "preventive",
     description: "",
     performed_by: "",
-    performed_at: new Date().toISOString().split("T")[0],
-    next_maintenance_date: "",
-    cost: "",
+    cost: 0,
     notes: "",
     status: "completed",
   });
+
+  const parseDate = (dateStr: string | null | undefined): Date | undefined => {
+    if (!dateStr) return undefined;
+    const [year, month, day] = dateStr.split('-').map(Number);
+    return new Date(year, month - 1, day);
+  };
+
+  const formatDateISO = (date: Date | undefined): string => {
+    if (!date) return '';
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
 
   useEffect(() => {
     if (maintenance) {
@@ -58,29 +81,29 @@ export function MaintenanceDialog({
         maintenance_type: maintenance.maintenance_type || "preventive",
         description: maintenance.description || "",
         performed_by: maintenance.performed_by || "",
-        performed_at: maintenance.performed_at || new Date().toISOString().split("T")[0],
-        next_maintenance_date: maintenance.next_maintenance_date || "",
-        cost: maintenance.cost?.toString() || "",
+        cost: maintenance.cost || 0,
         notes: maintenance.notes || "",
         status: maintenance.status || "completed",
       });
+      setPerformedAtDate(parseDate(maintenance.performed_at) || new Date());
+      setNextMaintenanceDate(parseDate(maintenance.next_maintenance_date));
     } else {
       setFormData({
         maintenance_type: "preventive",
         description: "",
         performed_by: "",
-        performed_at: new Date().toISOString().split("T")[0],
-        next_maintenance_date: "",
-        cost: "",
+        cost: 0,
         notes: "",
         status: "completed",
       });
+      setPerformedAtDate(new Date());
+      setNextMaintenanceDate(undefined);
     }
   }, [maintenance, open]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!profile?.company_id || !equipmentId) return;
+    if (!profile?.company_id || !equipmentId || !performedAtDate) return;
 
     setLoading(true);
     try {
@@ -90,9 +113,9 @@ export function MaintenanceDialog({
         maintenance_type: formData.maintenance_type,
         description: formData.description || null,
         performed_by: formData.performed_by || null,
-        performed_at: formData.performed_at,
-        next_maintenance_date: formData.next_maintenance_date || null,
-        cost: formData.cost ? parseFloat(formData.cost) : 0,
+        performed_at: formatDateISO(performedAtDate),
+        next_maintenance_date: formatDateISO(nextMaintenanceDate) || null,
+        cost: formData.cost,
         notes: formData.notes || null,
         status: formData.status,
       };
@@ -166,23 +189,56 @@ export function MaintenanceDialog({
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="performed_at">Data da Manutenção *</Label>
-              <Input
-                id="performed_at"
-                type="date"
-                value={formData.performed_at}
-                onChange={(e) => setFormData({ ...formData, performed_at: e.target.value })}
-                required
-              />
+              <Label>Data da Manutenção *</Label>
+              <Popover open={performedAtOpen} onOpenChange={setPerformedAtOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn("w-full justify-start text-left font-normal", !performedAtDate && "text-muted-foreground")}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {performedAtDate ? format(performedAtDate, "dd/MM/yyyy") : "Selecionar"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={performedAtDate}
+                    onSelect={(date) => {
+                      setPerformedAtDate(date);
+                      setPerformedAtOpen(false);
+                    }}
+                    locale={pt}
+                    className="pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="next_maintenance_date">Próxima Manutenção</Label>
-              <Input
-                id="next_maintenance_date"
-                type="date"
-                value={formData.next_maintenance_date}
-                onChange={(e) => setFormData({ ...formData, next_maintenance_date: e.target.value })}
-              />
+              <Label>Próxima Manutenção</Label>
+              <Popover open={nextMaintenanceOpen} onOpenChange={setNextMaintenanceOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn("w-full justify-start text-left font-normal", !nextMaintenanceDate && "text-muted-foreground")}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {nextMaintenanceDate ? format(nextMaintenanceDate, "dd/MM/yyyy") : "Selecionar"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={nextMaintenanceDate}
+                    onSelect={(date) => {
+                      setNextMaintenanceDate(date);
+                      setNextMaintenanceOpen(false);
+                    }}
+                    locale={pt}
+                    className="pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
             <div className="space-y-2">
               <Label htmlFor="performed_by">Realizada por</Label>
@@ -195,12 +251,12 @@ export function MaintenanceDialog({
             </div>
             <div className="space-y-2">
               <Label htmlFor="cost">Custo (€)</Label>
-              <Input
+              <CurrencyInput
                 id="cost"
-                type="number"
-                step="0.01"
                 value={formData.cost}
-                onChange={(e) => setFormData({ ...formData, cost: e.target.value })}
+                onChange={(val) => setFormData({ ...formData, cost: val })}
+                placeholder="0,00"
+                allowEmpty
               />
             </div>
             <div className="space-y-2 md:col-span-2">
