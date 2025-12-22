@@ -222,13 +222,18 @@ export default function PersonalChat() {
         conv.unreadCount = unreadQuery.count || 0;
       }
 
-      convList.sort((a, b) => {
+      // Keep company pinned at top, sort others by lastMessageTime
+      const companyConv = convList.find(c => c.type === 'company');
+      const otherConvs = convList.filter(c => c.type !== 'company');
+      
+      otherConvs.sort((a, b) => {
         if (!a.lastMessageTime) return 1;
         if (!b.lastMessageTime) return -1;
         return new Date(b.lastMessageTime).getTime() - new Date(a.lastMessageTime).getTime();
       });
 
-      setConversations(convList);
+      const sortedList = companyConv ? [companyConv, ...otherConvs] : otherConvs;
+      setConversations(sortedList);
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
