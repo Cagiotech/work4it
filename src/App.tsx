@@ -50,6 +50,7 @@ import PersonalNutrition from "./pages/personal/Nutrition";
 import PersonalFinancial from "./pages/personal/Financial";
 import PersonalAttendance from "./pages/personal/Attendance";
 import PersonalChat from "./pages/personal/Chat";
+import PersonalEvents from "./pages/personal/Events";
 import PersonalSettings from "./pages/personal/Settings";
 
 // Admin Layout & Pages
@@ -121,6 +122,7 @@ const App = () => (
                 <Route path="financial" element={<PersonalFinancial />} />
                 <Route path="attendance" element={<PersonalAttendance />} />
                 <Route path="chat" element={<PersonalChat />} />
+                <Route path="events" element={<PersonalEvents />} />
                 <Route path="settings" element={<PersonalSettings />} />
               </Route>
 
