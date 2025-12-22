@@ -43,8 +43,52 @@ export default function Communication() {
   useEffect(() => {
     if (profile?.company_id) {
       fetchConversations();
+      
+      // Subscribe to realtime messages
+      const channel = supabase
+        .channel('company-messages')
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'messages',
+            filter: `company_id=eq.${profile.company_id}`
+          },
+          (payload) => {
+            const newMsg = payload.new as Message;
+            console.log('New message received:', newMsg);
+            
+            // If the message is for the selected conversation, add it to messages
+            if (selectedConversation && 
+                ((newMsg.sender_id === selectedConversation.id && newMsg.sender_type === selectedConversation.type) ||
+                 (newMsg.receiver_id === selectedConversation.id && newMsg.receiver_type === selectedConversation.type))) {
+              setMessages(prev => {
+                // Avoid duplicates
+                if (prev.some(m => m.id === newMsg.id)) return prev;
+                return [...prev, newMsg];
+              });
+              
+              // Mark as read if it's from the other party
+              if (newMsg.sender_type !== 'company') {
+                supabase
+                  .from('messages')
+                  .update({ is_read: true, read_at: new Date().toISOString() })
+                  .eq('id', newMsg.id);
+              }
+            } else if (newMsg.receiver_type === 'company' || newMsg.sender_type === 'company') {
+              // Update conversations list for unread count
+              fetchConversations();
+            }
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
     }
-  }, [profile?.company_id]);
+  }, [profile?.company_id, selectedConversation?.id]);
 
   useEffect(() => {
     if (selectedConversation) {

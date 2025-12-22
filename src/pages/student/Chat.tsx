@@ -51,11 +51,17 @@ export default function StudentChat() {
     loadInitialData();
   }, []);
 
+  // Subscribe to realtime messages when studentInfo is available
+  useEffect(() => {
+    if (studentInfo) {
+      const cleanup = subscribeToMessages();
+      return cleanup;
+    }
+  }, [studentInfo, selectedContact]);
+
   useEffect(() => {
     if (selectedContact && studentInfo) {
       loadMessages(selectedContact);
-      const cleanup = subscribeToMessages();
-      return cleanup;
     }
   }, [selectedContact, studentInfo]);
 
@@ -206,7 +212,7 @@ export default function StudentChat() {
   };
 
   const subscribeToMessages = () => {
-    if (!studentInfo || !selectedContact) return;
+    if (!studentInfo) return;
 
     const channel = supabase
       .channel('student-messages-channel')
@@ -216,21 +222,38 @@ export default function StudentChat() {
           event: 'INSERT',
           schema: 'public',
           table: 'messages',
-          filter: `receiver_id=eq.${studentInfo.id}`
+          filter: `company_id=eq.${studentInfo.company_id}`
         },
         (payload) => {
           const newMsg = payload.new as Message;
-          if (newMsg.sender_id === selectedContact.id) {
-            setMessages(prev => [...prev, newMsg]);
-            // Mark as read immediately
-            supabase
-              .from('messages')
-              .update({ is_read: true, read_at: new Date().toISOString() })
-              .eq('id', newMsg.id);
-          } else {
+          console.log('Student received message:', newMsg);
+          
+          // Check if this message involves me (either as sender or receiver)
+          const isForMe = (newMsg.receiver_id === studentInfo.id && newMsg.receiver_type === 'student') ||
+                          (newMsg.sender_id === studentInfo.id && newMsg.sender_type === 'student');
+          
+          if (!isForMe) return;
+
+          // If message is from selected contact, add to current chat
+          if (selectedContact && 
+              ((newMsg.sender_id === selectedContact.id) || 
+               (newMsg.receiver_id === selectedContact.id))) {
+            setMessages(prev => {
+              if (prev.some(m => m.id === newMsg.id)) return prev;
+              return [...prev, newMsg];
+            });
+            
+            // Mark as read if it's from the other party
+            if (newMsg.sender_id === selectedContact.id) {
+              supabase
+                .from('messages')
+                .update({ is_read: true, read_at: new Date().toISOString() })
+                .eq('id', newMsg.id);
+            }
+          } else if (newMsg.receiver_id === studentInfo.id && newMsg.receiver_type === 'student') {
             // Update unread count for other contacts
             setContacts(prev => prev.map(c =>
-              c.id === newMsg.sender_id ? { ...c, unreadCount: c.unreadCount + 1 } : c
+              c.id === newMsg.sender_id ? { ...c, unreadCount: c.unreadCount + 1, lastMessage: newMsg.content, lastMessageTime: newMsg.created_at } : c
             ));
           }
         }
