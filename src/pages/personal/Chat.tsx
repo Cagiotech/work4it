@@ -1,12 +1,14 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { MessageSquare, Users } from "lucide-react";
+import { MessageSquare, Users, Plus } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { ConversationList } from "@/components/company/communication/ConversationList";
 import { ChatWindow } from "@/components/company/communication/ChatWindow";
+import { NewPersonalMessageDialog } from "@/components/personal/NewPersonalMessageDialog";
 
 interface Message {
   id: string;
@@ -37,6 +39,7 @@ export default function PersonalChat() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
   const [messagesLoading, setMessagesLoading] = useState(false);
+  const [newMessageOpen, setNewMessageOpen] = useState(false);
 
   useEffect(() => {
     loadInitialData();
@@ -307,6 +310,28 @@ export default function PersonalChat() {
     }
   };
 
+  const handleSelectRecipients = (recipients: { id: string; name: string; type: 'student' | 'company' }[]) => {
+    const recipient = recipients[0];
+    if (!recipient) return;
+
+    const existingConv = conversations.find(c => c.id === recipient.id);
+    
+    if (existingConv) {
+      setSelectedConversation(existingConv);
+    } else {
+      const newConv: Conversation = {
+        id: recipient.id,
+        name: recipient.name,
+        type: recipient.type,
+        lastMessage: '',
+        lastMessageTime: '',
+        unreadCount: 0
+      };
+      setConversations(prev => [newConv, ...prev]);
+      setSelectedConversation(newConv);
+    }
+  };
+
   return (
     <div className="h-[calc(100vh-180px)]">
       <Card className="h-full flex overflow-hidden">
@@ -317,6 +342,14 @@ export default function PersonalChat() {
               <MessageSquare className="h-5 w-5 text-primary" />
               Mensagens
             </h2>
+            <Button
+              size="sm"
+              onClick={() => setNewMessageOpen(true)}
+              className="gap-1"
+            >
+              <Plus className="h-4 w-4" />
+              Nova
+            </Button>
           </div>
           <div className="flex-1 overflow-hidden">
             <ConversationList
@@ -350,6 +383,16 @@ export default function PersonalChat() {
           )}
         </div>
       </Card>
+
+      {staffInfo && (
+        <NewPersonalMessageDialog
+          open={newMessageOpen}
+          onOpenChange={setNewMessageOpen}
+          onSelectRecipients={handleSelectRecipients}
+          staffId={staffInfo.id}
+          companyId={staffInfo.company_id}
+        />
+      )}
     </div>
   );
 }
