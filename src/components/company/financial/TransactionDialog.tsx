@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -66,12 +67,13 @@ export function TransactionDialog({
   const [studentId, setStudentId] = useState<string>("");
   const [staffId, setStaffId] = useState<string>("");
   const [description, setDescription] = useState("");
-  const [amount, setAmount] = useState("");
+  const [amount, setAmount] = useState<number>(0);
   const [status, setStatus] = useState("pending");
   const [dueDate, setDueDate] = useState<Date | undefined>();
   const [notes, setNotes] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [saving, setSaving] = useState(false);
+  const [calendarOpen, setCalendarOpen] = useState(false);
 
   useEffect(() => {
     if (transaction) {
@@ -80,9 +82,15 @@ export function TransactionDialog({
       setStudentId(transaction.student_id || "");
       setStaffId(transaction.staff_id || "");
       setDescription(transaction.description);
-      setAmount(String(transaction.amount));
+      setAmount(transaction.amount);
       setStatus(transaction.status);
-      setDueDate(transaction.due_date ? new Date(transaction.due_date) : undefined);
+      // Parse date correctly to avoid timezone issues
+      if (transaction.due_date) {
+        const [year, month, day] = transaction.due_date.split('-').map(Number);
+        setDueDate(new Date(year, month - 1, day));
+      } else {
+        setDueDate(undefined);
+      }
       setNotes(transaction.notes || "");
       setPaymentMethod(transaction.payment_method || "cash");
     } else {
@@ -91,7 +99,7 @@ export function TransactionDialog({
       setStudentId("");
       setStaffId("");
       setDescription("");
-      setAmount("");
+      setAmount(0);
       setStatus("pending");
       setDueDate(undefined);
       setNotes("");
@@ -100,18 +108,27 @@ export function TransactionDialog({
   }, [transaction, open]);
 
   const handleSave = async () => {
-    if (!description.trim() || !amount) return;
+    if (!description.trim() || amount <= 0) return;
     setSaving(true);
     try {
+      // Format date without timezone issues
+      let formattedDate: string | null = null;
+      if (dueDate) {
+        const year = dueDate.getFullYear();
+        const month = String(dueDate.getMonth() + 1).padStart(2, '0');
+        const day = String(dueDate.getDate()).padStart(2, '0');
+        formattedDate = `${year}-${month}-${day}`;
+      }
+      
       await onSave({
         type,
         category_id: categoryId || null,
         student_id: studentId || null,
         staff_id: staffId || null,
         description: description.trim(),
-        amount: parseFloat(amount),
+        amount: amount,
         status,
-        due_date: dueDate ? format(dueDate, "yyyy-MM-dd") : null,
+        due_date: formattedDate,
         notes: notes.trim() || null,
         payment_method: paymentMethod,
       });
@@ -189,13 +206,11 @@ export function TransactionDialog({
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="amount">Valor (€) *</Label>
-              <Input
+              <CurrencyInput
                 id="amount"
-                type="number"
-                step="0.01"
                 value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                placeholder="0.00"
+                onChange={setAmount}
+                placeholder="0,00"
               />
             </div>
 
@@ -220,7 +235,7 @@ export function TransactionDialog({
 
           <div className="space-y-2">
             <Label>Data de Vencimento</Label>
-            <Popover>
+            <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
@@ -234,7 +249,10 @@ export function TransactionDialog({
                 <Calendar
                   mode="single"
                   selected={dueDate}
-                  onSelect={setDueDate}
+                  onSelect={(date) => {
+                    setDueDate(date);
+                    setCalendarOpen(false);
+                  }}
                   locale={pt}
                   className="pointer-events-auto"
                 />
@@ -292,7 +310,7 @@ export function TransactionDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
-          <Button onClick={handleSave} disabled={saving || !description.trim() || !amount}>
+          <Button onClick={handleSave} disabled={saving || !description.trim() || amount <= 0}>
             {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Guardar
           </Button>
