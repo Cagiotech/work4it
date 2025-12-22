@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { pt } from "date-fns/locale";
-import { Search, Users, User } from "lucide-react";
+import { Search, Users, User, Building2, Pin } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -83,21 +83,35 @@ export function ConversationList({ conversations, selectedId, onSelect, loading 
                 onClick={() => onSelect(conversation)}
                 className={cn(
                   "flex items-center gap-3 p-4 cursor-pointer hover:bg-muted/50 transition-colors",
-                  selectedId === conversation.id && "bg-muted"
+                  selectedId === conversation.id && "bg-muted",
+                  conversation.type === 'company' && "border-l-2 border-l-primary bg-primary/5"
                 )}
               >
                 <Avatar className="h-12 w-12">
                   <AvatarFallback className={cn(
                     "text-sm font-medium",
-                    conversation.type === 'student' ? "bg-primary/10 text-primary" : "bg-secondary/50 text-secondary-foreground"
+                    conversation.type === 'company' 
+                      ? "bg-primary text-primary-foreground" 
+                      : conversation.type === 'student' 
+                        ? "bg-primary/10 text-primary" 
+                        : "bg-secondary/50 text-secondary-foreground"
                   )}>
-                    {getInitials(conversation.name)}
+                    {conversation.type === 'company' ? (
+                      <Building2 className="h-5 w-5" />
+                    ) : (
+                      getInitials(conversation.name)
+                    )}
                   </AvatarFallback>
                 </Avatar>
                 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="font-medium truncate">{conversation.name}</span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-medium truncate">{conversation.name}</span>
+                      {conversation.type === 'company' && (
+                        <Pin className="h-3 w-3 text-primary flex-shrink-0" />
+                      )}
+                    </div>
                     <span className="text-xs text-muted-foreground whitespace-nowrap">
                       {conversation.lastMessageTime && formatTime(conversation.lastMessageTime)}
                     </span>
