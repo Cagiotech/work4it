@@ -3,23 +3,28 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { CompanySidebar } from "@/components/company/CompanySidebar";
 import { CompanyHeader } from "@/components/company/CompanyHeader";
 import { DeveloperFooter } from "@/components/DeveloperFooter";
-import { RequireAuth } from "@/hooks/useAuth";
+import { RequireAuth, useAuth } from "@/hooks/useAuth";
+import { LoadingScreen } from "@/components/LoadingScreen";
 
 export function CompanyLayout() {
+  const { loading } = useAuth();
+  
   return (
-    <RequireAuth>
-      <SidebarProvider>
-        <div className="min-h-screen flex w-full">
-          <CompanySidebar />
-          <div className="flex-1 flex flex-col min-w-0 bg-muted/30">
-            <CompanyHeader />
-            <main className="flex-1 p-4 md:p-6 overflow-auto">
-              <Outlet />
-            </main>
-            <DeveloperFooter />
+    <LoadingScreen isLoading={loading} minDuration={2000}>
+      <RequireAuth>
+        <SidebarProvider>
+          <div className="min-h-screen flex w-full">
+            <CompanySidebar />
+            <div className="flex-1 flex flex-col min-w-0 bg-muted/30">
+              <CompanyHeader />
+              <main className="flex-1 p-4 md:p-6 overflow-auto">
+                <Outlet />
+              </main>
+              <DeveloperFooter />
+            </div>
           </div>
-        </div>
-      </SidebarProvider>
-    </RequireAuth>
+        </SidebarProvider>
+      </RequireAuth>
+    </LoadingScreen>
   );
 }
