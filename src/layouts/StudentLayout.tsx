@@ -7,7 +7,7 @@ import { DeveloperFooter } from "@/components/DeveloperFooter";
 import { useStudentAccessCheck } from "@/hooks/useStudentAccessCheck";
 import { TermsAcceptanceDialog } from "@/components/student/TermsAcceptanceDialog";
 import { PaymentReminderDialog } from "@/components/student/PaymentReminderDialog";
-import { Loader2 } from "lucide-react";
+import { LoadingScreen } from "@/components/LoadingScreen";
 import { supabase } from "@/integrations/supabase/client";
 
 interface OverdueSubscription {
@@ -72,14 +72,7 @@ export function StudentLayout() {
   }, [student?.id, company?.id]);
 
   if (checking) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-muted/30">
-        <div className="flex flex-col items-center gap-3">
-          <Loader2 className="h-10 w-10 animate-spin text-primary" />
-          <p className="text-sm text-muted-foreground">A carregar...</p>
-        </div>
-      </div>
-    );
+    return <LoadingScreen isLoading={true} minDuration={2000}><div /></LoadingScreen>;
   }
 
   const showTermsDialog = mustAcceptTerms && !termsAccepted && student && company;
