@@ -150,10 +150,11 @@ export default function Communication() {
     if (!profile?.company_id || !selectedConversation) return;
 
     try {
+      // For company sending, sender_id is the company_id
       const { error } = await supabase.from('messages').insert({
         company_id: profile.company_id,
         content,
-        sender_id: profile.id,
+        sender_id: profile.company_id,
         sender_type: 'company',
         receiver_id: selectedConversation.id,
         receiver_type: selectedConversation.type
@@ -228,7 +229,7 @@ export default function Communication() {
               recipientName={selectedConversation.name}
               recipientType={selectedConversation.type}
               messages={messages}
-              currentUserId={profile?.id || ''}
+              currentUserId={profile?.company_id || ''}
               currentUserType="company"
               onSendMessage={handleSendMessage}
               loading={messagesLoading}
