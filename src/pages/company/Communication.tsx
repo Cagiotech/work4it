@@ -24,7 +24,7 @@ interface Message {
 interface Conversation {
   id: string;
   name: string;
-  type: 'student' | 'staff';
+  type: 'student' | 'staff' | 'company';
   lastMessage: string;
   lastMessageTime: string;
   unreadCount: number;

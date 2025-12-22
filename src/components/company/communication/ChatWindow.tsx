@@ -21,7 +21,7 @@ interface Message {
 interface ChatWindowProps {
   recipientId: string;
   recipientName: string;
-  recipientType: 'student' | 'staff';
+  recipientType: 'student' | 'staff' | 'company';
   messages: Message[];
   currentUserId: string;
   currentUserType: string;

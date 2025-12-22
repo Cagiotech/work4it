@@ -1,27 +1,12 @@
-import { useState, useEffect, useRef } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Send, Search, ArrowLeft, MessageCircle } from "lucide-react";
+import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
+import { MessageSquare, Users } from "lucide-react";
+import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
-import { format, isToday, isYesterday } from "date-fns";
-import { pt } from "date-fns/locale";
-import { useToast } from "@/hooks/use-toast";
-
-interface Contact {
-  id: string;
-  name: string;
-  type: 'student' | 'company';
-  avatar?: string;
-  lastMessage?: string;
-  lastMessageTime?: string;
-  unreadCount: number;
-}
+import { toast } from "sonner";
+import { ConversationList } from "@/components/company/communication/ConversationList";
+import { ChatWindow } from "@/components/company/communication/ChatWindow";
 
 interface Message {
   id: string;
@@ -34,45 +19,93 @@ interface Message {
   is_read: boolean;
 }
 
+interface Conversation {
+  id: string;
+  name: string;
+  type: 'student' | 'staff' | 'company';
+  lastMessage: string;
+  lastMessageTime: string;
+  unreadCount: number;
+}
+
 export default function PersonalChat() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
-  const { toast } = useToast();
-  const [loading, setLoading] = useState(true);
   const [staffInfo, setStaffInfo] = useState<{ id: string; company_id: string } | null>(null);
-  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
-  const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
-  const [newMessage, setNewMessage] = useState("");
-  const [searchTerm, setSearchTerm] = useState("");
-  const [showMobileChat, setShowMobileChat] = useState(false);
-  const [sendingMessage, setSendingMessage] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [loading, setLoading] = useState(true);
+  const [messagesLoading, setMessagesLoading] = useState(false);
 
   useEffect(() => {
     loadInitialData();
   }, []);
 
-  // Subscribe to realtime messages when staffInfo is available
   useEffect(() => {
     if (staffInfo) {
-      const cleanup = subscribeToMessages();
-      return cleanup;
+      const channel = supabase
+        .channel('staff-messages-channel')
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'messages',
+            filter: `company_id=eq.${staffInfo.company_id}`
+          },
+          (payload) => {
+            const newMsg = payload.new as Message;
+            console.log('Staff received message:', newMsg);
+
+            const isForMe = (newMsg.receiver_id === staffInfo.id && newMsg.receiver_type === 'staff') ||
+                            (newMsg.sender_id === staffInfo.id && newMsg.sender_type === 'staff');
+
+            if (!isForMe) return;
+
+            const isForSelectedContact = selectedConversation && (
+              (selectedConversation.type === 'company' && (newMsg.sender_type === 'company' || newMsg.receiver_type === 'company')) ||
+              (selectedConversation.type !== 'company' && (newMsg.sender_id === selectedConversation.id || newMsg.receiver_id === selectedConversation.id))
+            );
+
+            if (isForSelectedContact) {
+              setMessages(prev => {
+                if (prev.some(m => m.id === newMsg.id)) return prev;
+                return [...prev, newMsg];
+              });
+
+              if (newMsg.receiver_id === staffInfo.id && newMsg.receiver_type === 'staff') {
+                supabase
+                  .from('messages')
+                  .update({ is_read: true, read_at: new Date().toISOString() })
+                  .eq('id', newMsg.id);
+              }
+            } else if (newMsg.receiver_id === staffInfo.id && newMsg.receiver_type === 'staff') {
+              const contactId = newMsg.sender_type === 'company'
+                ? conversations.find(c => c.type === 'company')?.id
+                : newMsg.sender_id;
+
+              if (contactId) {
+                setConversations(prev => prev.map(c =>
+                  c.id === contactId ? { ...c, unreadCount: c.unreadCount + 1, lastMessage: newMsg.content, lastMessageTime: newMsg.created_at } : c
+                ));
+              }
+            }
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
     }
-  }, [staffInfo, selectedContact]);
+  }, [staffInfo, selectedConversation?.id]);
 
   useEffect(() => {
-    if (selectedContact && staffInfo) {
-      loadMessages(selectedContact);
+    if (selectedConversation && staffInfo) {
+      fetchMessages(selectedConversation);
     }
-  }, [selectedContact, staffInfo]);
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
+  }, [selectedConversation?.id, staffInfo]);
 
   const loadInitialData = async () => {
     try {
@@ -95,55 +128,52 @@ export default function PersonalChat() {
 
       setStaffInfo(staff);
 
-      // Load company info as a contact
       const { data: company } = await supabase
         .from('companies')
         .select('id, name')
         .eq('id', staff.company_id)
         .single();
 
-      // Load assigned students as contacts
       const { data: students } = await supabase
         .from('students')
         .select('id, full_name, profile_photo_url')
         .eq('personal_trainer_id', staff.id)
         .eq('status', 'active');
 
-      const contactsList: Contact[] = [];
+      const convList: Conversation[] = [];
 
-      // Add company as contact (use company_id as the contact id)
       if (company) {
-        contactsList.push({
+        convList.push({
           id: company.id,
           name: company.name || 'Administração',
           type: 'company',
+          lastMessage: '',
+          lastMessageTime: '',
           unreadCount: 0
         });
       }
 
-      // Add students as contacts
       if (students) {
         for (const student of students) {
-          contactsList.push({
+          convList.push({
             id: student.id,
             name: student.full_name,
             type: 'student',
-            avatar: student.profile_photo_url || undefined,
+            lastMessage: '',
+            lastMessageTime: '',
             unreadCount: 0
           });
         }
       }
 
-      // Load last messages and unread counts for each contact
-      for (const contact of contactsList) {
+      // Load last messages and unread counts
+      for (const conv of convList) {
         const myId = staff.id;
-        
+
         let lastMsgQuery;
         let unreadQuery;
-        
-        if (contact.type === 'company') {
-          // For company contacts: company sends with sender_type='company' and I'm the receiver
-          // OR I send with receiver_type='company'
+
+        if (conv.type === 'company') {
           lastMsgQuery = await supabase
             .from('messages')
             .select('content, created_at')
@@ -153,7 +183,6 @@ export default function PersonalChat() {
             .limit(1)
             .maybeSingle();
 
-          // Count unread messages FROM company TO me
           unreadQuery = await supabase
             .from('messages')
             .select('*', { count: 'exact', head: true })
@@ -162,9 +191,8 @@ export default function PersonalChat() {
             .eq('sender_type', 'company')
             .eq('is_read', false);
         } else {
-          // For student contacts, use their ID directly
-          const theirId = contact.id;
-          
+          const theirId = conv.id;
+
           lastMsgQuery = await supabase
             .from('messages')
             .select('content, created_at')
@@ -184,21 +212,20 @@ export default function PersonalChat() {
         }
 
         if (lastMsgQuery.data) {
-          contact.lastMessage = lastMsgQuery.data.content;
-          contact.lastMessageTime = lastMsgQuery.data.created_at;
+          conv.lastMessage = lastMsgQuery.data.content;
+          conv.lastMessageTime = lastMsgQuery.data.created_at;
         }
 
-        contact.unreadCount = unreadQuery.count || 0;
+        conv.unreadCount = unreadQuery.count || 0;
       }
 
-      // Sort contacts by last message time
-      contactsList.sort((a, b) => {
+      convList.sort((a, b) => {
         if (!a.lastMessageTime) return 1;
         if (!b.lastMessageTime) return -1;
         return new Date(b.lastMessageTime).getTime() - new Date(a.lastMessageTime).getTime();
       });
 
-      setContacts(contactsList);
+      setConversations(convList);
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
@@ -206,376 +233,121 @@ export default function PersonalChat() {
     }
   };
 
-  const loadMessages = async (contact: Contact) => {
+  const fetchMessages = async (conversation: Conversation) => {
     if (!staffInfo) return;
 
+    setMessagesLoading(true);
     const myId = staffInfo.id;
-    let query;
-    
-    if (contact.type === 'company') {
-      // For company: get messages where company sent to me OR I sent to company
-      query = await supabase
-        .from('messages')
-        .select('*')
-        .eq('company_id', staffInfo.company_id)
-        .or(`and(sender_type.eq.company,receiver_id.eq.${myId},receiver_type.eq.staff),and(sender_id.eq.${myId},sender_type.eq.staff,receiver_type.eq.company)`)
-        .order('created_at', { ascending: true });
-    } else {
-      // For students: use their ID directly
-      const theirId = contact.id;
-      query = await supabase
-        .from('messages')
-        .select('*')
-        .eq('company_id', staffInfo.company_id)
-        .or(`and(sender_id.eq.${myId},receiver_id.eq.${theirId}),and(sender_id.eq.${theirId},receiver_id.eq.${myId})`)
-        .order('created_at', { ascending: true });
-    }
 
-    if (query.data) {
-      setMessages(query.data);
-      
-      // Mark messages as read (only messages where I am the receiver)
-      const unreadIds = query.data
-        .filter(m => !m.is_read && m.receiver_id === myId && m.receiver_type === 'staff')
-        .map(m => m.id);
+    try {
+      let query;
 
-      if (unreadIds.length > 0) {
-        await supabase
+      if (conversation.type === 'company') {
+        query = await supabase
           .from('messages')
-          .update({ is_read: true, read_at: new Date().toISOString() })
-          .in('id', unreadIds);
+          .select('*')
+          .eq('company_id', staffInfo.company_id)
+          .or(`and(sender_type.eq.company,receiver_id.eq.${myId},receiver_type.eq.staff),and(sender_id.eq.${myId},sender_type.eq.staff,receiver_type.eq.company)`)
+          .order('created_at', { ascending: true });
+      } else {
+        const theirId = conversation.id;
+        query = await supabase
+          .from('messages')
+          .select('*')
+          .eq('company_id', staffInfo.company_id)
+          .or(`and(sender_id.eq.${myId},receiver_id.eq.${theirId}),and(sender_id.eq.${theirId},receiver_id.eq.${myId})`)
+          .order('created_at', { ascending: true });
       }
 
-      // Update unread count in contacts
-      setContacts(prev => prev.map(c => 
-        c.id === contact.id ? { ...c, unreadCount: 0 } : c
-      ));
-    }
-  };
+      setMessages(query.data || []);
 
-  const subscribeToMessages = () => {
-    if (!staffInfo) return;
+      if (query.data) {
+        const unreadIds = query.data
+          .filter(m => !m.is_read && m.receiver_id === myId && m.receiver_type === 'staff')
+          .map(m => m.id);
 
-    const channel = supabase
-      .channel('staff-messages-channel')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'messages',
-          filter: `company_id=eq.${staffInfo.company_id}`
-        },
-        (payload) => {
-          const newMsg = payload.new as Message;
-          console.log('Staff received message:', newMsg);
-          
-          // Check if this message involves me (either as sender or receiver)
-          const isForMe = (newMsg.receiver_id === staffInfo.id && newMsg.receiver_type === 'staff') ||
-                          (newMsg.sender_id === staffInfo.id && newMsg.sender_type === 'staff');
-          
-          if (!isForMe) return;
-
-          // Determine if message is for selected contact
-          const isForSelectedContact = selectedContact && (
-            (selectedContact.type === 'company' && (newMsg.sender_type === 'company' || newMsg.receiver_type === 'company')) ||
-            (selectedContact.type !== 'company' && (newMsg.sender_id === selectedContact.id || newMsg.receiver_id === selectedContact.id))
-          );
-
-          if (isForSelectedContact) {
-            setMessages(prev => {
-              if (prev.some(m => m.id === newMsg.id)) return prev;
-              return [...prev, newMsg];
-            });
-            
-            // Mark as read if it's from the other party
-            if (newMsg.receiver_id === staffInfo.id && newMsg.receiver_type === 'staff') {
-              supabase
-                .from('messages')
-                .update({ is_read: true, read_at: new Date().toISOString() })
-                .eq('id', newMsg.id);
-            }
-          } else if (newMsg.receiver_id === staffInfo.id && newMsg.receiver_type === 'staff') {
-            // Update unread count for other contacts
-            // For company messages, find the company contact
-            const contactId = newMsg.sender_type === 'company' 
-              ? contacts.find(c => c.type === 'company')?.id 
-              : newMsg.sender_id;
-            
-            if (contactId) {
-              setContacts(prev => prev.map(c => 
-                c.id === contactId ? { ...c, unreadCount: c.unreadCount + 1, lastMessage: newMsg.content, lastMessageTime: newMsg.created_at } : c
-              ));
-            }
-          }
+        if (unreadIds.length > 0) {
+          await supabase
+            .from('messages')
+            .update({ is_read: true, read_at: new Date().toISOString() })
+            .in('id', unreadIds);
         }
-      )
-      .subscribe();
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  };
-
-  const handleSendMessage = async () => {
-    if (!newMessage.trim() || !selectedContact || !staffInfo || sendingMessage) return;
-
-    setSendingMessage(true);
-    try {
-      const message = {
-        company_id: staffInfo.company_id,
-        sender_id: staffInfo.id,
-        sender_type: 'staff',
-        receiver_id: selectedContact.id,
-        receiver_type: selectedContact.type,
-        content: newMessage.trim()
-      };
-
-      const { data, error } = await supabase
-        .from('messages')
-        .insert(message)
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      if (data) {
-        setMessages(prev => [...prev, data]);
-        setNewMessage("");
-        
-        // Update contact's last message
-        setContacts(prev => prev.map(c => 
-          c.id === selectedContact.id 
-            ? { ...c, lastMessage: data.content, lastMessageTime: data.created_at }
-            : c
+        setConversations(prev => prev.map(c =>
+          c.id === conversation.id ? { ...c, unreadCount: 0 } : c
         ));
       }
     } catch (error) {
-      console.error('Error sending message:', error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível enviar a mensagem",
-        variant: "destructive"
-      });
+      console.error('Error fetching messages:', error);
     } finally {
-      setSendingMessage(false);
+      setMessagesLoading(false);
     }
   };
 
-  const getInitials = (name: string) => {
-    return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
-  };
+  const handleSendMessage = async (content: string) => {
+    if (!staffInfo || !selectedConversation) return;
 
-  const formatMessageTime = (dateStr: string) => {
-    const date = new Date(dateStr);
-    if (isToday(date)) {
-      return format(date, 'HH:mm');
-    } else if (isYesterday(date)) {
-      return 'Ontem';
+    try {
+      const { error } = await supabase.from('messages').insert({
+        company_id: staffInfo.company_id,
+        content,
+        sender_id: staffInfo.id,
+        sender_type: 'staff',
+        receiver_id: selectedConversation.id,
+        receiver_type: selectedConversation.type
+      });
+
+      if (error) throw error;
+
+      await fetchMessages(selectedConversation);
+      await loadInitialData();
+    } catch (error) {
+      console.error('Error sending message:', error);
+      toast.error('Erro ao enviar mensagem');
     }
-    return format(date, 'dd/MM');
   };
-
-  const filteredContacts = contacts.filter(c =>
-    c.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  if (loading) {
-    return (
-      <div className="h-[calc(100vh-8rem)] md:h-[calc(100vh-10rem)]">
-        <Card className="h-full">
-          <div className="flex h-full">
-            <div className="w-full md:w-80 border-r p-4 space-y-4">
-              <Skeleton className="h-6 w-32" />
-              <Skeleton className="h-10 w-full" />
-              {[1, 2, 3, 4].map(i => (
-                <div key={i} className="flex items-center gap-3">
-                  <Skeleton className="h-12 w-12 rounded-full" />
-                  <div className="flex-1 space-y-2">
-                    <Skeleton className="h-4 w-24" />
-                    <Skeleton className="h-3 w-32" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </Card>
-      </div>
-    );
-  }
 
   return (
-    <div className="h-[calc(100vh-8rem)] md:h-[calc(100vh-10rem)]">
-      <Card className="h-full overflow-hidden">
-        <div className="flex h-full">
-          {/* Contacts List */}
-          <div className={`w-full md:w-80 border-r flex flex-col ${showMobileChat ? 'hidden md:flex' : 'flex'}`}>
-            <CardHeader className="border-b p-4 shrink-0">
-              <CardTitle className="text-lg">Mensagens</CardTitle>
-              <div className="relative mt-2">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  placeholder="Pesquisar conversas..."
-                  className="pl-10"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-            </CardHeader>
-            <ScrollArea className="flex-1">
-              <div className="p-2">
-                {filteredContacts.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <MessageCircle className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                    <p className="text-sm">Nenhum contacto encontrado</p>
-                  </div>
-                ) : (
-                  filteredContacts.map((contact) => (
-                    <button
-                      key={contact.id}
-                      onClick={() => {
-                        setSelectedContact(contact);
-                        setShowMobileChat(true);
-                      }}
-                      className={`w-full flex items-center gap-3 p-3 rounded-lg transition-colors text-left ${
-                        selectedContact?.id === contact.id
-                          ? "bg-primary/10"
-                          : "hover:bg-muted/50"
-                      }`}
-                    >
-                      <Avatar>
-                        {contact.avatar && <AvatarImage src={contact.avatar} />}
-                        <AvatarFallback className={`${contact.type === 'company' ? 'bg-blue-500/10 text-blue-600' : 'bg-primary/10 text-primary'}`}>
-                          {getInitials(contact.name)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between">
-                          <span className="font-medium truncate">{contact.name}</span>
-                          {contact.lastMessageTime && (
-                            <span className="text-xs text-muted-foreground">
-                              {formatMessageTime(contact.lastMessageTime)}
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <p className="text-sm text-muted-foreground truncate">
-                            {contact.lastMessage || 'Nenhuma mensagem'}
-                          </p>
-                          {contact.unreadCount > 0 && (
-                            <Badge className="ml-2 h-5 min-w-[20px] p-0 flex items-center justify-center">
-                              {contact.unreadCount}
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                    </button>
-                  ))
-                )}
-              </div>
-            </ScrollArea>
+    <div className="h-[calc(100vh-180px)]">
+      <Card className="h-full flex overflow-hidden">
+        {/* Sidebar */}
+        <div className="w-80 flex-shrink-0 flex flex-col">
+          <div className="p-4 border-b border-border flex items-center justify-between">
+            <h2 className="font-semibold flex items-center gap-2">
+              <MessageSquare className="h-5 w-5 text-primary" />
+              Mensagens
+            </h2>
           </div>
-
-          {/* Chat Area */}
-          <div className={`flex-1 flex flex-col ${!showMobileChat ? 'hidden md:flex' : 'flex'}`}>
-            {selectedContact ? (
-              <>
-                {/* Chat Header */}
-                <div className="border-b p-4 flex items-center gap-3 shrink-0">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="md:hidden"
-                    onClick={() => setShowMobileChat(false)}
-                  >
-                    <ArrowLeft className="h-4 w-4" />
-                  </Button>
-                  <Avatar>
-                    {selectedContact.avatar && <AvatarImage src={selectedContact.avatar} />}
-                    <AvatarFallback className={`${selectedContact.type === 'company' ? 'bg-blue-500/10 text-blue-600' : 'bg-primary/10 text-primary'}`}>
-                      {getInitials(selectedContact.name)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="font-medium">{selectedContact.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {selectedContact.type === 'company' ? 'Administração' : 'Aluno'}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Messages */}
-                <ScrollArea className="flex-1 p-4">
-                  <div className="space-y-4">
-                    {messages.length === 0 ? (
-                      <div className="text-center py-12 text-muted-foreground">
-                        <MessageCircle className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                        <p>Nenhuma mensagem ainda</p>
-                        <p className="text-sm">Envie a primeira mensagem!</p>
-                      </div>
-                    ) : (
-                      messages.map((message) => {
-                        const isMe = message.sender_type === 'staff' && message.sender_id === staffInfo?.id;
-                        return (
-                          <div
-                            key={message.id}
-                            className={`flex ${isMe ? "justify-end" : "justify-start"}`}
-                          >
-                            <div
-                              className={`max-w-[80%] md:max-w-[60%] rounded-2xl px-4 py-2 ${
-                                isMe
-                                  ? "bg-primary text-primary-foreground rounded-br-md"
-                                  : "bg-muted rounded-bl-md"
-                              }`}
-                            >
-                              <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                              <p
-                                className={`text-xs mt-1 ${
-                                  isMe ? "text-primary-foreground/70" : "text-muted-foreground"
-                                }`}
-                              >
-                                {format(new Date(message.created_at), 'HH:mm')}
-                              </p>
-                            </div>
-                          </div>
-                        );
-                      })
-                    )}
-                    <div ref={messagesEndRef} />
-                  </div>
-                </ScrollArea>
-
-                {/* Message Input */}
-                <div className="border-t p-4 shrink-0">
-                  <div className="flex items-center gap-2">
-                    <Input
-                      placeholder="Escrever mensagem..."
-                      value={newMessage}
-                      onChange={(e) => setNewMessage(e.target.value)}
-                      onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSendMessage()}
-                      className="flex-1"
-                      disabled={sendingMessage}
-                    />
-                    <Button 
-                      onClick={handleSendMessage} 
-                      size="icon"
-                      disabled={!newMessage.trim() || sendingMessage}
-                    >
-                      <Send className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              </>
-            ) : (
-              <div className="flex-1 flex items-center justify-center text-muted-foreground">
-                <div className="text-center">
-                  <MessageCircle className="h-16 w-16 mx-auto mb-4 opacity-50" />
-                  <p className="text-lg font-medium">Selecione uma conversa</p>
-                  <p className="text-sm">Escolha um contacto para iniciar uma conversa</p>
-                </div>
-              </div>
-            )}
+          <div className="flex-1 overflow-hidden">
+            <ConversationList
+              conversations={conversations}
+              selectedId={selectedConversation?.id || null}
+              onSelect={setSelectedConversation}
+              loading={loading}
+            />
           </div>
+        </div>
+
+        {/* Chat area */}
+        <div className="flex-1 border-l border-border">
+          {selectedConversation ? (
+            <ChatWindow
+              recipientId={selectedConversation.id}
+              recipientName={selectedConversation.name}
+              recipientType={selectedConversation.type}
+              messages={messages}
+              currentUserId={staffInfo?.id || ''}
+              currentUserType="staff"
+              onSendMessage={handleSendMessage}
+              loading={messagesLoading}
+            />
+          ) : (
+            <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+              <Users className="h-16 w-16 mb-4 opacity-30" />
+              <p className="text-lg">Selecione uma conversa</p>
+              <p className="text-sm">para ver as mensagens</p>
+            </div>
+          )}
         </div>
       </Card>
     </div>
