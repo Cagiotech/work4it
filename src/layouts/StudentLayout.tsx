@@ -7,7 +7,6 @@ import { DeveloperFooter } from "@/components/DeveloperFooter";
 import { useStudentAccessCheck } from "@/hooks/useStudentAccessCheck";
 import { TermsAcceptanceDialog } from "@/components/student/TermsAcceptanceDialog";
 import { PaymentReminderDialog } from "@/components/student/PaymentReminderDialog";
-import { LoadingScreen } from "@/components/LoadingScreen";
 import { supabase } from "@/integrations/supabase/client";
 
 interface OverdueSubscription {
@@ -32,6 +31,14 @@ export function StudentLayout() {
   const [showPaymentReminder, setShowPaymentReminder] = useState(false);
   const [overdueSubscriptions, setOverdueSubscriptions] = useState<OverdueSubscription[]>([]);
   const [companyMbwayPhone, setCompanyMbwayPhone] = useState<string | null>(null);
+  const [minTimeElapsed, setMinTimeElapsed] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setMinTimeElapsed(true);
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Check for overdue payments
   useEffect(() => {
@@ -71,8 +78,27 @@ export function StudentLayout() {
     return () => clearInterval(interval);
   }, [student?.id, company?.id]);
 
-  if (checking) {
-    return <LoadingScreen isLoading={true} minDuration={2000}><div /></LoadingScreen>;
+  // Show loading screen until both checking is done AND min time has elapsed
+  if (checking || !minTimeElapsed) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background">
+        <div className="text-center space-y-6">
+          <div className="relative">
+            <div className="w-20 h-20 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto animate-pulse">
+              <div className="w-12 h-12 rounded-xl bg-primary/20" />
+            </div>
+          </div>
+          <div className="flex flex-col items-center gap-4">
+            <div className="flex gap-1.5">
+              <div className="w-2.5 h-2.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: '0ms' }} />
+              <div className="w-2.5 h-2.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: '150ms' }} />
+              <div className="w-2.5 h-2.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: '300ms' }} />
+            </div>
+            <p className="text-muted-foreground text-sm font-medium">A carregar...</p>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   const showTermsDialog = mustAcceptTerms && !termsAccepted && student && company;
