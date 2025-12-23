@@ -107,6 +107,114 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_settings: {
+        Row: {
+          allow_registration: boolean | null
+          api_enabled: boolean | null
+          bank_name: string | null
+          billing_address: string | null
+          billing_email: string | null
+          billing_name: string | null
+          created_at: string
+          default_language: string | null
+          from_email: string | null
+          from_name: string | null
+          iban: string | null
+          id: string
+          lockout_attempts: number | null
+          lockout_enabled: boolean | null
+          maintenance_mode: boolean | null
+          mbway_phone: string | null
+          nif: string | null
+          notify_new_companies: boolean | null
+          notify_new_suggestions: boolean | null
+          notify_pending_payments: boolean | null
+          notify_system_errors: boolean | null
+          platform_description: string | null
+          platform_name: string | null
+          platform_url: string | null
+          rate_limit: number | null
+          require_2fa: boolean | null
+          session_expiry: string | null
+          smtp_host: string | null
+          smtp_password: string | null
+          smtp_port: number | null
+          smtp_user: string | null
+          timezone: string | null
+          updated_at: string
+        }
+        Insert: {
+          allow_registration?: boolean | null
+          api_enabled?: boolean | null
+          bank_name?: string | null
+          billing_address?: string | null
+          billing_email?: string | null
+          billing_name?: string | null
+          created_at?: string
+          default_language?: string | null
+          from_email?: string | null
+          from_name?: string | null
+          iban?: string | null
+          id?: string
+          lockout_attempts?: number | null
+          lockout_enabled?: boolean | null
+          maintenance_mode?: boolean | null
+          mbway_phone?: string | null
+          nif?: string | null
+          notify_new_companies?: boolean | null
+          notify_new_suggestions?: boolean | null
+          notify_pending_payments?: boolean | null
+          notify_system_errors?: boolean | null
+          platform_description?: string | null
+          platform_name?: string | null
+          platform_url?: string | null
+          rate_limit?: number | null
+          require_2fa?: boolean | null
+          session_expiry?: string | null
+          smtp_host?: string | null
+          smtp_password?: string | null
+          smtp_port?: number | null
+          smtp_user?: string | null
+          timezone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          allow_registration?: boolean | null
+          api_enabled?: boolean | null
+          bank_name?: string | null
+          billing_address?: string | null
+          billing_email?: string | null
+          billing_name?: string | null
+          created_at?: string
+          default_language?: string | null
+          from_email?: string | null
+          from_name?: string | null
+          iban?: string | null
+          id?: string
+          lockout_attempts?: number | null
+          lockout_enabled?: boolean | null
+          maintenance_mode?: boolean | null
+          mbway_phone?: string | null
+          nif?: string | null
+          notify_new_companies?: boolean | null
+          notify_new_suggestions?: boolean | null
+          notify_pending_payments?: boolean | null
+          notify_system_errors?: boolean | null
+          platform_description?: string | null
+          platform_name?: string | null
+          platform_url?: string | null
+          rate_limit?: number | null
+          require_2fa?: boolean | null
+          session_expiry?: string | null
+          smtp_host?: string | null
+          smtp_password?: string | null
+          smtp_port?: number | null
+          smtp_user?: string | null
+          timezone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       class_enrollments: {
         Row: {
           attended_at: string | null
