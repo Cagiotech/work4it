@@ -4,6 +4,7 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { StudentSidebar } from "@/components/student/StudentSidebar";
 import { StudentHeader } from "@/components/student/StudentHeader";
 import { DeveloperFooter } from "@/components/DeveloperFooter";
+import { AdminBanner } from "@/components/shared/AdminBanner";
 import { useStudentAccessCheck } from "@/hooks/useStudentAccessCheck";
 import { TermsAcceptanceDialog } from "@/components/student/TermsAcceptanceDialog";
 import { PaymentReminderDialog } from "@/components/student/PaymentReminderDialog";
@@ -146,6 +147,7 @@ export function StudentLayout() {
         <div className="flex-1 flex flex-col min-w-0 bg-muted/30">
           <StudentHeader />
           <main className="flex-1 p-4 md:p-6 overflow-auto">
+            <AdminBanner audience="student" />
             <Outlet />
           </main>
           <DeveloperFooter />

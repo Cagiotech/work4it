@@ -4,6 +4,7 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { CompanySidebar } from "@/components/company/CompanySidebar";
 import { CompanyHeader } from "@/components/company/CompanyHeader";
 import { DeveloperFooter } from "@/components/DeveloperFooter";
+import { AdminBanner } from "@/components/shared/AdminBanner";
 import { useAuth } from "@/hooks/useAuth";
 import { ShieldX } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -91,6 +92,7 @@ export function CompanyLayout() {
         <div className="flex-1 flex flex-col min-w-0 bg-muted/30">
           <CompanyHeader />
           <main className="flex-1 p-4 md:p-6 overflow-auto">
+            <AdminBanner audience="company" />
             <Outlet />
           </main>
           <DeveloperFooter />

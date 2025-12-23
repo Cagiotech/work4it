@@ -4,6 +4,7 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { PersonalSidebar } from "@/components/personal/PersonalSidebar";
 import { PersonalHeader } from "@/components/personal/PersonalHeader";
 import { DeveloperFooter } from "@/components/DeveloperFooter";
+import { AdminBanner } from "@/components/shared/AdminBanner";
 import { useAuth } from "@/hooks/useAuth";
 import { useStaffAccessCheck } from "@/hooks/useStaffAccessCheck";
 import { ShieldX } from "lucide-react";
@@ -83,6 +84,7 @@ export default function PersonalLayout() {
         <div className="flex-1 flex flex-col min-w-0 bg-muted/30">
           <PersonalHeader />
           <main className="flex-1 p-4 md:p-6 overflow-auto">
+            <AdminBanner audience="staff" />
             <Outlet />
           </main>
           <DeveloperFooter />
