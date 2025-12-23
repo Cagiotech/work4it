@@ -46,7 +46,7 @@ export function StudentHeader() {
   }, []);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    await supabase.auth.signOut({ scope: 'local' });
     navigate('/login');
   };
 

@@ -116,7 +116,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    // Use local sign out to always clear client session even if the server session was already revoked.
+    // This prevents "Session not found" loops and ensures the app doesn't auto-login again.
+    try {
+      await supabase.auth.signOut({ scope: 'local' });
+    } catch {
+      // Ignore signOut errors; we still clear local state.
+    }
     setUser(null);
     setSession(null);
     setProfile(null);

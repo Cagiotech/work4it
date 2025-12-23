@@ -21,7 +21,7 @@ export function AdminHeader() {
   const navigate = useNavigate();
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    await supabase.auth.signOut({ scope: 'local' });
     navigate('/login');
   };
 

@@ -200,7 +200,7 @@ const Onboarding = () => {
               size="sm"
               className="text-muted-foreground hover:text-foreground"
               onClick={async () => {
-                await supabase.auth.signOut();
+                await supabase.auth.signOut({ scope: 'local' });
                 navigate('/login');
               }}
             >
