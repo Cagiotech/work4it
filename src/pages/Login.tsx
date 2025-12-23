@@ -41,6 +41,13 @@ const Login = () => {
   }, []);
 
   const redirectBasedOnRole = async (userId: string) => {
+    // Check if user is admin first (highest priority)
+    const { data: isAdmin } = await supabase.rpc('is_admin');
+    if (isAdmin) {
+      navigate('/admin');
+      return;
+    }
+
     // Check if user is a student
     const { data: student } = await supabase
       .from('students')
