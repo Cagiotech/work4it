@@ -2,29 +2,39 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Users, Building2, TrendingUp, Activity, AlertTriangle, CheckCircle, CreditCard, Calendar } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-
-const stats = [
-  { title: "Total Empresas", value: "48", icon: Building2, change: "+3 este mês", trend: "up" },
-  { title: "Total Utilizadores", value: "1,247", icon: Users, change: "+124 este mês", trend: "up" },
-  { title: "Receita Mensal", value: "€24,580", icon: CreditCard, change: "+12%", trend: "up" },
-  { title: "Uptime Sistema", value: "99.9%", icon: Activity, change: "Último mês", trend: "neutral" },
-];
-
-const recentCompanies = [
-  { name: "Gym Fitness Pro", plan: "Premium", users: 156, status: "Ativo", date: "Há 2 dias" },
-  { name: "CrossFit Lisboa", plan: "Básico", users: 45, status: "Ativo", date: "Há 5 dias" },
-  { name: "Yoga Studio Zen", plan: "Intermédio", users: 78, status: "Pendente", date: "Há 1 semana" },
-  { name: "Boxing Academy", plan: "Premium", users: 92, status: "Ativo", date: "Há 2 semanas" },
-];
-
-const alerts = [
-  { type: "warning", message: "3 empresas com pagamento pendente", time: "Há 2h" },
-  { type: "info", message: "Nova sugestão no roadmap", time: "Há 4h" },
-  { type: "success", message: "Backup automático concluído", time: "Há 6h" },
-  { type: "warning", message: "Pico de utilização detectado", time: "Há 8h" },
-];
+import { useAdminStats, useAdminCompanies, useFeatureSuggestions } from "@/hooks/useAdminData";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useNavigate } from "react-router-dom";
+import { formatCurrency } from "@/lib/formatters";
 
 export default function AdminDashboard() {
+  const navigate = useNavigate();
+  const { data: stats, isLoading: statsLoading } = useAdminStats();
+  const { data: companies, isLoading: companiesLoading } = useAdminCompanies();
+  const { data: suggestions } = useFeatureSuggestions();
+
+  const pendingSuggestions = suggestions?.filter((s) => s.status === "pending").length || 0;
+  const recentCompanies = companies?.slice(0, 4) || [];
+
+  if (statsLoading) {
+    return (
+      <div className="space-y-4 md:space-y-6">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Painel de Administração</h1>
+          <p className="text-muted-foreground text-sm md:text-base">Visão geral do sistema</p>
+        </div>
+        <div className="grid gap-3 md:gap-4 grid-cols-2 lg:grid-cols-4">
+          {[1, 2, 3, 4].map((i) => (
+            <Card key={i}>
+              <CardHeader className="pb-2"><Skeleton className="h-4 w-24" /></CardHeader>
+              <CardContent><Skeleton className="h-8 w-16" /></CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4 md:space-y-6">
       <div>
@@ -34,22 +44,49 @@ export default function AdminDashboard() {
 
       {/* Stats Grid */}
       <div className="grid gap-3 md:gap-4 grid-cols-2 lg:grid-cols-4">
-        {stats.map((stat) => (
-          <Card key={stat.title} className="hover:shadow-md transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">
-                {stat.title}
-              </CardTitle>
-              <stat.icon className="h-4 w-4 text-primary" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-xl md:text-2xl font-bold">{stat.value}</div>
-              <p className={`text-xs ${stat.trend === 'up' ? 'text-green-600' : 'text-muted-foreground'}`}>
-                {stat.change}
-              </p>
-            </CardContent>
-          </Card>
-        ))}
+        <Card className="hover:shadow-md transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">Total Empresas</CardTitle>
+            <Building2 className="h-4 w-4 text-primary" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-xl md:text-2xl font-bold">{stats?.totalCompanies || 0}</div>
+            <p className="text-xs text-green-600">+{stats?.newCompaniesThisMonth || 0} este mês</p>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-md transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">Total Alunos</CardTitle>
+            <Users className="h-4 w-4 text-primary" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-xl md:text-2xl font-bold">{stats?.totalStudents || 0}</div>
+            <p className="text-xs text-green-600">+{stats?.newStudentsThisMonth || 0} este mês</p>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-md transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">Receita Mensal</CardTitle>
+            <CreditCard className="h-4 w-4 text-primary" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-xl md:text-2xl font-bold">{formatCurrency(stats?.monthlyRevenue || 0)}</div>
+            <p className="text-xs text-muted-foreground">{stats?.activeSubscriptions || 0} subscrições ativas</p>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-md transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">Total Staff</CardTitle>
+            <Activity className="h-4 w-4 text-primary" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-xl md:text-2xl font-bold">{stats?.totalStaff || 0}</div>
+            <p className="text-xs text-muted-foreground">{stats?.activeStaff || 0} ativos</p>
+          </CardContent>
+        </Card>
       </div>
 
       <div className="grid gap-4 md:gap-6 lg:grid-cols-2">
@@ -63,35 +100,44 @@ export default function AdminDashboard() {
             <CardDescription>Últimas empresas registadas</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {recentCompanies.map((company, index) => (
-                <div
-                  key={index}
-                  className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
-                >
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium truncate">{company.name}</p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Badge variant="outline" className="text-xs">{company.plan}</Badge>
-                      <span className="text-xs text-muted-foreground">{company.users} utilizadores</span>
+            {companiesLoading ? (
+              <div className="space-y-4">
+                {[1, 2, 3].map((i) => <Skeleton key={i} className="h-16 w-full" />)}
+              </div>
+            ) : recentCompanies.length === 0 ? (
+              <p className="text-muted-foreground text-sm text-center py-8">Nenhuma empresa registada</p>
+            ) : (
+              <div className="space-y-4">
+                {recentCompanies.map((company: any) => (
+                  <div
+                    key={company.id}
+                    className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium truncate">{company.name || "Sem nome"}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Badge variant="outline" className="text-xs">
+                          {company.subscription?.name || "Sem plano"}
+                        </Badge>
+                        <span className="text-xs text-muted-foreground">{company.studentCount} alunos</span>
+                      </div>
+                    </div>
+                    <div className="text-right ml-2">
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(company.created_at).toLocaleDateString("pt-PT")}
+                      </p>
                     </div>
                   </div>
-                  <div className="text-right ml-2">
-                    <Badge variant={company.status === "Ativo" ? "default" : "secondary"} className="text-xs">
-                      {company.status}
-                    </Badge>
-                    <p className="text-xs text-muted-foreground mt-1">{company.date}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <Button variant="outline" className="w-full mt-4">
+                ))}
+              </div>
+            )}
+            <Button variant="outline" className="w-full mt-4" onClick={() => navigate("/admin/companies")}>
               Ver Todas as Empresas
             </Button>
           </CardContent>
         </Card>
 
-        {/* System Alerts */}
+        {/* Alerts */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -102,30 +148,24 @@ export default function AdminDashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {alerts.map((alert, index) => (
-                <div
-                  key={index}
-                  className={`flex items-start gap-3 p-3 rounded-lg ${
-                    alert.type === "warning"
-                      ? "bg-yellow-500/10 border border-yellow-500/20"
-                      : alert.type === "success"
-                      ? "bg-green-500/10 border border-green-500/20"
-                      : "bg-blue-500/10 border border-blue-500/20"
-                  }`}
-                >
-                  {alert.type === "warning" ? (
-                    <AlertTriangle className="h-4 w-4 text-yellow-600 mt-0.5" />
-                  ) : alert.type === "success" ? (
-                    <CheckCircle className="h-4 w-4 text-green-600 mt-0.5" />
-                  ) : (
-                    <Activity className="h-4 w-4 text-blue-600 mt-0.5" />
-                  )}
+              {pendingSuggestions > 0 && (
+                <div className="flex items-start gap-3 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
+                  <AlertTriangle className="h-4 w-4 text-yellow-600 mt-0.5" />
                   <div className="flex-1">
-                    <p className="text-sm">{alert.message}</p>
-                    <p className="text-xs text-muted-foreground mt-1">{alert.time}</p>
+                    <p className="text-sm">{pendingSuggestions} sugestões pendentes de revisão</p>
+                    <Button variant="link" className="h-auto p-0 text-xs" onClick={() => navigate("/admin/roadmap")}>
+                      Ver sugestões
+                    </Button>
                   </div>
                 </div>
-              ))}
+              )}
+              <div className="flex items-start gap-3 p-3 rounded-lg bg-green-500/10 border border-green-500/20">
+                <CheckCircle className="h-4 w-4 text-green-600 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-sm">Sistema operacional</p>
+                  <p className="text-xs text-muted-foreground">Todos os serviços a funcionar</p>
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -139,21 +179,21 @@ export default function AdminDashboard() {
         </CardHeader>
         <CardContent>
           <div className="grid gap-3 grid-cols-2 md:grid-cols-4">
-            <Button variant="outline" className="h-auto py-4 flex-col gap-2">
+            <Button variant="outline" className="h-auto py-4 flex-col gap-2" onClick={() => navigate("/admin/companies")}>
               <Building2 className="h-5 w-5" />
-              <span className="text-xs">Nova Empresa</span>
+              <span className="text-xs">Ver Empresas</span>
             </Button>
-            <Button variant="outline" className="h-auto py-4 flex-col gap-2">
+            <Button variant="outline" className="h-auto py-4 flex-col gap-2" onClick={() => navigate("/admin/users")}>
               <Users className="h-5 w-5" />
               <span className="text-xs">Gerir Utilizadores</span>
             </Button>
-            <Button variant="outline" className="h-auto py-4 flex-col gap-2">
+            <Button variant="outline" className="h-auto py-4 flex-col gap-2" onClick={() => navigate("/admin/events")}>
               <Calendar className="h-5 w-5" />
-              <span className="text-xs">Criar Evento</span>
+              <span className="text-xs">Criar Banner</span>
             </Button>
-            <Button variant="outline" className="h-auto py-4 flex-col gap-2">
+            <Button variant="outline" className="h-auto py-4 flex-col gap-2" onClick={() => navigate("/admin/roadmap")}>
               <TrendingUp className="h-5 w-5" />
-              <span className="text-xs">Ver Relatórios</span>
+              <span className="text-xs">Ver Roadmap</span>
             </Button>
           </div>
         </CardContent>
