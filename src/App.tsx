@@ -56,10 +56,8 @@ import PersonalSettings from "./pages/personal/Settings";
 // Admin Layout & Pages
 import AdminLayout from "./layouts/AdminLayout";
 import AdminDashboard from "./pages/admin/Dashboard";
-import AdminUsers from "./pages/admin/Users";
 import AdminCompanies from "./pages/admin/Companies";
 import AdminPlans from "./pages/admin/Plans";
-import AdminPermissions from "./pages/admin/Permissions";
 import AdminReports from "./pages/admin/Reports";
 import AdminMonitoring from "./pages/admin/Monitoring";
 import AdminEvents from "./pages/admin/Events";
@@ -129,10 +127,8 @@ const App = () => (
               {/* Admin Dashboard Routes */}
               <Route path="/admin" element={<AdminLayout />}>
                 <Route index element={<AdminDashboard />} />
-                <Route path="users" element={<AdminUsers />} />
                 <Route path="companies" element={<AdminCompanies />} />
                 <Route path="plans" element={<AdminPlans />} />
-                <Route path="permissions" element={<AdminPermissions />} />
                 <Route path="reports" element={<AdminReports />} />
                 <Route path="monitoring" element={<AdminMonitoring />} />
                 <Route path="events" element={<AdminEvents />} />

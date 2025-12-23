@@ -1,9 +1,7 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
-  Users,
   Building2,
-  Shield,
   Settings,
   BarChart3,
   Activity,
@@ -31,10 +29,8 @@ import logoLight from "@/assets/logo-light.png";
 
 const menuItems = [
   { title: "Dashboard", url: "/admin", icon: LayoutDashboard },
-  { title: "Utilizadores", url: "/admin/users", icon: Users },
   { title: "Empresas", url: "/admin/companies", icon: Building2 },
   { title: "Planos", url: "/admin/plans", icon: CreditCard },
-  { title: "Permissões", url: "/admin/permissions", icon: Shield },
   { title: "Relatórios", url: "/admin/reports", icon: BarChart3 },
   { title: "Monitorização", url: "/admin/monitoring", icon: Activity },
   { title: "Eventos/Anúncios", url: "/admin/events", icon: Megaphone },
