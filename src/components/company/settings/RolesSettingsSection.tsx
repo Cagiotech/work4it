@@ -35,8 +35,8 @@ interface Role {
   name: string;
   description: string | null;
   color: string | null;
-  is_admin: boolean;
-  is_default: boolean;
+  is_admin: boolean | null;
+  is_default: boolean | null;
   company_id: string;
 }
 
@@ -91,7 +91,7 @@ export function RolesSettingsSection() {
     setIsLoading(true);
     try {
       const [rolesRes, modulesRes, permissionsRes] = await Promise.all([
-        supabase.from('roles').select('*').eq('company_id', profile.company_id).order('name'),
+        supabase.from('roles').select('id, name, description, color, is_admin, is_default, company_id').eq('company_id', profile.company_id).order('name'),
         supabase.from('modules').select('*').order('sort_order'),
         supabase.from('role_permissions').select('*')
       ]);
@@ -100,7 +100,7 @@ export function RolesSettingsSection() {
       if (modulesRes.error) throw modulesRes.error;
       if (permissionsRes.error) throw permissionsRes.error;
       
-      setRoles(rolesRes.data || []);
+      setRoles((rolesRes.data || []) as Role[]);
       setModules(modulesRes.data || []);
       setPermissions(permissionsRes.data || []);
     } catch (error) {
