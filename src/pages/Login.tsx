@@ -16,6 +16,7 @@ const Login = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [checkingSession, setCheckingSession] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -25,14 +26,21 @@ const Login = () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
         redirectBasedOnRole(session.user.id);
+      } else {
+        setCheckingSession(false);
       }
     };
     checkUser();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
-        if (session?.user) {
+        // Only redirect on SIGNED_IN event, not on initial state
+        if (event === 'SIGNED_IN' && session?.user) {
           redirectBasedOnRole(session.user.id);
+        }
+        // On sign out, just ensure we stay on login
+        if (event === 'SIGNED_OUT') {
+          setCheckingSession(false);
         }
       }
     );
@@ -139,6 +147,19 @@ const Login = () => {
       setLoading(false);
     }
   };
+
+  if (checkingSession) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4">
+          <svg className="animate-spin h-8 w-8 text-primary" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+          </svg>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex">
