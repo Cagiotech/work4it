@@ -35,6 +35,7 @@ export default function AdminMonitoring() {
     return () => clearInterval(interval);
   }, []);
 
+
   // Fetch database stats
   const { data: dbStats, isLoading, refetch } = useQuery({
     queryKey: ['admin-db-stats'],
@@ -136,6 +137,27 @@ export default function AdminMonitoring() {
     },
     refetchInterval: 60000,
   });
+
+  // Real-time updates for all main tables
+  useEffect(() => {
+    const channel = supabase
+      .channel('admin-monitoring-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'companies' }, () => refetch())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'students' }, () => refetch())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'staff' }, () => refetch())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, () => refetch())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'financial_transactions' }, () => refetch())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'classes' }, () => refetch())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'events' }, () => refetch())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'company_subscriptions' }, () => refetch())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'class_schedules' }, () => refetch())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'class_enrollments' }, () => refetch())
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [refetch]);
 
   // Simulated server metrics (in production these would come from monitoring services)
   const serverMetrics = {
