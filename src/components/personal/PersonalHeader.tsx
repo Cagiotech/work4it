@@ -1,4 +1,5 @@
-import { Bell, Search, User, Menu } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Bell, Search, User, Menu, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -14,9 +15,45 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+
+interface StaffInfo {
+  full_name: string;
+  email: string;
+}
 
 export function PersonalHeader() {
   const navigate = useNavigate();
+  const [staff, setStaff] = useState<StaffInfo | null>(null);
+
+  useEffect(() => {
+    const fetchStaffInfo = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data } = await supabase
+        .from('staff')
+        .select('full_name, email')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (data) {
+        setStaff(data);
+      }
+    };
+
+    fetchStaffInfo();
+  }, []);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate('/login');
+  };
+
+  const getInitials = (name: string | null) => {
+    if (!name) return 'PT';
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  };
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -50,16 +87,17 @@ export function PersonalHeader() {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-9 w-9 rounded-full">
                 <Avatar className="h-9 w-9">
-                  <AvatarImage src="/placeholder.svg" alt="Personal" />
-                  <AvatarFallback className="bg-primary/10 text-primary">PT</AvatarFallback>
+                  <AvatarFallback className="bg-primary/10 text-primary">
+                    {getInitials(staff?.full_name)}
+                  </AvatarFallback>
                 </Avatar>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-56" align="end" forceMount>
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium">João Silva</p>
-                  <p className="text-xs text-muted-foreground">personal@cagiotech.com</p>
+                  <p className="text-sm font-medium">{staff?.full_name || 'Personal Trainer'}</p>
+                  <p className="text-xs text-muted-foreground">{staff?.email || ''}</p>
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
@@ -68,7 +106,8 @@ export function PersonalHeader() {
                 <span>Meu Perfil</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => navigate("/login")}>
+              <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">
+                <LogOut className="mr-2 h-4 w-4" />
                 <span>Terminar Sessão</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
