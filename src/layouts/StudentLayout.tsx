@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Outlet } from "react-router-dom";
+import { Outlet, useNavigate } from "react-router-dom";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { StudentSidebar } from "@/components/student/StudentSidebar";
 import { StudentHeader } from "@/components/student/StudentHeader";
@@ -8,6 +8,9 @@ import { useStudentAccessCheck } from "@/hooks/useStudentAccessCheck";
 import { TermsAcceptanceDialog } from "@/components/student/TermsAcceptanceDialog";
 import { PaymentReminderDialog } from "@/components/student/PaymentReminderDialog";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { ShieldX } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface OverdueSubscription {
   id: string;
@@ -20,6 +23,8 @@ interface OverdueSubscription {
 }
 
 export function StudentLayout() {
+  const { user, loading: authLoading } = useAuth();
+  const navigate = useNavigate();
   const { 
     checking, 
     mustAcceptTerms, 
@@ -39,6 +44,13 @@ export function StudentLayout() {
     }, 2000);
     return () => clearTimeout(timer);
   }, []);
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate('/login');
+    }
+  }, [authLoading, user, navigate]);
 
   // Check for overdue payments
   useEffect(() => {
@@ -78,8 +90,10 @@ export function StudentLayout() {
     return () => clearInterval(interval);
   }, [student?.id, company?.id]);
 
+  const loading = authLoading || checking;
+
   // Show loading screen until both checking is done AND min time has elapsed
-  if (checking || !minTimeElapsed) {
+  if (loading || !minTimeElapsed) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background">
         <div className="text-center space-y-6">
@@ -96,6 +110,28 @@ export function StudentLayout() {
             </div>
             <p className="text-muted-foreground text-sm font-medium">A carregar...</p>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show access denied if not a student
+  if (!student) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background">
+        <div className="text-center space-y-6 max-w-md px-4">
+          <div className="w-20 h-20 rounded-2xl bg-destructive/10 flex items-center justify-center mx-auto">
+            <ShieldX className="w-10 h-10 text-destructive" />
+          </div>
+          <div className="space-y-2">
+            <h1 className="text-2xl font-bold text-foreground">Acesso Negado</h1>
+            <p className="text-muted-foreground">
+              Não tem permissão para aceder a esta área. Esta secção é restrita a alunos.
+            </p>
+          </div>
+          <Button onClick={() => navigate('/')} variant="outline">
+            Voltar à página inicial
+          </Button>
         </div>
       </div>
     );

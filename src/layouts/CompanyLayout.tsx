@@ -1,14 +1,16 @@
 import { useState, useEffect } from "react";
-import { Outlet } from "react-router-dom";
+import { Outlet, useNavigate } from "react-router-dom";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { CompanySidebar } from "@/components/company/CompanySidebar";
 import { CompanyHeader } from "@/components/company/CompanyHeader";
 import { DeveloperFooter } from "@/components/DeveloperFooter";
-import { RequireAuth, useAuth } from "@/hooks/useAuth";
-import { LoadingScreen } from "@/components/LoadingScreen";
+import { useAuth } from "@/hooks/useAuth";
+import { ShieldX } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export function CompanyLayout() {
-  const { loading } = useAuth();
+  const { user, profile, loading: authLoading } = useAuth();
+  const navigate = useNavigate();
   const [minTimeElapsed, setMinTimeElapsed] = useState(false);
 
   useEffect(() => {
@@ -18,8 +20,22 @@ export function CompanyLayout() {
     return () => clearTimeout(timer);
   }, []);
 
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate('/login');
+    }
+  }, [authLoading, user, navigate]);
+
+  // Redirect to onboarding if not completed
+  useEffect(() => {
+    if (!authLoading && user && profile && !profile.onboarding_completed) {
+      navigate('/onboarding');
+    }
+  }, [authLoading, user, profile, navigate]);
+
   // Show loading screen until both auth is loaded AND min time has elapsed
-  if (loading || !minTimeElapsed) {
+  if (authLoading || !minTimeElapsed) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background">
         <div className="text-center space-y-6">
@@ -40,21 +56,46 @@ export function CompanyLayout() {
       </div>
     );
   }
+
+  // Check if user has completed onboarding and has a company
+  if (!user || !profile?.onboarding_completed) {
+    return null;
+  }
+
+  // Show access denied if not a company owner (no company_id)
+  if (!profile?.company_id) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background">
+        <div className="text-center space-y-6 max-w-md px-4">
+          <div className="w-20 h-20 rounded-2xl bg-destructive/10 flex items-center justify-center mx-auto">
+            <ShieldX className="w-10 h-10 text-destructive" />
+          </div>
+          <div className="space-y-2">
+            <h1 className="text-2xl font-bold text-foreground">Acesso Negado</h1>
+            <p className="text-muted-foreground">
+              Não tem permissão para aceder a esta área. Esta secção é restrita a proprietários de empresas.
+            </p>
+          </div>
+          <Button onClick={() => navigate('/')} variant="outline">
+            Voltar à página inicial
+          </Button>
+        </div>
+      </div>
+    );
+  }
   
   return (
-    <RequireAuth>
-      <SidebarProvider>
-        <div className="min-h-screen flex w-full">
-          <CompanySidebar />
-          <div className="flex-1 flex flex-col min-w-0 bg-muted/30">
-            <CompanyHeader />
-            <main className="flex-1 p-4 md:p-6 overflow-auto">
-              <Outlet />
-            </main>
-            <DeveloperFooter />
-          </div>
+    <SidebarProvider>
+      <div className="min-h-screen flex w-full">
+        <CompanySidebar />
+        <div className="flex-1 flex flex-col min-w-0 bg-muted/30">
+          <CompanyHeader />
+          <main className="flex-1 p-4 md:p-6 overflow-auto">
+            <Outlet />
+          </main>
+          <DeveloperFooter />
         </div>
-      </SidebarProvider>
-    </RequireAuth>
+      </div>
+    </SidebarProvider>
   );
 }
