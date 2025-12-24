@@ -229,6 +229,30 @@ export function ImportStudentsDialog({
     }
   };
 
+  const createAccountForStudent = async (studentId: string, email: string, fullName: string) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('create-student-account', {
+        body: {
+          email,
+          fullName,
+          recordId: studentId,
+          recordType: 'student'
+        }
+      });
+
+      if (error) {
+        console.error(`Error creating account for ${email}:`, error);
+        return false;
+      }
+
+      console.log(`Account created for ${email}:`, data);
+      return true;
+    } catch (err) {
+      console.error(`Error creating account for ${email}:`, err);
+      return false;
+    }
+  };
+
   const executeImport = async (students: ParsedStudent[], duplicatesToUpdate: DuplicateInfo[]) => {
     setIsLoading(true);
     try {
@@ -260,25 +284,44 @@ export function ImportStudentsDialog({
         }
       }
 
-      // Insert new students
+      // Insert new students and get their IDs
+      let insertedStudents: { id: string; email: string | null; full_name: string }[] = [];
       if (studentsToInsert.length > 0) {
-        const { error } = await supabase
+        const { data: newStudents, error } = await supabase
           .from('students')
-          .insert(studentsToInsert);
+          .insert(studentsToInsert)
+          .select('id, email, full_name');
 
         if (error) throw error;
+        insertedStudents = newStudents || [];
+      }
+
+      // Create accounts for students with email
+      let accountsCreated = 0;
+      const studentsWithEmail = insertedStudents.filter(s => s.email);
+      
+      for (const student of studentsWithEmail) {
+        const success = await createAccountForStudent(student.id, student.email!, student.full_name);
+        if (success) accountsCreated++;
       }
 
       const updatedCount = overwriteDuplicates ? duplicatesToUpdate.length : 0;
-      const insertedCount = studentsToInsert.length;
+      const insertedCount = insertedStudents.length;
       
+      let message = '';
       if (updatedCount > 0 && insertedCount > 0) {
-        toast.success(`${insertedCount} alunos criados e ${updatedCount} atualizados!`);
+        message = `${insertedCount} alunos criados e ${updatedCount} atualizados!`;
       } else if (updatedCount > 0) {
-        toast.success(`${updatedCount} alunos atualizados!`);
+        message = `${updatedCount} alunos atualizados!`;
       } else {
-        toast.success(`${insertedCount} alunos importados com sucesso!`);
+        message = `${insertedCount} alunos importados com sucesso!`;
       }
+
+      if (accountsCreated > 0) {
+        message += ` ${accountsCreated} contas de acesso criadas.`;
+      }
+
+      toast.success(message);
 
       onSuccess();
       handleClose();
@@ -324,9 +367,9 @@ export function ImportStudentsDialog({
               <div className="flex items-start gap-2">
                 <Key className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
                 <div>
-                  <p className="text-sm font-medium text-amber-700 dark:text-amber-400">Senha Temporária</p>
+                  <p className="text-sm font-medium text-amber-700 dark:text-amber-400">Conta de Acesso Automática</p>
                   <p className="text-xs text-amber-600 dark:text-amber-500">
-                    Alunos importados com email receberão a senha temporária <strong>12345678</strong> que deverá ser alterada no primeiro acesso.
+                    Alunos importados com email terão conta de acesso criada automaticamente com senha temporária segura que deverá ser alterada no primeiro acesso.
                   </p>
                 </div>
               </div>
