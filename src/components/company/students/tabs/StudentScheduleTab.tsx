@@ -142,25 +142,64 @@ export function StudentScheduleTab({ studentId }: StudentScheduleTabProps) {
 
   return (
     <div className="space-y-6">
+      {/* Summary Stats */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <Card className="bg-gradient-to-br from-green-500/10 to-green-500/5 border-green-500/20">
+          <CardContent className="p-4 text-center">
+            <p className="text-2xl font-bold text-green-600">
+              {sessions.filter(s => s.enrollment_status === 'attended').length}
+            </p>
+            <p className="text-xs text-muted-foreground">Realizadas</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-br from-blue-500/10 to-blue-500/5 border-blue-500/20">
+          <CardContent className="p-4 text-center">
+            <p className="text-2xl font-bold text-blue-600">{upcomingSessions.length}</p>
+            <p className="text-xs text-muted-foreground">Agendadas</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-br from-orange-500/10 to-orange-500/5 border-orange-500/20">
+          <CardContent className="p-4 text-center">
+            <p className="text-2xl font-bold text-orange-600">
+              {sessions.filter(s => s.enrollment_status === 'no_show').length}
+            </p>
+            <p className="text-xs text-muted-foreground">Faltas</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-br from-red-500/10 to-red-500/5 border-red-500/20">
+          <CardContent className="p-4 text-center">
+            <p className="text-2xl font-bold text-red-600">
+              {sessions.filter(s => s.enrollment_status === 'cancelled').length}
+            </p>
+            <p className="text-xs text-muted-foreground">Canceladas</p>
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Upcoming Classes */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-lg">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-base">
             <CalendarDays className="h-5 w-5 text-primary" />
             Próximas Aulas
           </CardTitle>
-          <CardDescription>Aulas agendadas para este aluno</CardDescription>
+          <CardDescription className="text-xs">Aulas agendadas para este aluno</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-0">
           {upcomingSessions.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              <Calendar className="h-12 w-12 mx-auto mb-3 opacity-50" />
-              <p>Nenhuma aula agendada</p>
-              <p className="text-sm mt-1">Inscreva o aluno em aulas através do módulo de Aulas</p>
+              <Calendar className="h-10 w-10 mx-auto mb-3 opacity-40" />
+              <p className="text-sm font-medium">Nenhuma aula agendada</p>
+              <p className="text-xs mt-1">Inscreva o aluno em aulas através do módulo de Aulas</p>
             </div>
           ) : (
-            <div className="space-y-3">
-              {upcomingSessions.map((session) => renderSessionCard(session, false))}
+            <div className="space-y-2">
+              {upcomingSessions.slice(0, 5).map((session) => renderSessionCard(session, false))}
+              {upcomingSessions.length > 5 && (
+                <p className="text-xs text-center text-muted-foreground pt-2">
+                  +{upcomingSessions.length - 5} aulas agendadas
+                </p>
+              )}
             </div>
           )}
         </CardContent>
@@ -168,61 +207,32 @@ export function StudentScheduleTab({ studentId }: StudentScheduleTabProps) {
 
       {/* Past Classes */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-lg">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-base">
             <CheckCircle className="h-5 w-5 text-green-600" />
             Histórico de Aulas
           </CardTitle>
-          <CardDescription>Aulas realizadas anteriormente</CardDescription>
+          <CardDescription className="text-xs">Aulas realizadas anteriormente</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-0">
           {pastSessions.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              <Clock className="h-12 w-12 mx-auto mb-3 opacity-50" />
-              <p>Nenhuma aula realizada</p>
-              <p className="text-sm mt-1">O histórico de aulas aparecerá aqui</p>
+              <Clock className="h-10 w-10 mx-auto mb-3 opacity-40" />
+              <p className="text-sm font-medium">Nenhuma aula realizada</p>
+              <p className="text-xs mt-1">O histórico de aulas aparecerá aqui</p>
             </div>
           ) : (
-            <div className="space-y-3">
-              {pastSessions.map((session) => renderSessionCard(session, true))}
+            <div className="space-y-2">
+              {pastSessions.slice(0, 10).map((session) => renderSessionCard(session, true))}
+              {pastSessions.length > 10 && (
+                <p className="text-xs text-center text-muted-foreground pt-2">
+                  +{pastSessions.length - 10} aulas no histórico
+                </p>
+              )}
             </div>
           )}
         </CardContent>
       </Card>
-
-      {/* Summary Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <Card className="p-4">
-          <div className="text-center">
-            <p className="text-2xl font-bold text-primary">
-              {sessions.filter(s => s.enrollment_status === 'attended').length}
-            </p>
-            <p className="text-xs text-muted-foreground">Aulas Realizadas</p>
-          </div>
-        </Card>
-        <Card className="p-4">
-          <div className="text-center">
-            <p className="text-2xl font-bold text-blue-600">{upcomingSessions.length}</p>
-            <p className="text-xs text-muted-foreground">Aulas Agendadas</p>
-          </div>
-        </Card>
-        <Card className="p-4">
-          <div className="text-center">
-            <p className="text-2xl font-bold text-orange-600">
-              {sessions.filter(s => s.enrollment_status === 'no_show').length}
-            </p>
-            <p className="text-xs text-muted-foreground">Faltas</p>
-          </div>
-        </Card>
-        <Card className="p-4">
-          <div className="text-center">
-            <p className="text-2xl font-bold text-red-600">
-              {sessions.filter(s => s.enrollment_status === 'cancelled').length}
-            </p>
-            <p className="text-xs text-muted-foreground">Canceladas</p>
-          </div>
-        </Card>
-      </div>
     </div>
   );
 }
