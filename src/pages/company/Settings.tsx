@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { User, Lock, Building, Save, LogOut, Link, FileText, Copy, Check, Trash2, AlertTriangle, LayoutGrid, UserCheck, Phone, Mail, MapPin, Globe, FileCheck, Users, CreditCard, Smartphone } from "lucide-react";
+import { User, Lock, Building, Save, LogOut, Link, FileText, Copy, Check, Trash2, AlertTriangle, LayoutGrid, UserCheck, Phone, Mail, MapPin, Globe, FileCheck, Users, CreditCard, Smartphone, KeyRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -17,6 +17,7 @@ import { useNavigate } from "react-router-dom";
 import { ClassesSettingsSection } from "@/components/company/settings/ClassesSettingsSection";
 import { RolesSettingsSection } from "@/components/company/settings/RolesSettingsSection";
 import { PlansSettingsSection } from "@/components/company/settings/PlansSettingsSection";
+import { PasswordResetRequestsSection } from "@/components/company/settings/PasswordResetRequestsSection";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -402,6 +403,10 @@ export default function Settings() {
           <TabsTrigger value="regulations">
             <FileText className="h-4 w-4 mr-2" />
             Regulamento
+          </TabsTrigger>
+          <TabsTrigger value="password-reset">
+            <KeyRound className="h-4 w-4 mr-2" />
+            Senhas
           </TabsTrigger>
           <TabsTrigger value="security">
             <Lock className="h-4 w-4 mr-2" />
@@ -873,6 +878,11 @@ export default function Settings() {
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+
+        {/* Password Reset Requests */}
+        <TabsContent value="password-reset">
+          <PasswordResetRequestsSection />
         </TabsContent>
       </Tabs>
 
