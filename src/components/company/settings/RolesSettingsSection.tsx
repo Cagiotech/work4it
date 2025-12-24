@@ -348,17 +348,17 @@ export function RolesSettingsSection() {
 
       {/* Role Dialog with Color and Permissions */}
       <Dialog open={showRoleDialog} onOpenChange={(open) => { setShowRoleDialog(open); if (!open) setSelectedRole(null); }}>
-        <DialogContent className="sm:max-w-[700px] max-h-[90vh] flex flex-col">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-[700px] max-h-[90vh] p-0 flex flex-col overflow-hidden">
+          <DialogHeader className="px-6 pt-6 pb-4 shrink-0">
             <DialogTitle>{selectedRole ? 'Editar Cargo' : 'Novo Cargo'}</DialogTitle>
             <DialogDescription>
               {selectedRole ? 'Atualize os dados e permissões do cargo.' : 'Crie um novo cargo com nome, cor e permissões.'}
             </DialogDescription>
           </DialogHeader>
           
-          <form onSubmit={handleSaveRole} className="flex flex-col flex-1 overflow-hidden">
-            <ScrollArea className="flex-1 max-h-[60vh] pr-4">
-              <div className="space-y-6 pb-4 pr-2">
+          <form onSubmit={handleSaveRole} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+            <div className="flex-1 overflow-y-auto px-6">
+              <div className="space-y-6 pb-4">
                 {/* Basic Info */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
@@ -464,9 +464,9 @@ export function RolesSettingsSection() {
                   )}
                 </div>
               </div>
-            </ScrollArea>
+            </div>
             
-            <DialogFooter className="pt-4 border-t mt-4">
+            <DialogFooter className="px-6 py-4 border-t shrink-0">
               <Button type="button" variant="outline" onClick={() => setShowRoleDialog(false)}>
                 Cancelar
               </Button>
