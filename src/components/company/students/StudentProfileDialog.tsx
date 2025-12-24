@@ -223,344 +223,373 @@ export function StudentProfileDialog({
     }
   };
 
+  const handleDelete = () => {
+    if (onDelete) {
+      onDelete();
+    }
+  };
 
   return (
-    <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-4xl max-h-[95vh] p-0 overflow-hidden">
-          {/* Header with gradient */}
-          <div className="relative bg-gradient-to-r from-primary/10 via-primary/5 to-background px-6 pt-6 pb-4">
-            <div className="flex items-start gap-5">
-              <Avatar className="h-20 w-20 border-4 border-background shadow-lg">
-                <AvatarImage src={student.profile_photo_url || undefined} />
-                <AvatarFallback className="bg-primary text-primary-foreground text-2xl font-semibold">
-                  {student.full_name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <DialogTitle className="text-2xl font-bold">{student.full_name}</DialogTitle>
-                    <div className="flex flex-wrap items-center gap-2 mt-1">
-                      {getStatusBadge(student.status)}
-                      {getAge(student.birth_date) && (
-                        <span className="text-sm text-muted-foreground">{getAge(student.birth_date)} anos</span>
-                      )}
-                      {getGenderLabel(student.gender) && (
-                        <span className="text-sm text-muted-foreground">• {getGenderLabel(student.gender)}</span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex gap-1 shrink-0">
-                    {canEdit && isEditing && (activeTab === "profile" || activeTab === "anamnesis") && (
-                      <Button 
-                        variant="default"
-                        size="icon"
-                        onClick={handleSave}
-                        disabled={isSaving}
-                        title="Guardar alterações"
-                      >
-                        <Save className="h-4 w-4" />
-                      </Button>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-4xl max-h-[95vh] p-0 overflow-hidden flex flex-col">
+        {/* Header with gradient */}
+        <div className="relative bg-gradient-to-r from-primary/10 via-primary/5 to-background px-6 pt-6 pb-4 shrink-0">
+          <div className="flex items-start gap-4">
+            <Avatar className="h-16 w-16 sm:h-20 sm:w-20 border-4 border-background shadow-lg shrink-0">
+              <AvatarImage src={student.profile_photo_url || undefined} />
+              <AvatarFallback className="bg-primary text-primary-foreground text-xl sm:text-2xl font-semibold">
+                {student.full_name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <DialogTitle className="text-xl sm:text-2xl font-bold truncate">{student.full_name}</DialogTitle>
+                  <div className="flex flex-wrap items-center gap-2 mt-1.5">
+                    {getStatusBadge(student.status)}
+                    {getAge(student.birth_date) && (
+                      <span className="text-sm text-muted-foreground">{getAge(student.birth_date)} anos</span>
                     )}
-                    {canEdit && (
-                      <Button 
-                        variant={isEditing ? "secondary" : "outline"}
-                        size="icon"
-                        onClick={() => setIsEditing(!isEditing)}
-                        title={isEditing ? "Cancelar edição" : "Modo de edição"}
-                      >
-                        {isEditing ? <X className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
-                      </Button>
-                    )}
-                    {canDelete && onDelete && (
-                      <Button 
-                        variant="outline" 
-                        size="icon"
-                        className="text-destructive hover:text-destructive"
-                        onClick={() => onDelete()}
-                        title="Eliminar aluno"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                    {getGenderLabel(student.gender) && (
+                      <span className="text-sm text-muted-foreground">• {getGenderLabel(student.gender)}</span>
                     )}
                   </div>
                 </div>
-                
-                {/* Quick info */}
-                <div className="flex flex-wrap items-center gap-4 mt-3 text-sm">
-                  {student.email && (
-                    <div className="flex items-center gap-1.5 text-muted-foreground">
-                      <Mail className="h-3.5 w-3.5" />
-                      <span className="truncate max-w-[200px]">{student.email}</span>
-                    </div>
-                  )}
-                  {student.phone && (
-                    <div className="flex items-center gap-1.5 text-muted-foreground">
-                      <Phone className="h-3.5 w-3.5" />
-                      <span>{student.phone}</span>
-                    </div>
-                  )}
-                  {student.city && (
-                    <div className="flex items-center gap-1.5 text-muted-foreground">
-                      <MapPin className="h-3.5 w-3.5" />
-                      <span>{student.city}</span>
-                    </div>
-                  )}
-                </div>
+              </div>
+              
+              {/* Quick info */}
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-3 text-sm">
+                {student.email && (
+                  <div className="flex items-center gap-1.5 text-muted-foreground">
+                    <Mail className="h-3.5 w-3.5 shrink-0" />
+                    <span className="truncate max-w-[180px]">{student.email}</span>
+                  </div>
+                )}
+                {student.phone && (
+                  <div className="flex items-center gap-1.5 text-muted-foreground">
+                    <Phone className="h-3.5 w-3.5 shrink-0" />
+                    <span>{student.phone}</span>
+                  </div>
+                )}
+                {student.city && (
+                  <div className="flex items-center gap-1.5 text-muted-foreground">
+                    <MapPin className="h-3.5 w-3.5 shrink-0" />
+                    <span>{student.city}</span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
+          
+          {/* Action Buttons - Fixed position */}
+          <div className="absolute top-4 right-4 flex items-center gap-2">
+            {canEdit && (
+              <Button 
+                variant={isEditing ? "default" : "outline"}
+                size="sm"
+                onClick={() => setIsEditing(!isEditing)}
+                className="gap-1.5"
+              >
+                {isEditing ? (
+                  <>
+                    <X className="h-4 w-4" />
+                    <span className="hidden sm:inline">Sair</span>
+                  </>
+                ) : (
+                  <>
+                    <Pencil className="h-4 w-4" />
+                    <span className="hidden sm:inline">Editar</span>
+                  </>
+                )}
+              </Button>
+            )}
+            {canDelete && onDelete && (
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="text-destructive hover:text-destructive hover:bg-destructive/10 gap-1.5"
+                onClick={handleDelete}
+              >
+                <Trash2 className="h-4 w-4" />
+                <span className="hidden sm:inline">Eliminar</span>
+              </Button>
+            )}
+          </div>
+        </div>
 
-          <SaveTriggerContext.Provider value={{ registerSave, unregisterSave }}>
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1">
-              <div className="px-6 pt-3 border-b">
-                <TabsList className="flex flex-wrap h-auto gap-1 justify-start bg-transparent p-0">
-                  <TabsTrigger value="overview" className="gap-1.5 text-xs sm:text-sm data-[state=active]:bg-primary/10 rounded-b-none border-b-2 border-transparent data-[state=active]:border-primary">
-                    <TrendingUp className="h-4 w-4" />
-                    <span className="hidden sm:inline">Resumo</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="profile" className="gap-1.5 text-xs sm:text-sm data-[state=active]:bg-primary/10 rounded-b-none border-b-2 border-transparent data-[state=active]:border-primary">
-                    <User className="h-4 w-4" />
-                    <span className="hidden sm:inline">Perfil</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="anamnesis" className="gap-1.5 text-xs sm:text-sm data-[state=active]:bg-primary/10 rounded-b-none border-b-2 border-transparent data-[state=active]:border-primary">
-                    <Heart className="h-4 w-4" />
-                    <span className="hidden sm:inline">Saúde</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="schedule" className="gap-1.5 text-xs sm:text-sm data-[state=active]:bg-primary/10 rounded-b-none border-b-2 border-transparent data-[state=active]:border-primary">
-                    <CalendarDays className="h-4 w-4" />
-                    <span className="hidden sm:inline">Agenda</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="training" className="gap-1.5 text-xs sm:text-sm data-[state=active]:bg-primary/10 rounded-b-none border-b-2 border-transparent data-[state=active]:border-primary">
-                    <Dumbbell className="h-4 w-4" />
-                    <span className="hidden sm:inline">Treino</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="nutrition" className="gap-1.5 text-xs sm:text-sm data-[state=active]:bg-primary/10 rounded-b-none border-b-2 border-transparent data-[state=active]:border-primary">
-                    <Apple className="h-4 w-4" />
-                    <span className="hidden sm:inline">Nutrição</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="plans" className="gap-1.5 text-xs sm:text-sm data-[state=active]:bg-primary/10 rounded-b-none border-b-2 border-transparent data-[state=active]:border-primary">
-                    <CreditCard className="h-4 w-4" />
-                    <span className="hidden sm:inline">Planos</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="documents" className="gap-1.5 text-xs sm:text-sm data-[state=active]:bg-primary/10 rounded-b-none border-b-2 border-transparent data-[state=active]:border-primary">
-                    <FileText className="h-4 w-4" />
-                    <span className="hidden sm:inline">Docs</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="notes" className="gap-1.5 text-xs sm:text-sm data-[state=active]:bg-primary/10 rounded-b-none border-b-2 border-transparent data-[state=active]:border-primary">
-                    <StickyNote className="h-4 w-4" />
-                    <span className="hidden sm:inline">Notas</span>
-                  </TabsTrigger>
-                </TabsList>
-              </div>
+        <SaveTriggerContext.Provider value={{ registerSave, unregisterSave }}>
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
+            <div className="px-4 sm:px-6 border-b shrink-0">
+              <TabsList className="flex h-auto gap-0.5 justify-start bg-transparent p-0 overflow-x-auto">
+                <TabsTrigger value="overview" className="gap-1.5 text-xs sm:text-sm data-[state=active]:bg-primary/10 rounded-b-none border-b-2 border-transparent data-[state=active]:border-primary px-3 py-2.5">
+                  <TrendingUp className="h-4 w-4" />
+                  <span className="hidden sm:inline">Resumo</span>
+                </TabsTrigger>
+                <TabsTrigger value="profile" className="gap-1.5 text-xs sm:text-sm data-[state=active]:bg-primary/10 rounded-b-none border-b-2 border-transparent data-[state=active]:border-primary px-3 py-2.5">
+                  <User className="h-4 w-4" />
+                  <span className="hidden sm:inline">Perfil</span>
+                </TabsTrigger>
+                <TabsTrigger value="anamnesis" className="gap-1.5 text-xs sm:text-sm data-[state=active]:bg-primary/10 rounded-b-none border-b-2 border-transparent data-[state=active]:border-primary px-3 py-2.5">
+                  <Heart className="h-4 w-4" />
+                  <span className="hidden sm:inline">Saúde</span>
+                </TabsTrigger>
+                <TabsTrigger value="schedule" className="gap-1.5 text-xs sm:text-sm data-[state=active]:bg-primary/10 rounded-b-none border-b-2 border-transparent data-[state=active]:border-primary px-3 py-2.5">
+                  <CalendarDays className="h-4 w-4" />
+                  <span className="hidden sm:inline">Agenda</span>
+                </TabsTrigger>
+                <TabsTrigger value="training" className="gap-1.5 text-xs sm:text-sm data-[state=active]:bg-primary/10 rounded-b-none border-b-2 border-transparent data-[state=active]:border-primary px-3 py-2.5">
+                  <Dumbbell className="h-4 w-4" />
+                  <span className="hidden sm:inline">Treino</span>
+                </TabsTrigger>
+                <TabsTrigger value="nutrition" className="gap-1.5 text-xs sm:text-sm data-[state=active]:bg-primary/10 rounded-b-none border-b-2 border-transparent data-[state=active]:border-primary px-3 py-2.5">
+                  <Apple className="h-4 w-4" />
+                  <span className="hidden sm:inline">Nutrição</span>
+                </TabsTrigger>
+                <TabsTrigger value="plans" className="gap-1.5 text-xs sm:text-sm data-[state=active]:bg-primary/10 rounded-b-none border-b-2 border-transparent data-[state=active]:border-primary px-3 py-2.5">
+                  <CreditCard className="h-4 w-4" />
+                  <span className="hidden sm:inline">Planos</span>
+                </TabsTrigger>
+                <TabsTrigger value="documents" className="gap-1.5 text-xs sm:text-sm data-[state=active]:bg-primary/10 rounded-b-none border-b-2 border-transparent data-[state=active]:border-primary px-3 py-2.5">
+                  <FileText className="h-4 w-4" />
+                  <span className="hidden sm:inline">Docs</span>
+                </TabsTrigger>
+                <TabsTrigger value="notes" className="gap-1.5 text-xs sm:text-sm data-[state=active]:bg-primary/10 rounded-b-none border-b-2 border-transparent data-[state=active]:border-primary px-3 py-2.5">
+                  <StickyNote className="h-4 w-4" />
+                  <span className="hidden sm:inline">Notas</span>
+                </TabsTrigger>
+              </TabsList>
+            </div>
 
-              <ScrollArea className="h-[calc(95vh-260px)] px-6 py-4">
-                {/* Overview Tab */}
-                <TabsContent value="overview" className="mt-0">
-                  <div className="space-y-6">
-                    {/* Stats Cards */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      <Card className="bg-gradient-to-br from-blue-500/10 to-blue-500/5 border-blue-500/20">
-                        <CardContent className="p-4">
-                          <div className="flex items-center gap-3">
-                            <div className="p-2 rounded-lg bg-blue-500/20">
-                              <CalendarDays className="h-5 w-5 text-blue-600" />
-                            </div>
-                            <div>
-                              <p className="text-2xl font-bold">{stats.totalClasses}</p>
-                              <p className="text-xs text-muted-foreground">Aulas Inscritas</p>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                      
-                      <Card className="bg-gradient-to-br from-green-500/10 to-green-500/5 border-green-500/20">
-                        <CardContent className="p-4">
-                          <div className="flex items-center gap-3">
-                            <div className="p-2 rounded-lg bg-green-500/20">
-                              <TrendingUp className="h-5 w-5 text-green-600" />
-                            </div>
-                            <div>
-                              <p className="text-2xl font-bold">{stats.attendedClasses}</p>
-                              <p className="text-xs text-muted-foreground">Presenças</p>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                      
-                      <Card className="bg-gradient-to-br from-purple-500/10 to-purple-500/5 border-purple-500/20">
-                        <CardContent className="p-4">
-                          <div className="flex items-center gap-3">
-                            <div className="p-2 rounded-lg bg-purple-500/20">
-                              <Clock className="h-5 w-5 text-purple-600" />
-                            </div>
-                            <div>
-                              <p className="text-2xl font-bold">{stats.daysSinceRegistration}</p>
-                              <p className="text-xs text-muted-foreground">Dias Membro</p>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                      
-                      <Card className="bg-gradient-to-br from-amber-500/10 to-amber-500/5 border-amber-500/20">
-                        <CardContent className="p-4">
-                          <div className="flex items-center gap-3">
-                            <div className="p-2 rounded-lg bg-amber-500/20">
-                              <CreditCard className="h-5 w-5 text-amber-600" />
-                            </div>
-                            <div>
-                              <p className="text-sm font-semibold truncate">
-                                {stats.activeSubscription || "Sem plano"}
-                              </p>
-                              <p className="text-xs text-muted-foreground">Plano Ativo</p>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
+            <ScrollArea className="flex-1">
+              <div className="p-4 sm:p-6">
+                {/* Editing Mode Banner */}
+                {isEditing && (activeTab === "profile" || activeTab === "anamnesis") && (
+                  <div className="mb-4 p-3 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-2 text-sm">
+                      <Pencil className="h-4 w-4 text-primary" />
+                      <span className="font-medium text-primary">Modo de edição ativo</span>
                     </div>
-
-                    {/* Info Grid */}
-                    <div className="grid md:grid-cols-2 gap-6">
-                      {/* Personal Info */}
-                      <Card>
-                        <CardContent className="p-4 space-y-3">
-                          <h3 className="font-semibold flex items-center gap-2">
-                            <User className="h-4 w-4 text-primary" />
-                            Informações Pessoais
-                          </h3>
-                          <div className="grid gap-2 text-sm">
-                            {student.birth_date && (
-                              <div className="flex justify-between">
-                                <span className="text-muted-foreground">Data Nascimento</span>
-                                <span>{format(new Date(student.birth_date), "dd/MM/yyyy")}</span>
-                              </div>
-                            )}
-                            {student.nationality && (
-                              <div className="flex justify-between">
-                                <span className="text-muted-foreground">Nacionalidade</span>
-                                <span>{student.nationality}</span>
-                              </div>
-                            )}
-                            {student.nif && (
-                              <div className="flex justify-between">
-                                <span className="text-muted-foreground">NIF</span>
-                                <span>{student.nif}</span>
-                              </div>
-                            )}
-                            {personalTrainer && (
-                              <div className="flex justify-between">
-                                <span className="text-muted-foreground">Personal Trainer</span>
-                                <span className="font-medium text-primary">{personalTrainer}</span>
-                              </div>
-                            )}
-                            {student.created_at && (
-                              <div className="flex justify-between">
-                                <span className="text-muted-foreground">Membro desde</span>
-                                <span>{format(new Date(student.created_at), "dd/MM/yyyy", { locale: pt })}</span>
-                              </div>
-                            )}
-                          </div>
-                        </CardContent>
-                      </Card>
-
-                      {/* Contact & Address */}
-                      <Card>
-                        <CardContent className="p-4 space-y-3">
-                          <h3 className="font-semibold flex items-center gap-2">
-                            <MapPin className="h-4 w-4 text-primary" />
-                            Contacto e Morada
-                          </h3>
-                          <div className="grid gap-2 text-sm">
-                            {student.email && (
-                              <div className="flex justify-between">
-                                <span className="text-muted-foreground">Email</span>
-                                <span className="truncate max-w-[180px]">{student.email}</span>
-                              </div>
-                            )}
-                            {student.phone && (
-                              <div className="flex justify-between">
-                                <span className="text-muted-foreground">Telefone</span>
-                                <span>{student.phone}</span>
-                              </div>
-                            )}
-                            {student.address && (
-                              <div className="flex justify-between">
-                                <span className="text-muted-foreground">Morada</span>
-                                <span className="text-right max-w-[180px] truncate">{student.address}</span>
-                              </div>
-                            )}
-                            {(student.postal_code || student.city) && (
-                              <div className="flex justify-between">
-                                <span className="text-muted-foreground">Localidade</span>
-                                <span>{[student.postal_code, student.city].filter(Boolean).join(" ")}</span>
-                              </div>
-                            )}
-                          </div>
-                        </CardContent>
-                      </Card>
-
-                      {/* Emergency Contact */}
-                      <Card>
-                        <CardContent className="p-4 space-y-3">
-                          <h3 className="font-semibold flex items-center gap-2 text-amber-600">
-                            <Phone className="h-4 w-4" />
-                            Contacto de Emergência
-                          </h3>
-                          {student.emergency_contact || student.emergency_phone ? (
-                            <div className="grid gap-2 text-sm">
-                              {student.emergency_contact && (
-                                <div className="flex justify-between">
-                                  <span className="text-muted-foreground">Nome</span>
-                                  <span>{student.emergency_contact}</span>
-                                </div>
-                              )}
-                              {student.emergency_phone && (
-                                <div className="flex justify-between">
-                                  <span className="text-muted-foreground">Telefone</span>
-                                  <span className="font-medium">{student.emergency_phone}</span>
-                                </div>
-                              )}
-                            </div>
-                          ) : (
-                            <p className="text-sm text-muted-foreground">Não definido</p>
-                          )}
-                        </CardContent>
-                      </Card>
-
-                      {/* Health Notes Preview */}
-                      <Card>
-                        <CardContent className="p-4 space-y-3">
-                          <h3 className="font-semibold flex items-center gap-2 text-red-600">
-                            <Heart className="h-4 w-4" />
-                            Notas de Saúde
-                          </h3>
-                          {student.health_notes ? (
-                            <p className="text-sm text-muted-foreground line-clamp-3">{student.health_notes}</p>
-                          ) : (
-                            <p className="text-sm text-muted-foreground">Sem notas de saúde registadas</p>
-                          )}
-                        </CardContent>
-                      </Card>
-                    </div>
-
-                    {/* Last Activity */}
-                    {stats.lastAttendance && (
-                      <Card className="bg-muted/50">
-                        <CardContent className="p-4">
-                          <div className="flex items-center gap-3">
-                            <Calendar className="h-5 w-5 text-muted-foreground" />
-                            <div>
-                              <p className="text-sm font-medium">Última presença</p>
-                              <p className="text-xs text-muted-foreground">
-                                {format(new Date(stats.lastAttendance), "EEEE, dd 'de' MMMM 'de' yyyy", { locale: pt })}
-                              </p>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    )}
+                    <Button 
+                      size="sm"
+                      onClick={handleSave}
+                      disabled={isSaving}
+                      className="gap-1.5"
+                    >
+                      <Save className="h-4 w-4" />
+                      {isSaving ? "Guardando..." : "Guardar Alterações"}
+                    </Button>
                   </div>
+                )}
+
+                {/* Overview Tab */}
+                <TabsContent value="overview" className="mt-0 space-y-6">
+                  {/* Stats Cards */}
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                    <Card className="bg-gradient-to-br from-blue-500/10 to-blue-500/5 border-blue-500/20">
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-lg bg-blue-500/20 shrink-0">
+                            <CalendarDays className="h-5 w-5 text-blue-600" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-2xl font-bold">{stats.totalClasses}</p>
+                            <p className="text-xs text-muted-foreground truncate">Aulas Inscritas</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                    
+                    <Card className="bg-gradient-to-br from-green-500/10 to-green-500/5 border-green-500/20">
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-lg bg-green-500/20 shrink-0">
+                            <TrendingUp className="h-5 w-5 text-green-600" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-2xl font-bold">{stats.attendedClasses}</p>
+                            <p className="text-xs text-muted-foreground truncate">Presenças</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                    
+                    <Card className="bg-gradient-to-br from-purple-500/10 to-purple-500/5 border-purple-500/20">
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-lg bg-purple-500/20 shrink-0">
+                            <Clock className="h-5 w-5 text-purple-600" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-2xl font-bold">{stats.daysSinceRegistration}</p>
+                            <p className="text-xs text-muted-foreground truncate">Dias Membro</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                    
+                    <Card className="bg-gradient-to-br from-amber-500/10 to-amber-500/5 border-amber-500/20">
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-lg bg-amber-500/20 shrink-0">
+                            <CreditCard className="h-5 w-5 text-amber-600" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold truncate">
+                              {stats.activeSubscription || "Sem plano"}
+                            </p>
+                            <p className="text-xs text-muted-foreground truncate">Plano Ativo</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* Info Grid */}
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    {/* Personal Info */}
+                    <Card>
+                      <CardContent className="p-4 space-y-4">
+                        <h3 className="font-semibold flex items-center gap-2 text-sm">
+                          <User className="h-4 w-4 text-primary" />
+                          Informações Pessoais
+                        </h3>
+                        <div className="space-y-2.5">
+                          {student.birth_date && (
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-muted-foreground">Data Nascimento</span>
+                              <span className="font-medium">{format(new Date(student.birth_date), "dd/MM/yyyy")}</span>
+                            </div>
+                          )}
+                          {student.nationality && (
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-muted-foreground">Nacionalidade</span>
+                              <span className="font-medium">{student.nationality}</span>
+                            </div>
+                          )}
+                          {student.nif && (
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-muted-foreground">NIF</span>
+                              <span className="font-medium font-mono">{student.nif}</span>
+                            </div>
+                          )}
+                          {personalTrainer && (
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-muted-foreground">Personal Trainer</span>
+                              <span className="font-medium text-primary">{personalTrainer}</span>
+                            </div>
+                          )}
+                          {student.created_at && (
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-muted-foreground">Membro desde</span>
+                              <span className="font-medium">{format(new Date(student.created_at), "dd/MM/yyyy", { locale: pt })}</span>
+                            </div>
+                          )}
+                          {!student.birth_date && !student.nationality && !student.nif && !personalTrainer && !student.created_at && (
+                            <p className="text-sm text-muted-foreground text-center py-2">Sem informações registadas</p>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* Contact & Address */}
+                    <Card>
+                      <CardContent className="p-4 space-y-4">
+                        <h3 className="font-semibold flex items-center gap-2 text-sm">
+                          <MapPin className="h-4 w-4 text-primary" />
+                          Contacto e Morada
+                        </h3>
+                        <div className="space-y-2.5">
+                          {student.email && (
+                            <div className="flex items-center justify-between gap-2 text-sm">
+                              <span className="text-muted-foreground shrink-0">Email</span>
+                              <span className="font-medium truncate">{student.email}</span>
+                            </div>
+                          )}
+                          {student.phone && (
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-muted-foreground">Telefone</span>
+                              <span className="font-medium font-mono">{student.phone}</span>
+                            </div>
+                          )}
+                          {student.address && (
+                            <div className="flex items-center justify-between gap-2 text-sm">
+                              <span className="text-muted-foreground shrink-0">Morada</span>
+                              <span className="font-medium text-right truncate">{student.address}</span>
+                            </div>
+                          )}
+                          {(student.postal_code || student.city) && (
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-muted-foreground">Localidade</span>
+                              <span className="font-medium">{[student.postal_code, student.city].filter(Boolean).join(" ")}</span>
+                            </div>
+                          )}
+                          {!student.email && !student.phone && !student.address && !student.postal_code && !student.city && (
+                            <p className="text-sm text-muted-foreground text-center py-2">Sem informações registadas</p>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* Emergency Contact */}
+                    <Card>
+                      <CardContent className="p-4 space-y-4">
+                        <h3 className="font-semibold flex items-center gap-2 text-sm text-amber-600">
+                          <Phone className="h-4 w-4" />
+                          Contacto de Emergência
+                        </h3>
+                        {student.emergency_contact || student.emergency_phone ? (
+                          <div className="space-y-2.5">
+                            {student.emergency_contact && (
+                              <div className="flex items-center justify-between text-sm">
+                                <span className="text-muted-foreground">Nome</span>
+                                <span className="font-medium">{student.emergency_contact}</span>
+                              </div>
+                            )}
+                            {student.emergency_phone && (
+                              <div className="flex items-center justify-between text-sm">
+                                <span className="text-muted-foreground">Telefone</span>
+                                <span className="font-medium font-mono">{student.emergency_phone}</span>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-muted-foreground text-center py-2">Não definido</p>
+                        )}
+                      </CardContent>
+                    </Card>
+
+                    {/* Health Notes Preview */}
+                    <Card>
+                      <CardContent className="p-4 space-y-4">
+                        <h3 className="font-semibold flex items-center gap-2 text-sm text-red-600">
+                          <Heart className="h-4 w-4" />
+                          Notas de Saúde
+                        </h3>
+                        {student.health_notes ? (
+                          <p className="text-sm text-muted-foreground line-clamp-3">{student.health_notes}</p>
+                        ) : (
+                          <p className="text-sm text-muted-foreground text-center py-2">Sem notas de saúde registadas</p>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* Last Activity */}
+                  {stats.lastAttendance && (
+                    <Card className="bg-muted/50">
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-3">
+                          <Calendar className="h-5 w-5 text-muted-foreground shrink-0" />
+                          <div>
+                            <p className="text-sm font-medium">Última presença</p>
+                            <p className="text-xs text-muted-foreground">
+                              {format(new Date(stats.lastAttendance), "EEEE, dd 'de' MMMM 'de' yyyy", { locale: pt })}
+                            </p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
                 </TabsContent>
 
                 <TabsContent value="profile" className="mt-0">
@@ -621,11 +650,11 @@ export function StudentProfileDialog({
                     canEdit={canEdit && isEditing} 
                   />
                 </TabsContent>
-              </ScrollArea>
-            </Tabs>
-          </SaveTriggerContext.Provider>
-        </DialogContent>
-      </Dialog>
-    </>
+              </div>
+            </ScrollArea>
+          </Tabs>
+        </SaveTriggerContext.Provider>
+      </DialogContent>
+    </Dialog>
   );
 }
