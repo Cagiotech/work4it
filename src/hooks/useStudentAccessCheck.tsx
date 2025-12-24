@@ -36,7 +36,7 @@ export function useStudentAccessCheck(): StudentCheckResult {
         // Fetch student data
         const { data: studentData, error: studentError } = await supabase
           .from('students')
-          .select('*, companies(id, name, terms_text, regulations_text)')
+          .select('*, companies(id, name, terms_text, regulations_text, mbway_phone)')
           .eq('user_id', user.id)
           .maybeSingle();
 

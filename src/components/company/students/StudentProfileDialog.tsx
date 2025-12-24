@@ -10,7 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { 
   User, Heart, CreditCard, FileText, StickyNote, Pencil, Trash2, X, Save, 
   Apple, CalendarDays, Dumbbell, Mail, Phone, MapPin, Calendar, Clock,
-  TrendingUp, MessageSquare
+  TrendingUp, MessageSquare, Ban
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { format, differenceInYears, differenceInDays } from "date-fns";
@@ -32,7 +32,7 @@ import { StudentDocumentsTab } from "./tabs/StudentDocumentsTab";
 import { StudentNutritionTabNew } from "./tabs/StudentNutritionTabNew";
 import { StudentScheduleTab } from "./tabs/StudentScheduleTab";
 import { StudentTrainingTab } from "./tabs/StudentTrainingTab";
-
+import { StudentStatusDialog } from "./StudentStatusDialog";
 interface Student {
   id: string;
   full_name: string;
@@ -95,6 +95,7 @@ export function StudentProfileDialog({
     daysSinceRegistration: 0
   });
   const [personalTrainer, setPersonalTrainer] = useState<string | null>(null);
+  const [showStatusDialog, setShowStatusDialog] = useState(false);
   
   const [isSaving, setIsSaving] = useState(false);
   const saveFunctionsRef = useRef<Map<string, () => Promise<void>>>(new Map());
@@ -278,7 +279,7 @@ export function StudentProfileDialog({
           </div>
           
           {/* Action Buttons - Below header info */}
-          <div className="flex items-center gap-2 mt-4 pt-3 border-t border-border/50">
+          <div className="flex flex-wrap items-center gap-2 mt-4 pt-3 border-t border-border/50">
             {canEdit && (
               <Button 
                 variant={isEditing ? "default" : "outline"}
@@ -297,6 +298,17 @@ export function StudentProfileDialog({
                     Editar Perfil
                   </>
                 )}
+              </Button>
+            )}
+            {canEdit && (
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setShowStatusDialog(true)}
+                className={`gap-1.5 ${student.status === 'suspended' ? 'border-red-500/50 text-red-600' : ''}`}
+              >
+                <Ban className="h-4 w-4" />
+                Alterar Status
               </Button>
             )}
             {canDelete && onDelete && (
@@ -650,6 +662,18 @@ export function StudentProfileDialog({
             </div>
           </Tabs>
         </SaveTriggerContext.Provider>
+
+        {/* Status Dialog */}
+        <StudentStatusDialog
+          open={showStatusDialog}
+          onOpenChange={setShowStatusDialog}
+          student={{
+            id: student.id,
+            full_name: student.full_name,
+            status: student.status,
+          }}
+          onUpdate={onUpdate}
+        />
       </DialogContent>
     </Dialog>
   );
