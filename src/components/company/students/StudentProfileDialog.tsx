@@ -233,7 +233,7 @@ export function StudentProfileDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-4xl max-h-[95vh] p-0 overflow-hidden flex flex-col">
         {/* Header with gradient */}
-        <div className="relative bg-gradient-to-r from-primary/10 via-primary/5 to-background px-6 pt-6 pb-4 shrink-0">
+        <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-background px-6 pt-10 pb-4 shrink-0">
           <div className="flex items-start gap-4">
             <Avatar className="h-16 w-16 sm:h-20 sm:w-20 border-4 border-background shadow-lg shrink-0">
               <AvatarImage src={student.profile_photo_url || undefined} />
@@ -241,20 +241,16 @@ export function StudentProfileDialog({
                 {student.full_name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
               </AvatarFallback>
             </Avatar>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <DialogTitle className="text-xl sm:text-2xl font-bold truncate">{student.full_name}</DialogTitle>
-                  <div className="flex flex-wrap items-center gap-2 mt-1.5">
-                    {getStatusBadge(student.status)}
-                    {getAge(student.birth_date) && (
-                      <span className="text-sm text-muted-foreground">{getAge(student.birth_date)} anos</span>
-                    )}
-                    {getGenderLabel(student.gender) && (
-                      <span className="text-sm text-muted-foreground">• {getGenderLabel(student.gender)}</span>
-                    )}
-                  </div>
-                </div>
+            <div className="flex-1 min-w-0 pr-2">
+              <DialogTitle className="text-xl sm:text-2xl font-bold truncate">{student.full_name}</DialogTitle>
+              <div className="flex flex-wrap items-center gap-2 mt-1.5">
+                {getStatusBadge(student.status)}
+                {getAge(student.birth_date) && (
+                  <span className="text-sm text-muted-foreground">{getAge(student.birth_date)} anos</span>
+                )}
+                {getGenderLabel(student.gender) && (
+                  <span className="text-sm text-muted-foreground">• {getGenderLabel(student.gender)}</span>
+                )}
               </div>
               
               {/* Quick info */}
@@ -281,8 +277,8 @@ export function StudentProfileDialog({
             </div>
           </div>
           
-          {/* Action Buttons - Fixed position */}
-          <div className="absolute top-4 right-4 flex items-center gap-2">
+          {/* Action Buttons - Below header info */}
+          <div className="flex items-center gap-2 mt-4 pt-3 border-t border-border/50">
             {canEdit && (
               <Button 
                 variant={isEditing ? "default" : "outline"}
@@ -293,12 +289,12 @@ export function StudentProfileDialog({
                 {isEditing ? (
                   <>
                     <X className="h-4 w-4" />
-                    <span className="hidden sm:inline">Sair</span>
+                    Cancelar Edição
                   </>
                 ) : (
                   <>
                     <Pencil className="h-4 w-4" />
-                    <span className="hidden sm:inline">Editar</span>
+                    Editar Perfil
                   </>
                 )}
               </Button>
@@ -311,7 +307,7 @@ export function StudentProfileDialog({
                 onClick={handleDelete}
               >
                 <Trash2 className="h-4 w-4" />
-                <span className="hidden sm:inline">Eliminar</span>
+                Eliminar
               </Button>
             )}
           </div>
