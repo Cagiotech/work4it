@@ -10,7 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { 
   User, Heart, CreditCard, FileText, StickyNote, Pencil, Trash2, X, Save, 
   Apple, CalendarDays, Dumbbell, Mail, Phone, MapPin, Calendar, Clock,
-  TrendingUp, MessageSquare, Ban, Shield
+  TrendingUp, MessageSquare, Ban, Shield, GraduationCap
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { format, differenceInYears, differenceInDays } from "date-fns";
@@ -34,6 +34,7 @@ import { StudentScheduleTab } from "./tabs/StudentScheduleTab";
 import { StudentTrainingTab } from "./tabs/StudentTrainingTab";
 import { StudentStatusDialog } from "./StudentStatusDialog";
 import { StudentSecurityTab } from "./tabs/StudentSecurityTab";
+import { StudentClassesTab } from "./tabs/StudentClassesTab";
 interface Student {
   id: string;
   full_name: string;
@@ -343,6 +344,10 @@ export function StudentProfileDialog({
                   <Heart className="h-4 w-4" />
                   <span className="hidden sm:inline">Saúde</span>
                 </TabsTrigger>
+                <TabsTrigger value="classes" className="gap-1.5 text-xs sm:text-sm data-[state=active]:bg-primary/10 rounded-b-none border-b-2 border-transparent data-[state=active]:border-primary px-3 py-2.5">
+                  <GraduationCap className="h-4 w-4" />
+                  <span className="hidden sm:inline">Modalidades</span>
+                </TabsTrigger>
                 <TabsTrigger value="schedule" className="gap-1.5 text-xs sm:text-sm data-[state=active]:bg-primary/10 rounded-b-none border-b-2 border-transparent data-[state=active]:border-primary px-3 py-2.5">
                   <CalendarDays className="h-4 w-4" />
                   <span className="hidden sm:inline">Agenda</span>
@@ -620,6 +625,14 @@ export function StudentProfileDialog({
                     canEdit={canEdit && isEditing}
                     healthNotes={student.health_notes}
                     onHealthNotesChange={() => onUpdate()}
+                  />
+                </TabsContent>
+
+                <TabsContent value="classes" className="mt-0">
+                  <StudentClassesTab 
+                    studentId={student.id}
+                    companyId={student.company_id}
+                    canEdit={canEdit && isEditing}
                   />
                 </TabsContent>
 
