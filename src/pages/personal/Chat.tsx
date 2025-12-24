@@ -59,7 +59,6 @@ export default function PersonalChat() {
           },
           (payload) => {
             const newMsg = payload.new as Message;
-            console.log('Staff received message:', newMsg);
 
             const isForMe = (newMsg.receiver_id === staffInfo.id && newMsg.receiver_type === 'staff') ||
                             (newMsg.sender_id === staffInfo.id && newMsg.sender_type === 'staff');
@@ -169,7 +168,6 @@ export default function PersonalChat() {
         }
       }
 
-      // Load last messages and unread counts
       for (const conv of convList) {
         const myId = staff.id;
 
@@ -222,7 +220,6 @@ export default function PersonalChat() {
         conv.unreadCount = unreadQuery.count || 0;
       }
 
-      // Keep company pinned at top, sort others by lastMessageTime
       const companyConv = convList.find(c => c.type === 'company');
       const otherConvs = convList.filter(c => c.type !== 'company');
       
@@ -338,14 +335,16 @@ export default function PersonalChat() {
   };
 
   return (
-    <div className="h-[calc(100vh-180px)]">
-      <Card className="h-full flex overflow-hidden">
+    <div className="space-y-4">
+      <h2 className="text-2xl font-bold">Mensagens</h2>
+      
+      <Card className="h-[calc(100vh-220px)] flex overflow-hidden">
         {/* Sidebar */}
         <div className="w-80 flex-shrink-0 flex flex-col">
           <div className="p-4 border-b border-border flex items-center justify-between">
             <h2 className="font-semibold flex items-center gap-2">
               <MessageSquare className="h-5 w-5 text-primary" />
-              Mensagens
+              Conversas
             </h2>
             <Button
               size="sm"

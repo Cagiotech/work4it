@@ -1,22 +1,21 @@
 import { useState, useEffect, useRef } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Send, Search, ArrowLeft, MessageCircle } from "lucide-react";
+import { Send, Search, ArrowLeft, MessageCircle, MessageSquare, Users, Plus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { format, isToday, isYesterday } from "date-fns";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 interface Contact {
   id: string;
   name: string;
   type: 'staff' | 'company';
-  avatar?: string;
   lastMessage?: string;
   lastMessageTime?: string;
   unreadCount: number;
@@ -35,7 +34,6 @@ interface Message {
 
 export default function StudentChat() {
   const navigate = useNavigate();
-  const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [studentInfo, setStudentInfo] = useState<{ id: string; company_id: string; personal_trainer_id: string | null } | null>(null);
   const [contacts, setContacts] = useState<Contact[]>([]);
@@ -51,7 +49,6 @@ export default function StudentChat() {
     loadInitialData();
   }, []);
 
-  // Subscribe to realtime messages when studentInfo is available
   useEffect(() => {
     if (studentInfo) {
       const cleanup = subscribeToMessages();
@@ -96,7 +93,6 @@ export default function StudentChat() {
 
       const contactsList: Contact[] = [];
 
-      // Load company info as a contact
       const { data: company } = await supabase
         .from('companies')
         .select('id, name')
@@ -112,7 +108,6 @@ export default function StudentChat() {
         });
       }
 
-      // Load personal trainer as contact if assigned
       if (student.personal_trainer_id) {
         const { data: trainer } = await supabase
           .from('staff')
@@ -130,7 +125,6 @@ export default function StudentChat() {
         }
       }
 
-      // Load last messages and unread counts for each contact
       for (const contact of contactsList) {
         const myId = student.id;
         const theirId = contact.id;
@@ -149,7 +143,6 @@ export default function StudentChat() {
           contact.lastMessageTime = lastMsg.created_at;
         }
 
-        // Count unread messages sent TO me
         const { count } = await supabase
           .from('messages')
           .select('*', { count: 'exact', head: true })
@@ -161,7 +154,6 @@ export default function StudentChat() {
         contact.unreadCount = count || 0;
       }
 
-      // Sort contacts by last message time
       contactsList.sort((a, b) => {
         if (!a.lastMessageTime) return 1;
         if (!b.lastMessageTime) return -1;
@@ -192,7 +184,6 @@ export default function StudentChat() {
     if (data) {
       setMessages(data);
 
-      // Mark messages as read (only messages where I am the receiver)
       const unreadIds = data
         .filter(m => !m.is_read && m.receiver_id === myId && m.receiver_type === 'student')
         .map(m => m.id);
@@ -204,7 +195,6 @@ export default function StudentChat() {
           .in('id', unreadIds);
       }
 
-      // Update unread count in contacts
       setContacts(prev => prev.map(c =>
         c.id === contact.id ? { ...c, unreadCount: 0 } : c
       ));
@@ -226,15 +216,12 @@ export default function StudentChat() {
         },
         (payload) => {
           const newMsg = payload.new as Message;
-          console.log('Student received message:', newMsg);
           
-          // Check if this message involves me (either as sender or receiver)
           const isForMe = (newMsg.receiver_id === studentInfo.id && newMsg.receiver_type === 'student') ||
                           (newMsg.sender_id === studentInfo.id && newMsg.sender_type === 'student');
           
           if (!isForMe) return;
 
-          // If message is from selected contact, add to current chat
           if (selectedContact && 
               ((newMsg.sender_id === selectedContact.id) || 
                (newMsg.receiver_id === selectedContact.id))) {
@@ -243,7 +230,6 @@ export default function StudentChat() {
               return [...prev, newMsg];
             });
             
-            // Mark as read if it's from the other party
             if (newMsg.sender_id === selectedContact.id) {
               supabase
                 .from('messages')
@@ -251,7 +237,6 @@ export default function StudentChat() {
                 .eq('id', newMsg.id);
             }
           } else if (newMsg.receiver_id === studentInfo.id && newMsg.receiver_type === 'student') {
-            // Update unread count for other contacts
             setContacts(prev => prev.map(c =>
               c.id === newMsg.sender_id ? { ...c, unreadCount: c.unreadCount + 1, lastMessage: newMsg.content, lastMessageTime: newMsg.created_at } : c
             ));
@@ -291,7 +276,6 @@ export default function StudentChat() {
         setMessages(prev => [...prev, data]);
         setNewMessage("");
 
-        // Update contact's last message
         setContacts(prev => prev.map(c =>
           c.id === selectedContact.id
             ? { ...c, lastMessage: data.content, lastMessageTime: data.created_at }
@@ -300,11 +284,7 @@ export default function StudentChat() {
       }
     } catch (error) {
       console.error('Error sending message:', error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível enviar a mensagem",
-        variant: "destructive"
-      });
+      toast.error("Não foi possível enviar a mensagem");
     } finally {
       setSendingMessage(false);
     }
@@ -330,11 +310,11 @@ export default function StudentChat() {
 
   if (loading) {
     return (
-      <div className="h-[calc(100vh-8rem)] md:h-[calc(100vh-10rem)]">
-        <Card className="h-full">
+      <div className="space-y-4">
+        <h2 className="text-2xl font-bold">Mensagens</h2>
+        <Card className="h-[calc(100vh-220px)]">
           <div className="flex h-full">
             <div className="w-full md:w-80 border-r p-4 space-y-4">
-              <Skeleton className="h-6 w-32" />
               <Skeleton className="h-10 w-full" />
               {[1, 2, 3].map(i => (
                 <div key={i} className="flex items-center gap-3">
@@ -353,23 +333,30 @@ export default function StudentChat() {
   }
 
   return (
-    <div className="h-[calc(100vh-8rem)] md:h-[calc(100vh-10rem)]">
-      <Card className="h-full overflow-hidden">
+    <div className="space-y-4">
+      <h2 className="text-2xl font-bold">Mensagens</h2>
+      
+      <Card className="h-[calc(100vh-220px)] overflow-hidden">
         <div className="flex h-full">
           {/* Contacts List */}
           <div className={`w-full md:w-80 border-r flex flex-col ${showMobileChat ? 'hidden md:flex' : 'flex'}`}>
-            <CardHeader className="border-b p-4 shrink-0">
-              <CardTitle className="text-lg">Mensagens</CardTitle>
-              <div className="relative mt-2">
+            <div className="p-4 border-b shrink-0">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-semibold flex items-center gap-2">
+                  <MessageSquare className="h-5 w-5 text-primary" />
+                  Conversas
+                </h3>
+              </div>
+              <div className="relative">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
-                  placeholder="Pesquisar conversas..."
+                  placeholder="Pesquisar..."
                   className="pl-10"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
-            </CardHeader>
+            </div>
             <ScrollArea className="flex-1">
               <div className="p-2">
                 {filteredContacts.length === 0 ? (
@@ -392,7 +379,6 @@ export default function StudentChat() {
                       }`}
                     >
                       <Avatar>
-                        {contact.avatar && <AvatarImage src={contact.avatar} />}
                         <AvatarFallback className={`${contact.type === 'company' ? 'bg-blue-500/10 text-blue-600' : 'bg-primary/10 text-primary'}`}>
                           {getInitials(contact.name)}
                         </AvatarFallback>
@@ -428,7 +414,6 @@ export default function StudentChat() {
           <div className={`flex-1 flex flex-col ${!showMobileChat ? 'hidden md:flex' : 'flex'}`}>
             {selectedContact ? (
               <>
-                {/* Chat Header */}
                 <div className="border-b p-4 flex items-center gap-3 shrink-0">
                   <Button
                     variant="ghost"
@@ -439,7 +424,6 @@ export default function StudentChat() {
                     <ArrowLeft className="h-4 w-4" />
                   </Button>
                   <Avatar>
-                    {selectedContact.avatar && <AvatarImage src={selectedContact.avatar} />}
                     <AvatarFallback className={`${selectedContact.type === 'company' ? 'bg-blue-500/10 text-blue-600' : 'bg-primary/10 text-primary'}`}>
                       {getInitials(selectedContact.name)}
                     </AvatarFallback>
@@ -452,7 +436,6 @@ export default function StudentChat() {
                   </div>
                 </div>
 
-                {/* Messages */}
                 <ScrollArea className="flex-1 p-4">
                   <div className="space-y-4">
                     {messages.length === 0 ? (
@@ -493,20 +476,22 @@ export default function StudentChat() {
                   </div>
                 </ScrollArea>
 
-                {/* Message Input */}
                 <div className="border-t p-4 shrink-0">
-                  <div className="flex items-center gap-2">
+                  <div className="flex gap-2">
                     <Input
-                      placeholder="Escrever mensagem..."
+                      placeholder="Escreva uma mensagem..."
                       value={newMessage}
                       onChange={(e) => setNewMessage(e.target.value)}
-                      onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSendMessage()}
-                      className="flex-1"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault();
+                          handleSendMessage();
+                        }
+                      }}
                       disabled={sendingMessage}
                     />
-                    <Button
-                      onClick={handleSendMessage}
-                      size="icon"
+                    <Button 
+                      onClick={handleSendMessage} 
                       disabled={!newMessage.trim() || sendingMessage}
                     >
                       <Send className="h-4 w-4" />
@@ -515,12 +500,10 @@ export default function StudentChat() {
                 </div>
               </>
             ) : (
-              <div className="flex-1 flex items-center justify-center text-muted-foreground">
-                <div className="text-center">
-                  <MessageCircle className="h-16 w-16 mx-auto mb-4 opacity-50" />
-                  <p className="text-lg font-medium">Selecione uma conversa</p>
-                  <p className="text-sm">Escolha um contacto para iniciar</p>
-                </div>
+              <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+                <Users className="h-16 w-16 mb-4 opacity-30" />
+                <p className="text-lg">Selecione uma conversa</p>
+                <p className="text-sm">para ver as mensagens</p>
               </div>
             )}
           </div>
