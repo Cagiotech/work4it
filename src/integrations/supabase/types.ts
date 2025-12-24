@@ -1997,6 +1997,57 @@ export type Database = {
           },
         ]
       }
+      staff_classes: {
+        Row: {
+          assigned_at: string
+          assigned_by: string | null
+          class_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          notes: string | null
+          staff_id: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_at?: string
+          assigned_by?: string | null
+          class_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          staff_id: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_at?: string
+          assigned_by?: string | null
+          class_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          staff_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_classes_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_classes_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       staff_documents: {
         Row: {
           company_id: string
