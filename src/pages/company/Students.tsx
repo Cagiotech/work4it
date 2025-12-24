@@ -352,29 +352,6 @@ export default function Students() {
     }
   };
 
-  const handleExportCSV = () => {
-    const csvContent = [
-      ['Nome', 'Email', 'Telefone', 'Status', 'Personal Trainer', 'Plano', 'Status Pagamento', 'Data Matrícula'].join(','),
-      ...filteredStudents.map(s => [
-        s.full_name,
-        s.email || '',
-        s.phone || '',
-        s.status || '',
-        s.trainer?.full_name || '',
-        s.activeSubscription?.plan?.name || '',
-        s.activeSubscription?.payment_status || '',
-        s.enrollment_date || ''
-      ].join(','))
-    ].join('\n');
-    
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = 'alunos.csv';
-    link.click();
-    toast.success('CSV exportado!');
-  };
-
   const handleExportPDF = async () => {
     const stats = {
       total: students.length,
@@ -517,16 +494,10 @@ export default function Students() {
             <span className="hidden sm:inline">Grupos</span>
           </Button>
           {canExport('students') && (
-            <>
-              <Button variant="outline" size="sm" className="gap-1.5" onClick={handleExportCSV}>
-                <Download className="h-4 w-4" />
-                <span className="hidden sm:inline">CSV</span>
-              </Button>
-              <Button variant="outline" size="sm" className="gap-1.5" onClick={handleExportPDF}>
-                <FileText className="h-4 w-4" />
-                <span className="hidden sm:inline">PDF</span>
-              </Button>
-            </>
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={handleExportPDF}>
+              <FileText className="h-4 w-4" />
+              <span className="hidden sm:inline">PDF</span>
+            </Button>
           )}
           {canCreate('students') && (
             <>
