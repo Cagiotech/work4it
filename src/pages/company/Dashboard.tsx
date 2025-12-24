@@ -203,8 +203,16 @@ export default function CompanyDashboard() {
         income: stats.income,
         expenses: stats.expenses,
         pendingPayments: stats.pendingPayments,
+        pendingStudents: stats.pendingStudents,
+        inactiveStudents: stats.inactiveStudents,
       };
-      await exportDashboardReport(exportStats, recentActivity, dateRange);
+      await exportDashboardReport(exportStats, recentActivity, dateRange, {
+        transactions: filteredTransactions,
+        classes: classes,
+        schedules: schedules,
+        upcomingClasses: upcomingClasses,
+        previousStats: previousStats,
+      });
       toast.success("Relatório exportado com sucesso");
     } catch (error) {
       console.error('Error exporting PDF:', error);

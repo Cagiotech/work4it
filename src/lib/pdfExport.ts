@@ -232,40 +232,404 @@ export const exportDashboardReport = async (
     income: number;
     expenses?: number;
     pendingPayments: number;
+    pendingStudents?: number;
+    inactiveStudents?: number;
   },
   recentActivity: any[],
-  dateRange: { from: Date; to: Date }
+  dateRange: { from: Date; to: Date },
+  extraData?: {
+    transactions?: any[];
+    classes?: any[];
+    schedules?: any[];
+    upcomingClasses?: any[];
+    previousStats?: {
+      totalStudents: number;
+      income: number;
+      expenses: number;
+    };
+  }
 ) => {
   const doc = new jsPDF();
+  const pageWidth = doc.internal.pageSize.getWidth();
   
   let yPosition = addHeader(doc, 'Relatório do Dashboard', 'Resumo geral da empresa', dateRange);
   
-  // Summary boxes
-  const summaryItems = [
-    { label: 'Total Alunos', value: String(stats.totalStudents) },
-    { label: 'Aulas Ativas', value: String(stats.activeClasses) },
-    { label: 'Receita', value: `€${stats.income.toFixed(2)}` },
-    { label: 'Pendente', value: `€${stats.pendingPayments.toFixed(2)}` },
+  // Calculate KPIs
+  const expenses = stats.expenses || 0;
+  const profit = stats.income - expenses;
+  const profitMargin = stats.income > 0 ? ((stats.income - expenses) / stats.income) * 100 : 0;
+  const totalRevenue = stats.income + stats.pendingPayments;
+  const collectionRate = totalRevenue > 0 ? (stats.income / totalRevenue) * 100 : 100;
+  const totalStudentsWithInactive = stats.totalStudents + (stats.inactiveStudents || 0);
+  const retentionRate = totalStudentsWithInactive > 0 ? (stats.totalStudents / totalStudentsWithInactive) * 100 : 100;
+  
+  // Previous period comparison
+  const revenueGrowth = extraData?.previousStats?.income 
+    ? ((stats.income - extraData.previousStats.income) / extraData.previousStats.income) * 100 
+    : 0;
+  const studentGrowth = extraData?.previousStats?.totalStudents 
+    ? ((stats.totalStudents - extraData.previousStats.totalStudents) / extraData.previousStats.totalStudents) * 100 
+    : 0;
+
+  // ========== ROW 1: Main KPI Cards (4 cards) ==========
+  const cardWidth = (pageWidth - 28 - 12) / 4; // 4 cards with gaps
+  const cardHeight = 42;
+  
+  const kpiCards = [
+    { 
+      label: 'Receita Total', 
+      value: `€${stats.income.toFixed(2)}`, 
+      trend: `${revenueGrowth >= 0 ? '+' : ''}${revenueGrowth.toFixed(1)}% vs período anterior`,
+      color: PRIMARY_COLOR,
+      trendPositive: revenueGrowth >= 0
+    },
+    { 
+      label: 'Lucro Líquido', 
+      value: `€${profit.toFixed(2)}`, 
+      trend: `Margem: ${profitMargin.toFixed(1)}%`,
+      color: [34, 197, 94] as [number, number, number], // green
+      trendPositive: profit >= 0
+    },
+    { 
+      label: 'Total Alunos', 
+      value: String(stats.totalStudents), 
+      trend: `${studentGrowth >= 0 ? '+' : ''}${studentGrowth.toFixed(1)}% crescimento`,
+      color: [59, 130, 246] as [number, number, number], // blue
+      trendPositive: studentGrowth >= 0
+    },
+    { 
+      label: 'Pendentes', 
+      value: `€${stats.pendingPayments.toFixed(2)}`, 
+      trend: `Taxa Recebimento: ${collectionRate.toFixed(0)}%`,
+      color: [245, 158, 11] as [number, number, number], // yellow
+      trendPositive: true
+    },
   ];
-  
-  yPosition = addSummaryBoxes(doc, summaryItems, yPosition);
-  
-  // Recent activity table
-  if (recentActivity.length > 0) {
+
+  kpiCards.forEach((card, index) => {
+    const xPos = 14 + index * (cardWidth + 4);
+    
+    // Card background
+    doc.setFillColor(250, 250, 250);
+    doc.roundedRect(xPos, yPosition, cardWidth, cardHeight, 4, 4, 'F');
+    
+    // Left accent bar
+    doc.setFillColor(...card.color);
+    doc.rect(xPos, yPosition, 3, cardHeight, 'F');
+    
+    // Label
+    doc.setFontSize(8);
+    doc.setTextColor(100, 100, 100);
+    doc.setFont('helvetica', 'normal');
+    doc.text(card.label, xPos + 8, yPosition + 10);
+    
+    // Value
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(card.trendPositive ? 50 : 239, card.trendPositive ? 50 : 68, card.trendPositive ? 50 : 68);
+    doc.text(card.value, xPos + 8, yPosition + 24);
+    
+    // Trend
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(card.trendPositive ? 34 : 239, card.trendPositive ? 197 : 68, card.trendPositive ? 94 : 68);
+    doc.text(card.trend, xPos + 8, yPosition + 34);
+  });
+
+  yPosition += cardHeight + 8;
+
+  // ========== ROW 2: Secondary KPI Cards (4 cards) ==========
+  const secondaryKpis = [
+    { 
+      label: 'Aulas Ativas', 
+      value: String(stats.activeClasses), 
+      subtitle: 'Tipos de aula disponíveis',
+      color: [168, 85, 247] as [number, number, number] // purple
+    },
+    { 
+      label: 'Retenção', 
+      value: `${retentionRate.toFixed(0)}%`, 
+      subtitle: 'Taxa de retenção de alunos',
+      color: [99, 102, 241] as [number, number, number] // indigo
+    },
+    { 
+      label: 'Despesas', 
+      value: `€${expenses.toFixed(2)}`, 
+      subtitle: `${stats.pendingStudents || 0} alunos pendentes`,
+      color: [239, 68, 68] as [number, number, number] // red
+    },
+    { 
+      label: 'Inativos', 
+      value: String(stats.inactiveStudents || 0), 
+      subtitle: 'Alunos inativos',
+      color: [107, 114, 128] as [number, number, number] // gray
+    },
+  ];
+
+  secondaryKpis.forEach((card, index) => {
+    const xPos = 14 + index * (cardWidth + 4);
+    
+    // Card background
+    doc.setFillColor(250, 250, 250);
+    doc.roundedRect(xPos, yPosition, cardWidth, 32, 4, 4, 'F');
+    
+    // Left accent bar
+    doc.setFillColor(...card.color);
+    doc.rect(xPos, yPosition, 3, 32, 'F');
+    
+    // Label
+    doc.setFontSize(8);
+    doc.setTextColor(100, 100, 100);
+    doc.setFont('helvetica', 'normal');
+    doc.text(card.label, xPos + 8, yPosition + 10);
+    
+    // Value
     doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(50, 50, 50);
-    doc.text('Atividade Recente', 14, yPosition + 5);
+    doc.text(card.value, xPos + 8, yPosition + 22);
     
-    addTable(doc, recentActivity.map(a => ({
-      activity: a.text,
-      time: a.time,
-    })), [
-      { header: 'Atividade', dataKey: 'activity' },
-      { header: 'Quando', dataKey: 'time' },
-    ], yPosition + 10);
+    // Subtitle
+    doc.setFontSize(6);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(130, 130, 130);
+    doc.text(card.subtitle, xPos + 8, yPosition + 28);
+  });
+
+  yPosition += 40;
+
+  // ========== ROW 3: Financial Summary Chart (Bar representation) ==========
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(50, 50, 50);
+  doc.text('Resumo Financeiro', 14, yPosition);
+  yPosition += 8;
+
+  // Draw financial bar chart representation
+  const financialData = [
+    { label: 'Receita', value: stats.income, color: PRIMARY_COLOR },
+    { label: 'Despesas', value: expenses, color: [239, 68, 68] as [number, number, number] },
+    { label: 'Lucro', value: profit, color: [34, 197, 94] as [number, number, number] },
+    { label: 'Pendente', value: stats.pendingPayments, color: [245, 158, 11] as [number, number, number] },
+  ];
+
+  const maxValue = Math.max(...financialData.map(d => Math.abs(d.value)), 1);
+  const barChartWidth = (pageWidth - 28) / 2 - 10;
+  const barHeight = 14;
+
+  financialData.forEach((item, index) => {
+    const yBar = yPosition + index * (barHeight + 4);
+    
+    // Label
+    doc.setFontSize(8);
+    doc.setTextColor(80, 80, 80);
+    doc.setFont('helvetica', 'normal');
+    doc.text(item.label, 14, yBar + 9);
+    
+    // Bar background
+    doc.setFillColor(240, 240, 240);
+    doc.roundedRect(50, yBar, barChartWidth - 40, barHeight, 2, 2, 'F');
+    
+    // Bar fill
+    const barWidth = Math.max((Math.abs(item.value) / maxValue) * (barChartWidth - 40), 2);
+    doc.setFillColor(...item.color);
+    doc.roundedRect(50, yBar, barWidth, barHeight, 2, 2, 'F');
+    
+    // Value
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(50, 50, 50);
+    doc.text(`€${item.value.toFixed(2)}`, 50 + barChartWidth - 35, yBar + 9);
+  });
+
+  // ========== Students Distribution (right side) ==========
+  const studentsX = pageWidth / 2 + 5;
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(50, 50, 50);
+  doc.text('Distribuição de Alunos', studentsX, yPosition - 8);
+
+  const studentData = [
+    { label: 'Ativos', value: stats.totalStudents, color: PRIMARY_COLOR },
+    { label: 'Inativos', value: stats.inactiveStudents || 0, color: [107, 114, 128] as [number, number, number] },
+    { label: 'Pendentes', value: stats.pendingStudents || 0, color: [245, 158, 11] as [number, number, number] },
+  ];
+
+  const totalStudentsAll = studentData.reduce((sum, s) => sum + s.value, 0) || 1;
+
+  studentData.forEach((item, index) => {
+    const yBar = yPosition + index * (barHeight + 4);
+    const percentage = (item.value / totalStudentsAll) * 100;
+    
+    // Label
+    doc.setFontSize(8);
+    doc.setTextColor(80, 80, 80);
+    doc.setFont('helvetica', 'normal');
+    doc.text(item.label, studentsX, yBar + 9);
+    
+    // Bar background
+    doc.setFillColor(240, 240, 240);
+    doc.roundedRect(studentsX + 30, yBar, barChartWidth - 50, barHeight, 2, 2, 'F');
+    
+    // Bar fill
+    const barWidth = Math.max((percentage / 100) * (barChartWidth - 50), 2);
+    doc.setFillColor(...item.color);
+    doc.roundedRect(studentsX + 30, yBar, barWidth, barHeight, 2, 2, 'F');
+    
+    // Value
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(50, 50, 50);
+    doc.text(`${item.value} (${percentage.toFixed(0)}%)`, studentsX + barChartWidth - 15, yBar + 9);
+  });
+
+  yPosition += financialData.length * (barHeight + 4) + 15;
+
+  // ========== ROW 4: Activity and Upcoming Classes ==========
+  const halfWidth = (pageWidth - 28 - 8) / 2;
+
+  // Recent Activity
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(50, 50, 50);
+  doc.text('Atividade Recente', 14, yPosition);
+  yPosition += 6;
+
+  if (recentActivity.length > 0) {
+    const activityY = yPosition;
+    recentActivity.slice(0, 6).forEach((activity, index) => {
+      const yItem = activityY + index * 10;
+      
+      // Bullet
+      doc.setFillColor(...PRIMARY_COLOR);
+      doc.circle(17, yItem + 3, 1.5, 'F');
+      
+      // Text
+      doc.setFontSize(7);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(60, 60, 60);
+      const activityText = activity.text.length > 40 ? activity.text.slice(0, 40) + '...' : activity.text;
+      doc.text(activityText, 22, yItem + 4);
+      
+      // Time
+      doc.setTextColor(130, 130, 130);
+      doc.text(activity.time, halfWidth - 5, yItem + 4);
+    });
+  } else {
+    doc.setFontSize(8);
+    doc.setTextColor(130, 130, 130);
+    doc.text('Sem atividade recente', 14, yPosition + 5);
   }
-  
+
+  // Upcoming Classes
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(50, 50, 50);
+  doc.text('Próximas Aulas', pageWidth / 2 + 5, yPosition - 6);
+
+  if (extraData?.upcomingClasses && extraData.upcomingClasses.length > 0) {
+    const classesY = yPosition;
+    extraData.upcomingClasses.slice(0, 6).forEach((schedule: any, index: number) => {
+      const yItem = classesY + index * 12;
+      const xPos = pageWidth / 2 + 5;
+      
+      // Class card
+      doc.setFillColor(248, 248, 248);
+      doc.roundedRect(xPos, yItem - 2, halfWidth, 10, 2, 2, 'F');
+      
+      // Class name
+      doc.setFontSize(7);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(50, 50, 50);
+      const className = (schedule.classes as any)?.name || 'Aula';
+      doc.text(className.slice(0, 15), xPos + 3, yItem + 4);
+      
+      // Time
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(...PRIMARY_COLOR);
+      doc.text(schedule.start_time?.slice(0, 5) || '', xPos + halfWidth - 35, yItem + 4);
+      
+      // Date
+      doc.setTextColor(130, 130, 130);
+      doc.text(schedule.scheduled_date || '', xPos + halfWidth - 18, yItem + 4);
+    });
+  } else {
+    doc.setFontSize(8);
+    doc.setTextColor(130, 130, 130);
+    doc.text('Sem aulas agendadas', pageWidth / 2 + 5, yPosition + 5);
+  }
+
+  // ========== Classes Distribution (if data available) ==========
+  if (extraData?.classes && extraData.classes.length > 0) {
+    yPosition += Math.max(recentActivity.length, extraData.upcomingClasses?.length || 0) * 12 + 15;
+    
+    if (yPosition > 260) {
+      doc.addPage();
+      yPosition = 20;
+    }
+
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(50, 50, 50);
+    doc.text('Aulas por Modalidade', 14, yPosition);
+    yPosition += 8;
+
+    // Count schedules per class
+    const classScheduleCounts: Record<string, number> = {};
+    (extraData.schedules || []).forEach((s: any) => {
+      const classId = s.class_id || s.class?.id;
+      if (classId) {
+        classScheduleCounts[classId] = (classScheduleCounts[classId] || 0) + 1;
+      }
+    });
+
+    const classColors: [number, number, number][] = [
+      PRIMARY_COLOR, 
+      [59, 130, 246], 
+      [239, 68, 68], 
+      [245, 158, 11], 
+      [168, 85, 247], 
+      [236, 72, 153]
+    ];
+    const classData = extraData.classes
+      .filter((c: any) => c.is_active !== false)
+      .map((c: any, index: number) => ({
+        name: c.name as string,
+        schedules: classScheduleCounts[c.id] || 0,
+        color: classColors[index % classColors.length],
+      }))
+      .sort((a, b) => b.schedules - a.schedules)
+      .slice(0, 6);
+
+    const maxSchedules = Math.max(...classData.map((c: any) => c.schedules), 1);
+
+    classData.forEach((classItem: any, index: number) => {
+      const yBar = yPosition + index * (barHeight + 3);
+      
+      // Label
+      doc.setFontSize(7);
+      doc.setTextColor(80, 80, 80);
+      doc.setFont('helvetica', 'normal');
+      const displayName = classItem.name.length > 18 ? classItem.name.slice(0, 18) + '...' : classItem.name;
+      doc.text(displayName, 14, yBar + 9);
+      
+      // Bar background
+      doc.setFillColor(240, 240, 240);
+      doc.roundedRect(70, yBar, pageWidth - 110, barHeight, 2, 2, 'F');
+      
+      // Bar fill
+      const barWidth = Math.max((classItem.schedules / maxSchedules) * (pageWidth - 110), 2);
+      doc.setFillColor(classItem.color[0], classItem.color[1], classItem.color[2]);
+      doc.roundedRect(70, yBar, barWidth, barHeight, 2, 2, 'F');
+      
+      // Value
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(50, 50, 50);
+      doc.text(`${classItem.schedules} aulas`, pageWidth - 30, yBar + 9);
+    });
+  }
+
   addFooter(doc);
   
   const fileName = `dashboard_${new Date().toISOString().split('T')[0]}.pdf`;
