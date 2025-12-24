@@ -97,18 +97,31 @@ export default function Communication() {
     
     setLoading(true);
     try {
-      const { data: messagesData } = await (supabase
-        .from('messages')
-        .select('*')
-        .eq('company_id', profile.company_id) as any)
-        .order('created_at', { ascending: false });
+      // Fetch all students and staff from the company
+      const [studentsResult, staffResult, messagesResult] = await Promise.all([
+        supabase
+          .from('students')
+          .select('id, full_name')
+          .eq('company_id', profile.company_id)
+          .eq('status', 'active'),
+        supabase
+          .from('staff')
+          .select('id, full_name')
+          .eq('company_id', profile.company_id)
+          .eq('is_active', true),
+        supabase
+          .from('messages')
+          .select('*')
+          .eq('company_id', profile.company_id)
+          .order('created_at', { ascending: false })
+      ]);
 
-      if (!messagesData) {
-        setConversations([]);
-        return;
-      }
+      const students = studentsResult.data || [];
+      const staff = staffResult.data || [];
+      const messagesData = messagesResult.data || [];
 
-      const convMap = new Map<string, Conversation>();
+      // Create a map to track message data per contact
+      const messageMap = new Map<string, { lastMessage: string; lastMessageTime: string; unreadCount: number }>();
       
       for (const msg of messagesData) {
         const isFromCompany = msg.sender_type === 'company';
@@ -116,32 +129,58 @@ export default function Communication() {
         const otherId = isFromCompany ? msg.receiver_id : msg.sender_id;
         const key = `${otherType}-${otherId}`;
         
-        if (!convMap.has(key)) {
-          convMap.set(key, {
-            id: otherId,
-            name: 'A carregar...',
-            type: otherType as 'student' | 'staff',
+        if (!messageMap.has(key)) {
+          messageMap.set(key, {
             lastMessage: msg.content,
             lastMessageTime: msg.created_at,
             unreadCount: !msg.is_read && !isFromCompany ? 1 : 0
           });
         } else {
-          const existing = convMap.get(key)!;
+          const existing = messageMap.get(key)!;
           if (!msg.is_read && !isFromCompany) {
             existing.unreadCount++;
           }
         }
       }
 
-      const convArray = Array.from(convMap.values());
+      // Build conversation list with all students and staff
+      const convArray: Conversation[] = [];
       
-      for (const conv of convArray) {
-        const table = conv.type === 'student' ? 'students' : 'staff';
-        const { data } = await supabase.from(table).select('full_name').eq('id', conv.id).single();
-        if (data) {
-          conv.name = data.full_name;
-        }
+      for (const student of students) {
+        const key = `student-${student.id}`;
+        const msgData = messageMap.get(key);
+        convArray.push({
+          id: student.id,
+          name: student.full_name,
+          type: 'student',
+          lastMessage: msgData?.lastMessage || '',
+          lastMessageTime: msgData?.lastMessageTime || '',
+          unreadCount: msgData?.unreadCount || 0
+        });
       }
+      
+      for (const member of staff) {
+        const key = `staff-${member.id}`;
+        const msgData = messageMap.get(key);
+        convArray.push({
+          id: member.id,
+          name: member.full_name,
+          type: 'staff',
+          lastMessage: msgData?.lastMessage || '',
+          lastMessageTime: msgData?.lastMessageTime || '',
+          unreadCount: msgData?.unreadCount || 0
+        });
+      }
+
+      // Sort: unread first, then by last message time
+      convArray.sort((a, b) => {
+        if (a.unreadCount > 0 && b.unreadCount === 0) return -1;
+        if (a.unreadCount === 0 && b.unreadCount > 0) return 1;
+        if (!a.lastMessageTime && !b.lastMessageTime) return a.name.localeCompare(b.name);
+        if (!a.lastMessageTime) return 1;
+        if (!b.lastMessageTime) return -1;
+        return new Date(b.lastMessageTime).getTime() - new Date(a.lastMessageTime).getTime();
+      });
 
       setConversations(convArray);
     } catch (error) {
