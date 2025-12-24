@@ -348,16 +348,16 @@ export function RolesSettingsSection() {
 
       {/* Role Dialog with Color and Permissions */}
       <Dialog open={showRoleDialog} onOpenChange={(open) => { setShowRoleDialog(open); if (!open) setSelectedRole(null); }}>
-        <DialogContent className="sm:max-w-[700px] max-h-[90vh] p-0 flex flex-col overflow-hidden">
-          <DialogHeader className="px-6 pt-6 pb-4 shrink-0">
+        <DialogContent className="w-[95vw] max-w-[700px] h-[85vh] max-h-[700px] p-0 flex flex-col">
+          <DialogHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-3 sm:pb-4 shrink-0 border-b">
             <DialogTitle>{selectedRole ? 'Editar Cargo' : 'Novo Cargo'}</DialogTitle>
             <DialogDescription>
               {selectedRole ? 'Atualize os dados e permissões do cargo.' : 'Crie um novo cargo com nome, cor e permissões.'}
             </DialogDescription>
           </DialogHeader>
           
-          <form onSubmit={handleSaveRole} className="flex flex-col flex-1 min-h-0 overflow-hidden">
-            <div className="flex-1 overflow-y-auto px-6">
+          <form onSubmit={handleSaveRole} className="flex flex-col flex-1 min-h-0">
+            <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4">
               <div className="space-y-6 pb-4">
                 {/* Basic Info */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -466,11 +466,11 @@ export function RolesSettingsSection() {
               </div>
             </div>
             
-            <DialogFooter className="px-6 py-4 border-t shrink-0">
-              <Button type="button" variant="outline" onClick={() => setShowRoleDialog(false)}>
+            <DialogFooter className="px-4 sm:px-6 py-3 sm:py-4 border-t shrink-0 gap-2 sm:gap-0">
+              <Button type="button" variant="outline" onClick={() => setShowRoleDialog(false)} className="w-full sm:w-auto">
                 Cancelar
               </Button>
-              <Button type="submit" disabled={saving}>
+              <Button type="submit" disabled={saving} className="w-full sm:w-auto">
                 {saving ? 'Salvando...' : selectedRole ? 'Salvar Alterações' : 'Criar Cargo'}
               </Button>
             </DialogFooter>
