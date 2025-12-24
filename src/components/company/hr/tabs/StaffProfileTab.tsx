@@ -392,11 +392,11 @@ export function StaffProfileTab({ staff, roles, canEdit, isNewStaff, onSaved }: 
         </div>
       )}
 
-      {/* Password Management - only for existing staff with accounts */}
-      {!isNewStaff && staff?.user_id && canEdit && (
+      {/* Password Management */}
+      {!isNewStaff && staff?.company_id && staff?.email && canEdit && (
         <div className="pt-4 border-t">
           <PasswordManagementCard
-            userId={staff.id}
+            recordId={staff.id}
             userType="staff"
             userEmail={staff.email}
             userName={staff.full_name}

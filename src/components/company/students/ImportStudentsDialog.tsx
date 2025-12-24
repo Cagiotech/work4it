@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { Upload, Download, FileSpreadsheet, X, Loader2, AlertTriangle, Key } from "lucide-react";
+import { Upload, Download, FileSpreadsheet, X, Loader2, AlertTriangle, Key, Copy, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -64,6 +64,9 @@ export function ImportStudentsDialog({
   const [duplicates, setDuplicates] = useState<DuplicateInfo[]>([]);
   const [showDuplicateDialog, setShowDuplicateDialog] = useState(false);
   const [overwriteDuplicates, setOverwriteDuplicates] = useState(false);
+  const [createdAccounts, setCreatedAccounts] = useState<Array<{ email: string; fullName: string; password: string }>>([]);
+  const [showCredentialsDialog, setShowCredentialsDialog] = useState(false);
+  const [copiedEmail, setCopiedEmail] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleDownloadTemplate = () => {
@@ -236,20 +239,22 @@ export function ImportStudentsDialog({
           email,
           fullName,
           recordId: studentId,
-          recordType: 'student'
-        }
+          recordType: 'student',
+        },
       });
 
       if (error) {
         console.error(`Error creating account for ${email}:`, error);
-        return false;
+        return null;
       }
 
-      console.log(`Account created for ${email}:`, data);
-      return true;
+      const temporaryPassword = (data as any)?.temporaryPassword as string | undefined;
+      if (!temporaryPassword) return null;
+
+      return temporaryPassword;
     } catch (err) {
       console.error(`Error creating account for ${email}:`, err);
-      return false;
+      return null;
     }
   };
 
@@ -298,11 +303,20 @@ export function ImportStudentsDialog({
 
       // Create accounts for students with email
       let accountsCreated = 0;
+      const credentials: Array<{ email: string; fullName: string; password: string }> = [];
       const studentsWithEmail = insertedStudents.filter(s => s.email);
-      
+
       for (const student of studentsWithEmail) {
-        const success = await createAccountForStudent(student.id, student.email!, student.full_name);
-        if (success) accountsCreated++;
+        const password = await createAccountForStudent(student.id, student.email!, student.full_name);
+        if (password) {
+          accountsCreated++;
+          credentials.push({ email: student.email!, fullName: student.full_name, password });
+        }
+      }
+
+      if (credentials.length > 0) {
+        setCreatedAccounts(credentials);
+        setShowCredentialsDialog(true);
       }
 
       const updatedCount = overwriteDuplicates ? duplicatesToUpdate.length : 0;
@@ -369,7 +383,7 @@ export function ImportStudentsDialog({
                 <div>
                   <p className="text-sm font-medium text-amber-700 dark:text-amber-400">Conta de Acesso Automática</p>
                   <p className="text-xs text-amber-600 dark:text-amber-500">
-                    Alunos importados com email terão conta de acesso criada automaticamente com senha temporária segura que deverá ser alterada no primeiro acesso.
+                    Alunos importados com email terão conta criada automaticamente. No final, mostraremos as senhas temporárias para copiar.
                   </p>
                 </div>
               </div>
@@ -524,6 +538,61 @@ export function ImportStudentsDialog({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Credentials Dialog */}
+      <Dialog
+        open={showCredentialsDialog}
+        onOpenChange={(open) => {
+          setShowCredentialsDialog(open);
+          if (!open) {
+            setCreatedAccounts([]);
+            setCopiedEmail(null);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Credenciais criadas</DialogTitle>
+            <DialogDescription>
+              Copie e guarde estas senhas temporárias (não será possível recuperá-las depois).
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-2 py-2">
+            {createdAccounts.map((acc) => (
+              <div key={acc.email} className="flex items-center justify-between gap-3 p-3 border rounded-lg bg-muted/20">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium truncate">{acc.email}</p>
+                  <p className="text-xs text-muted-foreground truncate">{acc.fullName}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <code className="px-2 py-1 rounded bg-background border font-mono text-xs">
+                    {acc.password}
+                  </code>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={async () => {
+                      await navigator.clipboard.writeText(acc.password);
+                      setCopiedEmail(acc.email);
+                      toast.success("Senha copiada!");
+                      setTimeout(() => setCopiedEmail(null), 1500);
+                    }}
+                    aria-label={`Copiar senha temporária de ${acc.email}`}
+                  >
+                    {copiedEmail === acc.email ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <DialogFooter>
+            <Button onClick={() => setShowCredentialsDialog(false)}>Fechar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
+
   );
 }
