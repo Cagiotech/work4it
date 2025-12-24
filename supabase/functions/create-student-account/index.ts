@@ -223,15 +223,70 @@ const handler = async (req: Request): Promise<Response> => {
     if (createError) {
       console.error("Error creating user:", createError);
       
-      // Check if user already exists
+      // Check if user already exists in auth - link existing user to record
       if (createError.message.includes("already been registered")) {
+        console.log(`Email ${email} already exists in auth. Attempting to link existing user...`);
+        
+        // Find the existing user by email
+        const { data: existingUsers, error: listError } = await supabaseAdmin.auth.admin.listUsers();
+        
+        if (listError) {
+          console.error("Error listing users:", listError);
+          throw listError;
+        }
+        
+        const existingAuthUser = existingUsers.users.find(u => u.email?.toLowerCase() === email.toLowerCase());
+        
+        if (!existingAuthUser) {
+          return new Response(
+            JSON.stringify({ 
+              error: "Email já registado no sistema mas não encontrado",
+              code: "USER_EXISTS"
+            }),
+            {
+              status: 400,
+              headers: { "Content-Type": "application/json", ...corsHeaders },
+            }
+          );
+        }
+        
+        // Link the existing auth user to the record
+        const { error: linkError } = await supabaseAdmin
+          .from(tableName)
+          .update({ 
+            user_id: existingAuthUser.id,
+            password_changed: false 
+          })
+          .eq("id", recordId);
+        
+        if (linkError) {
+          console.error(`Error linking existing user to ${recordType}:`, linkError);
+          throw linkError;
+        }
+        
+        // Reset password for the existing user
+        const newTempPassword = password ?? generateSecurePassword(16);
+        const { error: resetError } = await supabaseAdmin.auth.admin.updateUserById(existingAuthUser.id, {
+          password: newTempPassword,
+        });
+        
+        if (resetError) {
+          console.error("Error resetting password for existing user:", resetError);
+          throw resetError;
+        }
+        
+        console.log(`Linked existing auth user ${existingAuthUser.id} to ${recordType} ${recordId} and reset password`);
+        
         return new Response(
           JSON.stringify({ 
-            error: "Email já registado no sistema",
-            code: "USER_EXISTS"
+            success: true, 
+            userId: existingAuthUser.id,
+            temporaryPassword: newTempPassword,
+            message: `Conta existente vinculada. Senha temporária: ${newTempPassword}`,
+            linkedExisting: true
           }),
           {
-            status: 400,
+            status: 200,
             headers: { "Content-Type": "application/json", ...corsHeaders },
           }
         );
