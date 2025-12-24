@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { format } from "date-fns";
+import { format, isToday, isYesterday } from "date-fns";
 import { pt } from "date-fns/locale";
 import { Search, Users, User, Building2, Pin } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -37,17 +37,19 @@ export function ConversationList({ conversations, selectedId, onSelect, loading 
 
   const formatTime = (dateStr: string) => {
     const date = new Date(dateStr);
-    const now = new Date();
-    const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
     
-    if (diffDays === 0) {
+    if (isToday(date)) {
       return format(date, "HH:mm");
-    } else if (diffDays === 1) {
+    } else if (isYesterday(date)) {
       return "Ontem";
-    } else if (diffDays < 7) {
-      return format(date, "EEEE", { locale: pt });
     } else {
-      return format(date, "dd/MM/yyyy");
+      const now = new Date();
+      const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+      if (diffDays < 7) {
+        return format(date, "EEEE", { locale: pt });
+      } else {
+        return format(date, "dd/MM/yyyy");
+      }
     }
   };
 
