@@ -83,8 +83,8 @@ export function StudentStatusDialog({ open, onOpenChange, student, onUpdate }: S
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
+      <DialogContent className="w-[95vw] max-w-[550px] max-h-[85vh] p-0 flex flex-col">
+        <DialogHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-3 shrink-0 border-b">
           <DialogTitle className="flex items-center gap-2">
             <AlertTriangle className="h-5 w-5 text-amber-500" />
             Alterar Status do Aluno
@@ -94,7 +94,7 @@ export function StudentStatusDialog({ open, onOpenChange, student, onUpdate }: S
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-6 py-4">
+        <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 space-y-6">
           <div className="space-y-3">
             <Label className="text-sm font-medium">Status da Conta</Label>
             <RadioGroup value={selectedStatus} onValueChange={setSelectedStatus} className="space-y-2">
@@ -172,14 +172,15 @@ export function StudentStatusDialog({ open, onOpenChange, student, onUpdate }: S
           )}
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading}>
+        <DialogFooter className="px-4 sm:px-6 py-3 sm:py-4 border-t shrink-0 gap-2 sm:gap-0">
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading} className="w-full sm:w-auto">
             Cancelar
           </Button>
           <Button 
             onClick={handleSave} 
             disabled={isLoading || (selectedStatus === "suspended" && !selectedBlockReason)}
             variant={selectedStatus === "suspended" ? "destructive" : "default"}
+            className="w-full sm:w-auto"
           >
             {isLoading ? "Guardando..." : "Confirmar Alteração"}
           </Button>
