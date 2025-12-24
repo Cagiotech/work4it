@@ -14,9 +14,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Settings, Globe, Mail, Shield, Bell, Save, Key, CreditCard, Loader2, Phone, Building, Receipt } from "lucide-react";
+import { Settings, Globe, Mail, Shield, Bell, Save, Key, CreditCard, Loader2, Phone, Building, Receipt, KeyRound } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { PasswordResetRequestsSection } from "@/components/admin/PasswordResetRequestsSection";
 
 interface AdminSettings {
   id: string;
@@ -127,7 +128,7 @@ export default function AdminSettings() {
       </div>
 
       <Tabs defaultValue="general" className="space-y-4">
-        <TabsList className="w-full md:w-auto grid grid-cols-3 md:grid-cols-6 md:flex">
+        <TabsList className="w-full md:w-auto grid grid-cols-4 md:grid-cols-7 md:flex">
           <TabsTrigger value="general" className="gap-2">
             <Settings className="h-4 w-4" />
             <span className="hidden md:inline">Geral</span>
@@ -143,6 +144,10 @@ export default function AdminSettings() {
           <TabsTrigger value="security" className="gap-2">
             <Shield className="h-4 w-4" />
             <span className="hidden md:inline">Segurança</span>
+          </TabsTrigger>
+          <TabsTrigger value="password-reset" className="gap-2">
+            <KeyRound className="h-4 w-4" />
+            <span className="hidden md:inline">Senhas</span>
           </TabsTrigger>
           <TabsTrigger value="notifications" className="gap-2">
             <Bell className="h-4 w-4" />
@@ -710,6 +715,11 @@ export default function AdminSettings() {
               </Button>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Password Reset Requests */}
+        <TabsContent value="password-reset" className="space-y-4">
+          <PasswordResetRequestsSection />
         </TabsContent>
       </Tabs>
     </div>

@@ -8,6 +8,7 @@ import '@/i18n';
 import { AuthProvider } from "@/hooks/useAuth";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
+import ForgotPassword from "./pages/ForgotPassword";
 import Register from "./pages/Register";
 import Onboarding from "./pages/Onboarding";
 import StudentRegister from "./pages/StudentRegister";
@@ -77,6 +78,7 @@ const App = () => (
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/login" element={<Login />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/register" element={<Register />} />
               <Route path="/onboarding" element={<Onboarding />} />
               <Route path="/registro" element={<StudentRegister />} />
