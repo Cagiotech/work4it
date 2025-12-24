@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { Bell, User, Menu, LogOut } from "lucide-react";
+import { User, Menu, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
@@ -15,6 +15,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { StudentNotificationsDropdown } from "./StudentNotificationsDropdown";
 
 interface StudentInfo {
   full_name: string;
@@ -67,9 +68,7 @@ export function StudentHeader() {
           <LanguageSwitcher />
           <ThemeSwitcher />
           
-          <Button variant="ghost" size="icon" className="relative">
-            <Bell className="h-5 w-5" />
-          </Button>
+          <StudentNotificationsDropdown />
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
