@@ -2479,6 +2479,8 @@ export type Database = {
         Row: {
           address: string | null
           birth_date: string | null
+          block_reason: string | null
+          blocked_at: string | null
           citizen_card: string | null
           city: string | null
           company_id: string
@@ -2510,6 +2512,8 @@ export type Database = {
         Insert: {
           address?: string | null
           birth_date?: string | null
+          block_reason?: string | null
+          blocked_at?: string | null
           citizen_card?: string | null
           city?: string | null
           company_id: string
@@ -2541,6 +2545,8 @@ export type Database = {
         Update: {
           address?: string | null
           birth_date?: string | null
+          block_reason?: string | null
+          blocked_at?: string | null
           citizen_card?: string | null
           city?: string | null
           company_id?: string

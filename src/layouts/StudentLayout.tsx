@@ -8,6 +8,7 @@ import { AdminBanner } from "@/components/shared/AdminBanner";
 import { useStudentAccessCheck } from "@/hooks/useStudentAccessCheck";
 import { TermsAcceptanceDialog } from "@/components/student/TermsAcceptanceDialog";
 import { PaymentReminderDialog } from "@/components/student/PaymentReminderDialog";
+import { BlockedAccountDialog } from "@/components/student/BlockedAccountDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { ShieldX } from "lucide-react";
@@ -139,6 +140,23 @@ export function StudentLayout() {
   }
 
   const showTermsDialog = mustAcceptTerms && !termsAccepted && student && company;
+  const isBlocked = student?.status === 'suspended';
+
+  // If student is blocked, show blocked dialog
+  if (isBlocked && student && company) {
+    return (
+      <BlockedAccountDialog
+        open={true}
+        student={{
+          id: student.id,
+          full_name: student.full_name,
+          status: student.status,
+          block_reason: (student as any).block_reason,
+          company_id: company.id,
+        }}
+      />
+    );
+  }
 
   return (
     <SidebarProvider>
