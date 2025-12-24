@@ -314,7 +314,7 @@ export function StudentProfileDialog({
         </div>
 
         <SaveTriggerContext.Provider value={{ registerSave, unregisterSave }}>
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
             <div className="px-4 sm:px-6 border-b shrink-0">
               <TabsList className="flex h-auto gap-0.5 justify-start bg-transparent p-0 overflow-x-auto">
                 <TabsTrigger value="overview" className="gap-1.5 text-xs sm:text-sm data-[state=active]:bg-primary/10 rounded-b-none border-b-2 border-transparent data-[state=active]:border-primary px-3 py-2.5">
@@ -356,7 +356,7 @@ export function StudentProfileDialog({
               </TabsList>
             </div>
 
-            <ScrollArea className="flex-1">
+            <div className="flex-1 overflow-y-auto">
               <div className="p-4 sm:p-6">
                 {/* Editing Mode Banner */}
                 {isEditing && (activeTab === "profile" || activeTab === "anamnesis") && (
@@ -647,7 +647,7 @@ export function StudentProfileDialog({
                   />
                 </TabsContent>
               </div>
-            </ScrollArea>
+            </div>
           </Tabs>
         </SaveTriggerContext.Provider>
       </DialogContent>
