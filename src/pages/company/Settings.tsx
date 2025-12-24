@@ -366,77 +366,80 @@ export default function Settings() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Configurações</h1>
-        <Button variant="outline" onClick={handleLogout}>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold">Configurações</h1>
+          <p className="text-sm text-muted-foreground">Gerencie as configurações da sua empresa</p>
+        </div>
+        <Button variant="outline" onClick={handleLogout} size="sm">
           <LogOut className="h-4 w-4 mr-2" />
           Sair
         </Button>
       </div>
 
       <Tabs defaultValue="profile" className="w-full">
-        <TabsList className="mb-6 flex-wrap">
-          <TabsTrigger value="profile">
-            <User className="h-4 w-4 mr-2" />
-            Perfil
+        <TabsList className="mb-6 h-auto flex-wrap gap-1 bg-muted/50 p-1">
+          <TabsTrigger value="profile" className="text-xs sm:text-sm data-[state=active]:bg-background">
+            <User className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Perfil</span>
           </TabsTrigger>
-          <TabsTrigger value="company">
-            <Building className="h-4 w-4 mr-2" />
-            Empresa
+          <TabsTrigger value="company" className="text-xs sm:text-sm data-[state=active]:bg-background">
+            <Building className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Empresa</span>
           </TabsTrigger>
-          <TabsTrigger value="hr">
-            <Users className="h-4 w-4 mr-2" />
-            RH
+          <TabsTrigger value="hr" className="text-xs sm:text-sm data-[state=active]:bg-background">
+            <Users className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">RH</span>
           </TabsTrigger>
-          <TabsTrigger value="classes">
-            <LayoutGrid className="h-4 w-4 mr-2" />
-            Aulas
+          <TabsTrigger value="classes" className="text-xs sm:text-sm data-[state=active]:bg-background">
+            <LayoutGrid className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Aulas</span>
           </TabsTrigger>
-          <TabsTrigger value="plans">
-            <CreditCard className="h-4 w-4 mr-2" />
-            Planos
+          <TabsTrigger value="plans" className="text-xs sm:text-sm data-[state=active]:bg-background">
+            <CreditCard className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Planos</span>
           </TabsTrigger>
-          <TabsTrigger value="registration">
-            <Link className="h-4 w-4 mr-2" />
-            Registo
+          <TabsTrigger value="registration" className="text-xs sm:text-sm data-[state=active]:bg-background">
+            <Link className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Registo</span>
           </TabsTrigger>
-          <TabsTrigger value="regulations">
-            <FileText className="h-4 w-4 mr-2" />
-            Regulamento
+          <TabsTrigger value="regulations" className="text-xs sm:text-sm data-[state=active]:bg-background">
+            <FileText className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Regulamento</span>
           </TabsTrigger>
-          <TabsTrigger value="password-reset">
-            <KeyRound className="h-4 w-4 mr-2" />
-            Senhas
+          <TabsTrigger value="password-reset" className="text-xs sm:text-sm data-[state=active]:bg-background">
+            <KeyRound className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Senhas</span>
           </TabsTrigger>
-          <TabsTrigger value="security">
-            <Lock className="h-4 w-4 mr-2" />
-            Segurança
+          <TabsTrigger value="security" className="text-xs sm:text-sm data-[state=active]:bg-background">
+            <Lock className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Segurança</span>
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="profile">
+        <TabsContent value="profile" className="mt-0">
           <Card>
-            <CardHeader>
-              <CardTitle>Informações Pessoais</CardTitle>
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg">Informações Pessoais</CardTitle>
               <CardDescription>Gerencie seus dados pessoais e de acesso</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="flex items-center gap-6">
-                <Avatar className="h-24 w-24">
-                  <AvatarFallback className="bg-primary text-primary-foreground text-2xl">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 bg-muted/30 rounded-lg">
+                <Avatar className="h-16 w-16 sm:h-20 sm:w-20">
+                  <AvatarFallback className="bg-primary text-primary-foreground text-xl">
                     {getInitials(profileData.fullName)}
                   </AvatarFallback>
                 </Avatar>
-                <div className="flex-1">
-                  <p className="font-medium text-xl">{profileData.fullName || 'Sem nome'}</p>
-                  <p className="text-muted-foreground">{profileData.rolePosition || 'Sem cargo'}</p>
-                  <p className="text-sm text-muted-foreground mt-1">{profileData.email}</p>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-lg truncate">{profileData.fullName || 'Sem nome'}</p>
+                  <p className="text-muted-foreground text-sm">{profileData.rolePosition || 'Sem cargo'}</p>
+                  <p className="text-xs text-muted-foreground mt-1 truncate">{profileData.email}</p>
                 </div>
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="fullName">Nome Completo</Label>
+                  <Label htmlFor="fullName" className="text-sm font-medium">Nome Completo</Label>
                   <div className="relative">
                     <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
@@ -449,7 +452,7 @@ export default function Settings() {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="rolePosition">Cargo</Label>
+                  <Label htmlFor="rolePosition" className="text-sm font-medium">Cargo</Label>
                   <div className="relative">
                     <Building className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
@@ -462,7 +465,7 @@ export default function Settings() {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="email" className="text-sm font-medium">Email</Label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
@@ -475,7 +478,7 @@ export default function Settings() {
                   <p className="text-xs text-muted-foreground">O email não pode ser alterado</p>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="phone">Telefone</Label>
+                  <Label htmlFor="phone" className="text-sm font-medium">Telefone</Label>
                   <div className="relative">
                     <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
@@ -489,24 +492,26 @@ export default function Settings() {
                 </div>
               </div>
 
-              <Button onClick={handleSaveProfile} disabled={loading}>
-                <Save className="h-4 w-4 mr-2" />
-                {loading ? 'Salvando...' : 'Salvar Alterações'}
-              </Button>
+              <div className="flex justify-end pt-2">
+                <Button onClick={handleSaveProfile} disabled={loading} size="sm">
+                  <Save className="h-4 w-4 mr-2" />
+                  {loading ? 'Salvando...' : 'Salvar Alterações'}
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="company">
+        <TabsContent value="company" className="mt-0">
           <Card>
-            <CardHeader>
-              <CardTitle>Dados da Empresa</CardTitle>
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg">Dados da Empresa</CardTitle>
               <CardDescription>Informações do seu ginásio/academia</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="companyName">Nome da Empresa</Label>
+                  <Label htmlFor="companyName" className="text-sm font-medium">Nome da Empresa</Label>
                   <div className="relative">
                     <Building className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
@@ -519,7 +524,7 @@ export default function Settings() {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="nif">NIF</Label>
+                  <Label htmlFor="nif" className="text-sm font-medium">NIF</Label>
                   <Input
                     id="nif"
                     value={companyData.nif}
@@ -527,8 +532,8 @@ export default function Settings() {
                     placeholder="123456789"
                   />
                 </div>
-                <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="address">Endereço</Label>
+                <div className="space-y-2 sm:col-span-2">
+                  <Label htmlFor="address" className="text-sm font-medium">Endereço</Label>
                   <div className="relative">
                     <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
@@ -541,7 +546,7 @@ export default function Settings() {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="companyPhone">Telefone</Label>
+                  <Label htmlFor="companyPhone" className="text-sm font-medium">Telefone</Label>
                   <div className="relative">
                     <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
@@ -554,7 +559,7 @@ export default function Settings() {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="companyEmail">Email</Label>
+                  <Label htmlFor="companyEmail" className="text-sm font-medium">Email</Label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
@@ -566,8 +571,8 @@ export default function Settings() {
                     />
                   </div>
                 </div>
-                <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="website">Website</Label>
+                <div className="space-y-2 sm:col-span-2">
+                  <Label htmlFor="website" className="text-sm font-medium">Website</Label>
                   <div className="relative">
                     <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
@@ -581,14 +586,13 @@ export default function Settings() {
                 </div>
               </div>
 
-              {/* MB Way Configuration */}
               <div className="border-t pt-6">
-                <h3 className="text-sm font-medium mb-4 flex items-center gap-2">
+                <div className="flex items-center gap-2 mb-4">
                   <Smartphone className="h-4 w-4 text-primary" />
-                  Configurações de Pagamento
-                </h3>
-                <div className="space-y-2 max-w-md">
-                  <Label htmlFor="mbway_phone">Número MB Way</Label>
+                  <h3 className="text-sm font-medium">Configurações de Pagamento</h3>
+                </div>
+                <div className="space-y-2 max-w-sm">
+                  <Label htmlFor="mbway_phone" className="text-sm font-medium">Número MB Way</Label>
                   <div className="relative">
                     <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
@@ -600,26 +604,26 @@ export default function Settings() {
                     />
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Este número será exibido aos alunos para pagamento via MB Way quando houver parcelas em atraso.
+                    Este número será exibido aos alunos para pagamento via MB Way.
                   </p>
                 </div>
               </div>
 
-              <Button onClick={handleSaveCompany} disabled={loading}>
-                <Save className="h-4 w-4 mr-2" />
-                {loading ? 'Salvando...' : 'Salvar Alterações'}
-              </Button>
+              <div className="flex justify-end pt-2">
+                <Button onClick={handleSaveCompany} disabled={loading} size="sm">
+                  <Save className="h-4 w-4 mr-2" />
+                  {loading ? 'Salvando...' : 'Salvar Alterações'}
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="hr">
+        <TabsContent value="hr" className="mt-0">
           <Card>
-            <CardHeader>
-              <CardTitle>Cargos e Permissões</CardTitle>
-              <CardDescription>
-                Configure os cargos e permissões dos colaboradores.
-              </CardDescription>
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg">Cargos e Permissões</CardTitle>
+              <CardDescription>Configure os cargos e permissões dos colaboradores</CardDescription>
             </CardHeader>
             <CardContent>
               <RolesSettingsSection />
@@ -627,13 +631,11 @@ export default function Settings() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="classes">
+        <TabsContent value="classes" className="mt-0">
           <Card>
-            <CardHeader>
-              <CardTitle>Aulas e Serviços</CardTitle>
-              <CardDescription>
-                Configure os tipos de aula e salas disponíveis na sua empresa.
-              </CardDescription>
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg">Aulas e Serviços</CardTitle>
+              <CardDescription>Configure os tipos de aula e salas disponíveis</CardDescription>
             </CardHeader>
             <CardContent>
               <ClassesSettingsSection />
@@ -641,13 +643,11 @@ export default function Settings() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="plans">
+        <TabsContent value="plans" className="mt-0">
           <Card>
-            <CardHeader>
-              <CardTitle>Planos de Subscrição</CardTitle>
-              <CardDescription>
-                Configure os planos de subscrição e regras de pagamento para alunos.
-              </CardDescription>
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg">Planos de Subscrição</CardTitle>
+              <CardDescription>Configure os planos de subscrição e regras de pagamento</CardDescription>
             </CardHeader>
             <CardContent>
               <PlansSettingsSection />
@@ -655,26 +655,23 @@ export default function Settings() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="registration">
+        <TabsContent value="registration" className="mt-0">
           <Card>
-            <CardHeader>
-              <CardTitle>Link de Registo para Alunos</CardTitle>
-              <CardDescription>
-                Partilhe este link para os alunos se registarem na sua empresa.
-              </CardDescription>
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg">Link de Registo para Alunos</CardTitle>
+              <CardDescription>Partilhe este link para os alunos se registarem</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* Approval Switch */}
-              <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/30">
-                <div className="space-y-0.5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 border rounded-lg bg-muted/30">
+                <div className="space-y-1 flex-1">
                   <div className="flex items-center gap-2">
                     <UserCheck className="h-4 w-4 text-primary" />
-                    <Label htmlFor="requireApproval" className="font-medium">
-                      Requer Aprovação de Novos Alunos
+                    <Label htmlFor="requireApproval" className="font-medium text-sm">
+                      Requer Aprovação
                     </Label>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Quando ativo, alunos que se registarem pelo link ficarão pendentes de aprovação antes de poderem aceder à plataforma.
+                    Alunos ficam pendentes de aprovação antes de aceder
                   </p>
                 </div>
                 <Switch
@@ -685,35 +682,31 @@ export default function Settings() {
               </div>
 
               <div className="space-y-2">
-                <Label>Link de Registo</Label>
+                <Label className="text-sm font-medium">Link de Registo</Label>
                 <div className="flex gap-2">
                   <Input
                     value={getRegistrationLink()}
                     readOnly
-                    className="bg-muted"
+                    className="bg-muted text-xs sm:text-sm"
                   />
-                  <Button onClick={handleCopyLink} variant="outline">
-                    {copied ? (
-                      <Check className="h-4 w-4" />
-                    ) : (
-                      <Copy className="h-4 w-4" />
-                    )}
+                  <Button onClick={handleCopyLink} variant="outline" size="icon" className="shrink-0">
+                    {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                   </Button>
                 </div>
                 <p className="text-xs text-muted-foreground">
                   {regulationsData.requireStudentApproval 
-                    ? 'Os alunos que se registarem por este link ficarão pendentes até serem aprovados manualmente.'
-                    : 'Os alunos que se registarem por este link terão acesso imediato após completar o registo.'}
+                    ? 'Alunos ficarão pendentes até aprovação manual.'
+                    : 'Alunos terão acesso imediato após registo.'}
                 </p>
               </div>
 
               <div className="space-y-2 pt-4 border-t">
-                <Label>Quem preenche a Anamnese?</Label>
+                <Label className="text-sm font-medium">Quem preenche a Anamnese?</Label>
                 <Select 
                   value={regulationsData.anamnesisFilledBy} 
                   onValueChange={(value) => setRegulationsData({ ...regulationsData, anamnesisFilledBy: value })}
                 >
-                  <SelectTrigger className="w-full md:w-64">
+                  <SelectTrigger className="w-full sm:w-64">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -722,30 +715,30 @@ export default function Settings() {
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-muted-foreground">
-                  Define quem é responsável por preencher a avaliação de saúde (anamnese) do aluno.
+                  Define quem preenche a avaliação de saúde do aluno
                 </p>
               </div>
 
-              <Button onClick={handleSaveRegulations} disabled={loading}>
-                <Save className="h-4 w-4 mr-2" />
-                {loading ? 'Salvando...' : 'Salvar Configurações'}
-              </Button>
+              <div className="flex justify-end pt-2">
+                <Button onClick={handleSaveRegulations} disabled={loading} size="sm">
+                  <Save className="h-4 w-4 mr-2" />
+                  {loading ? 'Salvando...' : 'Salvar Configurações'}
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="regulations">
-          <div className="space-y-6">
+        <TabsContent value="regulations" className="mt-0">
+          <div className="space-y-4">
             <Card>
-              <CardHeader>
-                <div className="flex justify-between items-start">
+              <CardHeader className="pb-4">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
                   <div>
-                    <CardTitle>Termos e Condições</CardTitle>
-                    <CardDescription>
-                      Defina os termos e condições que os alunos devem aceitar.
-                    </CardDescription>
+                    <CardTitle className="text-lg">Termos e Condições</CardTitle>
+                    <CardDescription>Termos que os alunos devem aceitar</CardDescription>
                   </div>
-                  <Button variant="outline" size="sm" onClick={handleLoadTermsTemplate}>
+                  <Button variant="outline" size="sm" onClick={handleLoadTermsTemplate} className="w-fit">
                     <FileCheck className="h-4 w-4 mr-2" />
                     Carregar Modelo
                   </Button>
@@ -755,22 +748,20 @@ export default function Settings() {
                 <Textarea
                   value={regulationsData.termsText}
                   onChange={(e) => setRegulationsData({ ...regulationsData, termsText: e.target.value })}
-                  placeholder="Escreva aqui os termos e condições da sua empresa ou carregue o modelo pré-definido..."
-                  className="min-h-[300px] font-mono text-sm"
+                  placeholder="Escreva aqui os termos e condições..."
+                  className="min-h-[200px] sm:min-h-[250px] font-mono text-xs sm:text-sm"
                 />
               </CardContent>
             </Card>
 
             <Card>
-              <CardHeader>
-                <div className="flex justify-between items-start">
+              <CardHeader className="pb-4">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
                   <div>
-                    <CardTitle>Regulamento Interno</CardTitle>
-                    <CardDescription>
-                      Defina o regulamento interno que os alunos devem aceitar.
-                    </CardDescription>
+                    <CardTitle className="text-lg">Regulamento Interno</CardTitle>
+                    <CardDescription>Regulamento que os alunos devem aceitar</CardDescription>
                   </div>
-                  <Button variant="outline" size="sm" onClick={handleLoadRegulationsTemplate}>
+                  <Button variant="outline" size="sm" onClick={handleLoadRegulationsTemplate} className="w-fit">
                     <FileCheck className="h-4 w-4 mr-2" />
                     Carregar Modelo
                   </Button>
@@ -780,30 +771,32 @@ export default function Settings() {
                 <Textarea
                   value={regulationsData.regulationsText}
                   onChange={(e) => setRegulationsData({ ...regulationsData, regulationsText: e.target.value })}
-                  placeholder="Escreva aqui o regulamento interno da sua empresa ou carregue o modelo pré-definido..."
-                  className="min-h-[300px] font-mono text-sm"
+                  placeholder="Escreva aqui o regulamento interno..."
+                  className="min-h-[200px] sm:min-h-[250px] font-mono text-xs sm:text-sm"
                 />
                 
-                <Button onClick={handleSaveRegulations} disabled={loading}>
-                  <Save className="h-4 w-4 mr-2" />
-                  {loading ? 'Salvando...' : 'Salvar Regulamentos'}
-                </Button>
+                <div className="flex justify-end">
+                  <Button onClick={handleSaveRegulations} disabled={loading} size="sm">
+                    <Save className="h-4 w-4 mr-2" />
+                    {loading ? 'Salvando...' : 'Salvar Regulamentos'}
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </div>
         </TabsContent>
 
-        <TabsContent value="security">
-          <div className="space-y-6">
+        <TabsContent value="security" className="mt-0">
+          <div className="space-y-4">
             <Card>
-              <CardHeader>
-                <CardTitle>Alterar Senha</CardTitle>
-                <CardDescription>Mantenha sua conta segura com uma senha forte</CardDescription>
+              <CardHeader className="pb-4">
+                <CardTitle className="text-lg">Alterar Senha</CardTitle>
+                <CardDescription>Mantenha sua conta segura</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="newPassword">Nova Senha</Label>
+                    <Label htmlFor="newPassword" className="text-sm font-medium">Nova Senha</Label>
                     <div className="relative">
                       <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
@@ -817,7 +810,7 @@ export default function Settings() {
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="confirmPassword">Confirmar Nova Senha</Label>
+                    <Label htmlFor="confirmPassword" className="text-sm font-medium">Confirmar Senha</Label>
                     <div className="relative">
                       <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
@@ -832,47 +825,47 @@ export default function Settings() {
                   </div>
                 </div>
 
-                <div className="p-4 bg-muted/30 rounded-lg">
-                  <p className="text-sm font-medium mb-2">Requisitos de senha:</p>
-                  <ul className="text-xs text-muted-foreground space-y-1">
+                <div className="p-3 bg-muted/30 rounded-lg">
+                  <p className="text-xs font-medium mb-1">Requisitos:</p>
+                  <ul className="text-xs text-muted-foreground space-y-0.5">
                     <li>• Mínimo de 6 caracteres</li>
-                    <li>• Recomendamos usar letras maiúsculas e minúsculas</li>
-                    <li>• Recomendamos usar números e caracteres especiais</li>
+                    <li>• Use letras, números e caracteres especiais</li>
                   </ul>
                 </div>
 
-                <Button onClick={handleChangePassword} disabled={loading}>
-                  <Lock className="h-4 w-4 mr-2" />
-                  {loading ? 'Alterando...' : 'Alterar Senha'}
-                </Button>
+                <div className="flex justify-end">
+                  <Button onClick={handleChangePassword} disabled={loading} size="sm">
+                    <Lock className="h-4 w-4 mr-2" />
+                    {loading ? 'Alterando...' : 'Alterar Senha'}
+                  </Button>
+                </div>
               </CardContent>
             </Card>
 
-            {/* Danger Zone */}
             <Card className="border-destructive/50">
-              <CardHeader>
-                <CardTitle className="text-destructive flex items-center gap-2">
-                  <AlertTriangle className="h-5 w-5" />
+              <CardHeader className="pb-4">
+                <CardTitle className="text-lg text-destructive flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4" />
                   Zona de Perigo
                 </CardTitle>
-                <CardDescription>
-                  Ações irreversíveis. Tenha cuidado ao usar estas opções.
-                </CardDescription>
+                <CardDescription>Ações irreversíveis</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="flex items-center justify-between p-4 border border-destructive/30 rounded-lg bg-destructive/5">
-                  <div>
-                    <p className="font-medium text-destructive">Excluir Conta</p>
-                    <p className="text-sm text-muted-foreground">
-                      Remove permanentemente a empresa e todos os dados associados (alunos, staff, planos, etc.)
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 border border-destructive/30 rounded-lg bg-destructive/5">
+                  <div className="space-y-1">
+                    <p className="font-medium text-destructive text-sm">Excluir Conta</p>
+                    <p className="text-xs text-muted-foreground">
+                      Remove permanentemente todos os dados
                     </p>
                   </div>
                   <Button 
                     variant="destructive" 
                     onClick={() => setDeleteDialogOpen(true)}
+                    size="sm"
+                    className="w-fit"
                   >
                     <Trash2 className="h-4 w-4 mr-2" />
-                    Excluir Conta
+                    Excluir
                   </Button>
                 </div>
               </CardContent>
@@ -880,8 +873,7 @@ export default function Settings() {
           </div>
         </TabsContent>
 
-        {/* Password Reset Requests */}
-        <TabsContent value="password-reset">
+        <TabsContent value="password-reset" className="mt-0">
           <PasswordResetRequestsSection />
         </TabsContent>
       </Tabs>
