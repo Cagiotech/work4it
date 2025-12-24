@@ -21,6 +21,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { useTheme } from "next-themes";
 import { useTranslation } from "react-i18next";
+import { PasswordResetRequestCard } from "@/components/personal/PasswordResetRequestCard";
 
 interface StaffData {
   id: string;
@@ -543,8 +544,8 @@ export default function PersonalSettings() {
         <TabsContent value="security" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Segurança da Conta</CardTitle>
-              <CardDescription>Gerir a segurança da sua conta</CardDescription>
+              <CardTitle>Alterar Palavra-passe</CardTitle>
+              <CardDescription>Altere a sua palavra-passe atual</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               {staff?.password_changed === false && (
@@ -580,6 +581,13 @@ export default function PersonalSettings() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Password Reset Request Card */}
+          <PasswordResetRequestCard 
+            userEmail={staff?.email || ""}
+            userName={staff?.full_name || ""}
+            companyId={staff?.company_id || ""}
+          />
         </TabsContent>
 
         {/* Appearance Tab */}
