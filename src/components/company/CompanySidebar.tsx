@@ -65,31 +65,31 @@ export function CompanySidebar() {
   };
 
   return (
-    <Sidebar collapsible="icon" className="border-r border-sidebar-border">
-      <SidebarContent className="bg-sidebar flex flex-col">
+    <Sidebar collapsible="icon" className="border-r border-sidebar-border h-screen">
+      <SidebarContent className="bg-sidebar flex flex-col h-full overflow-hidden">
         {/* Header with logo */}
-        <div className={`p-3 ${collapsed ? 'flex flex-col items-center' : ''}`}>
+        <div className={`p-3 shrink-0 ${collapsed ? 'flex flex-col items-center' : ''}`}>
           <div className={`flex items-center ${collapsed ? 'justify-center' : 'gap-2'}`}>
             <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
               <img src={logoLight} alt="Cagiotech" className="h-6" />
             </div>
             {!collapsed && (
-              <span className="text-lg font-bold text-sidebar-foreground">Cagiotech</span>
+              <span className="text-lg font-bold text-sidebar-foreground truncate">Cagiotech</span>
             )}
           </div>
           
           {!collapsed && (
             <div className="mt-3 p-3 rounded-xl bg-primary/10 border border-primary/20">
-              <p className="text-sm font-medium text-sidebar-foreground">{profile?.full_name || 'Usuário'}</p>
+              <p className="text-sm font-medium text-sidebar-foreground truncate">{profile?.full_name || 'Usuário'}</p>
               {company?.name && (
-                <p className="text-xs text-sidebar-foreground/60 mt-0.5">{company.name}</p>
+                <p className="text-xs text-sidebar-foreground/60 mt-0.5 truncate">{company.name}</p>
               )}
             </div>
           )}
         </div>
 
         {/* Toggle button */}
-        <div className={`px-2 pb-2 ${collapsed ? 'flex justify-center' : ''}`}>
+        <div className={`px-2 pb-2 shrink-0 ${collapsed ? 'flex justify-center' : ''}`}>
           <Button
             variant="ghost"
             size="icon"
@@ -101,10 +101,10 @@ export function CompanySidebar() {
           </Button>
         </div>
 
-        <Separator className="bg-sidebar-border mx-2" />
+        <Separator className="bg-sidebar-border mx-2 shrink-0" />
 
-        {/* Menu Items */}
-        <SidebarGroup className={`flex-1 ${collapsed ? 'px-1' : 'px-2'} pt-2`}>
+        {/* Menu Items - scrollable area */}
+        <SidebarGroup className={`flex-1 ${collapsed ? 'px-1' : 'px-2'} pt-2 overflow-y-auto min-h-0`}>
           <SidebarGroupContent>
             <SidebarMenu className="space-y-1">
               {menuItems.map((item) => {
@@ -128,7 +128,7 @@ export function CompanySidebar() {
                       >
                         <item.icon className="h-5 w-5 shrink-0" />
                         {!collapsed && (
-                          <span>{item.key === "settings" ? "Configurações" : t(`dashboard.${item.key === "dashboard" ? "title" : item.key}`)}</span>
+                          <span className="truncate">{item.key === "settings" ? "Configurações" : t(`dashboard.${item.key === "dashboard" ? "title" : item.key}`)}</span>
                         )}
                       </NavLink>
                     </SidebarMenuButton>
@@ -140,7 +140,7 @@ export function CompanySidebar() {
         </SidebarGroup>
 
         {/* Footer with logout */}
-        <SidebarFooter className={`${collapsed ? 'px-1' : 'px-2'} pb-2`}>
+        <SidebarFooter className={`${collapsed ? 'px-1' : 'px-2'} pb-2 shrink-0`}>
           <Separator className="mb-2 bg-sidebar-border" />
           <SidebarMenu>
             <SidebarMenuItem>
