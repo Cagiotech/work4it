@@ -10,7 +10,9 @@ interface CreateAccountRequest {
   email: string;
   fullName: string;
   recordId: string;
-  recordType: "student" | "staff";
+  recordType?: "student" | "staff";
+  password?: string;
+  forceResetPassword?: boolean;
 }
 
 // Generate a cryptographically secure random password
@@ -79,12 +81,26 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log(`Authenticated caller: ${caller.id} (${caller.email})`);
 
-    const { email, fullName, recordId, recordType = "student" }: CreateAccountRequest = await req.json();
+    const {
+      email,
+      fullName,
+      recordId,
+      recordType = "student",
+      password,
+      forceResetPassword = false,
+    }: CreateAccountRequest = await req.json();
 
     // Validate required fields
     if (!email || !fullName || !recordId) {
       return new Response(
         JSON.stringify({ error: "Missing required fields: email, fullName, recordId" }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    if (password && password.length < 8) {
+      return new Response(
+        JSON.stringify({ error: "Password must be at least 8 characters" }),
         { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
@@ -105,14 +121,7 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Check if account already exists for this record
-    if (record.user_id) {
-      return new Response(
-        JSON.stringify({ error: "Account already exists for this record", code: "ACCOUNT_EXISTS" }),
-        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
-    }
-
+    const existingUserId = (record.user_id ?? null) as string | null;
     const recordCompanyId = record.company_id;
 
     // Step 3: Verify caller has permission (is company owner or admin staff)
@@ -148,10 +157,57 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     console.log(`Authorization verified: isOwner=${isOwner}, isAdminStaff=${isAdminStaff}`);
+
+    // If account already exists, optionally reset password
+    if (existingUserId) {
+      if (!forceResetPassword) {
+        return new Response(
+          JSON.stringify({ error: "Account already exists for this record", code: "ACCOUNT_EXISTS" }),
+          { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      const temporaryPassword = password ?? generateSecurePassword(16);
+
+      const { error: updateAuthError } = await supabaseAdmin.auth.admin.updateUserById(existingUserId, {
+        password: temporaryPassword,
+      });
+
+      if (updateAuthError) {
+        console.error("Error resetting user password:", updateAuthError);
+        throw updateAuthError;
+      }
+
+      const { error: updateRecordError } = await supabaseAdmin
+        .from(tableName)
+        .update({ password_changed: false })
+        .eq("id", recordId);
+
+      if (updateRecordError) {
+        console.error(`Error updating ${recordType} after password reset:`, updateRecordError);
+        throw updateRecordError;
+      }
+
+      console.log(`Password reset for ${recordType} ${recordId} (${email}) by ${caller.email}`);
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          userId: existingUserId,
+          temporaryPassword,
+          message: `Senha redefinida com sucesso. Senha temporária: ${temporaryPassword}`,
+        }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+
     console.log(`Creating account for ${recordType}: ${email}`);
 
-    // Generate a cryptographically secure random password
-    const temporaryPassword = generateSecurePassword(16);
+    // Generate a cryptographically secure random password (or use provided password)
+    const temporaryPassword = password ?? generateSecurePassword(16);
 
     // Create the user with secure temporary password
     const { data: userData, error: createError } = await supabaseAdmin.auth.admin.createUser({

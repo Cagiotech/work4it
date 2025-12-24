@@ -445,9 +445,9 @@ export function StudentProfileTab({ student, canEdit, onUpdate }: StudentProfile
         </div>
 
         {/* Password Management */}
-        {student.user_id && student.company_id && student.email && canEdit && (
+        {student.company_id && student.email && canEdit && (
           <PasswordManagementCard
-            userId={student.id}
+            recordId={student.id}
             userType="student"
             userEmail={student.email}
             userName={student.full_name}
