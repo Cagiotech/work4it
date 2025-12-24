@@ -314,7 +314,7 @@ export function ImportStudentsDialog({
               Importar Alunos
             </DialogTitle>
             <DialogDescription>
-              Importe alunos em massa através de uma planilha CSV
+              Importe alunos em massa através de uma planilha Excel (.xlsx)
             </DialogDescription>
           </DialogHeader>
 
