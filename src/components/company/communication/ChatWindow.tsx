@@ -76,6 +76,10 @@ export function ChatWindow({
   };
 
   const isOwnMessage = (msg: Message) => {
+    // For company, we check if sender_type is 'company' since the sender_id might vary
+    if (currentUserType === 'company') {
+      return msg.sender_type === 'company';
+    }
     return msg.sender_id === currentUserId && msg.sender_type === currentUserType;
   };
 
@@ -127,7 +131,7 @@ export function ChatWindow({
         <div>
           <h3 className="font-semibold">{recipientName}</h3>
           <span className="text-xs text-muted-foreground capitalize">
-            {recipientType === 'student' ? 'Aluno' : 'Colaborador'}
+            {recipientType === 'student' ? 'Aluno' : recipientType === 'company' ? 'Administração' : 'Colaborador'}
           </span>
         </div>
       </div>
