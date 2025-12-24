@@ -128,30 +128,55 @@ export default function StudentChat() {
       for (const contact of contactsList) {
         const myId = student.id;
         const theirId = contact.id;
+        const theirType = contact.type;
 
-        const { data: lastMsg } = await supabase
-          .from('messages')
-          .select('content, created_at')
-          .eq('company_id', student.company_id)
-          .or(`and(sender_id.eq.${myId},receiver_id.eq.${theirId}),and(sender_id.eq.${theirId},receiver_id.eq.${myId})`)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
+        let lastMsgQuery;
+        let unreadQuery;
 
-        if (lastMsg) {
-          contact.lastMessage = lastMsg.content;
-          contact.lastMessageTime = lastMsg.created_at;
+        if (theirType === 'company') {
+          // Messages with company
+          lastMsgQuery = await supabase
+            .from('messages')
+            .select('content, created_at')
+            .eq('company_id', student.company_id)
+            .or(`and(sender_id.eq.${myId},sender_type.eq.student,receiver_type.eq.company),and(sender_type.eq.company,receiver_id.eq.${myId},receiver_type.eq.student)`)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          unreadQuery = await supabase
+            .from('messages')
+            .select('*', { count: 'exact', head: true })
+            .eq('receiver_id', myId)
+            .eq('receiver_type', 'student')
+            .eq('sender_type', 'company')
+            .eq('is_read', false);
+        } else {
+          // Messages with staff (personal trainer)
+          lastMsgQuery = await supabase
+            .from('messages')
+            .select('content, created_at')
+            .eq('company_id', student.company_id)
+            .or(`and(sender_id.eq.${myId},receiver_id.eq.${theirId}),and(sender_id.eq.${theirId},receiver_id.eq.${myId})`)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          unreadQuery = await supabase
+            .from('messages')
+            .select('*', { count: 'exact', head: true })
+            .eq('receiver_id', myId)
+            .eq('receiver_type', 'student')
+            .eq('sender_id', theirId)
+            .eq('is_read', false);
         }
 
-        const { count } = await supabase
-          .from('messages')
-          .select('*', { count: 'exact', head: true })
-          .eq('receiver_id', myId)
-          .eq('receiver_type', 'student')
-          .eq('sender_id', theirId)
-          .eq('is_read', false);
+        if (lastMsgQuery.data) {
+          contact.lastMessage = lastMsgQuery.data.content;
+          contact.lastMessageTime = lastMsgQuery.data.created_at;
+        }
 
-        contact.unreadCount = count || 0;
+        contact.unreadCount = unreadQuery.count || 0;
       }
 
       contactsList.sort((a, b) => {
@@ -173,18 +198,32 @@ export default function StudentChat() {
 
     const myId = studentInfo.id;
     const theirId = contact.id;
+    const theirType = contact.type;
 
-    const { data } = await supabase
-      .from('messages')
-      .select('*')
-      .eq('company_id', studentInfo.company_id)
-      .or(`and(sender_id.eq.${myId},receiver_id.eq.${theirId}),and(sender_id.eq.${theirId},receiver_id.eq.${myId})`)
-      .order('created_at', { ascending: true });
+    let query;
 
-    if (data) {
-      setMessages(data);
+    if (theirType === 'company') {
+      // Messages with company
+      query = await supabase
+        .from('messages')
+        .select('*')
+        .eq('company_id', studentInfo.company_id)
+        .or(`and(sender_id.eq.${myId},sender_type.eq.student,receiver_type.eq.company),and(sender_type.eq.company,receiver_id.eq.${myId},receiver_type.eq.student)`)
+        .order('created_at', { ascending: true });
+    } else {
+      // Messages with staff
+      query = await supabase
+        .from('messages')
+        .select('*')
+        .eq('company_id', studentInfo.company_id)
+        .or(`and(sender_id.eq.${myId},receiver_id.eq.${theirId}),and(sender_id.eq.${theirId},receiver_id.eq.${myId})`)
+        .order('created_at', { ascending: true });
+    }
 
-      const unreadIds = data
+    if (query.data) {
+      setMessages(query.data);
+
+      const unreadIds = query.data
         .filter(m => !m.is_read && m.receiver_id === myId && m.receiver_type === 'student')
         .map(m => m.id);
 
@@ -196,7 +235,7 @@ export default function StudentChat() {
       }
 
       setContacts(prev => prev.map(c =>
-        c.id === contact.id ? { ...c, unreadCount: 0 } : c
+        c.id === contact.id && c.type === contact.type ? { ...c, unreadCount: 0 } : c
       ));
     }
   };
@@ -222,24 +261,36 @@ export default function StudentChat() {
           
           if (!isForMe) return;
 
-          if (selectedContact && 
-              ((newMsg.sender_id === selectedContact.id) || 
-               (newMsg.receiver_id === selectedContact.id))) {
+          // Check if message is for selected contact
+          const isForSelectedContact = selectedContact && (
+            (selectedContact.type === 'company' && (newMsg.sender_type === 'company' || newMsg.receiver_type === 'company')) ||
+            (selectedContact.type !== 'company' && (newMsg.sender_id === selectedContact.id || newMsg.receiver_id === selectedContact.id))
+          );
+
+          if (isForSelectedContact) {
             setMessages(prev => {
               if (prev.some(m => m.id === newMsg.id)) return prev;
               return [...prev, newMsg];
             });
             
-            if (newMsg.sender_id === selectedContact.id) {
+            // Mark as read if received
+            if (newMsg.receiver_id === studentInfo.id && newMsg.receiver_type === 'student') {
               supabase
                 .from('messages')
                 .update({ is_read: true, read_at: new Date().toISOString() })
                 .eq('id', newMsg.id);
             }
           } else if (newMsg.receiver_id === studentInfo.id && newMsg.receiver_type === 'student') {
-            setContacts(prev => prev.map(c =>
-              c.id === newMsg.sender_id ? { ...c, unreadCount: c.unreadCount + 1, lastMessage: newMsg.content, lastMessageTime: newMsg.created_at } : c
-            ));
+            // Update unread count for the contact
+            const senderType = newMsg.sender_type;
+            setContacts(prev => prev.map(c => {
+              if (senderType === 'company' && c.type === 'company') {
+                return { ...c, unreadCount: c.unreadCount + 1, lastMessage: newMsg.content, lastMessageTime: newMsg.created_at };
+              } else if (c.id === newMsg.sender_id) {
+                return { ...c, unreadCount: c.unreadCount + 1, lastMessage: newMsg.content, lastMessageTime: newMsg.created_at };
+              }
+              return c;
+            }));
           }
         }
       )
@@ -255,11 +306,16 @@ export default function StudentChat() {
 
     setSendingMessage(true);
     try {
+      // For company, receiver_id should be company_id
+      const receiverId = selectedContact.type === 'company' 
+        ? studentInfo.company_id 
+        : selectedContact.id;
+
       const message = {
         company_id: studentInfo.company_id,
         sender_id: studentInfo.id,
         sender_type: 'student',
-        receiver_id: selectedContact.id,
+        receiver_id: receiverId,
         receiver_type: selectedContact.type,
         content: newMessage.trim()
       };
@@ -277,7 +333,7 @@ export default function StudentChat() {
         setNewMessage("");
 
         setContacts(prev => prev.map(c =>
-          c.id === selectedContact.id
+          c.id === selectedContact.id && c.type === selectedContact.type
             ? { ...c, lastMessage: data.content, lastMessageTime: data.created_at }
             : c
         ));

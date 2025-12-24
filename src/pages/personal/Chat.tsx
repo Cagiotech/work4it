@@ -316,7 +316,7 @@ export default function PersonalChat() {
     const recipient = recipients[0];
     if (!recipient) return;
 
-    const existingConv = conversations.find(c => c.id === recipient.id);
+    const existingConv = conversations.find(c => c.id === recipient.id && c.type === recipient.type);
     
     if (existingConv) {
       setSelectedConversation(existingConv);
@@ -324,7 +324,7 @@ export default function PersonalChat() {
       const newConv: Conversation = {
         id: recipient.id,
         name: recipient.name,
-        type: recipient.type,
+        type: recipient.type as 'student' | 'staff' | 'company',
         lastMessage: '',
         lastMessageTime: '',
         unreadCount: 0
