@@ -19,7 +19,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { PasswordManagementCard } from "@/components/shared/PasswordManagementCard";
+
 
 interface StudentData {
   id: string;
@@ -444,17 +444,6 @@ export function StudentProfileTab({ student, canEdit, onUpdate }: StudentProfile
           </div>
         </div>
 
-        {/* Password Management */}
-        {student.company_id && student.email && canEdit && (
-          <PasswordManagementCard
-            recordId={student.id}
-            userType="student"
-            userEmail={student.email}
-            userName={student.full_name}
-            companyId={student.company_id}
-            hasAccount={!!student.user_id}
-          />
-        )}
       </div>
 
       {/* Save Confirmation Dialog */}
