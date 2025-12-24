@@ -222,26 +222,44 @@ const handler = async (req: Request): Promise<Response> => {
 
     if (createError) {
       console.error("Error creating user:", createError);
-      
-      // Check if user already exists in auth - link existing user to record
-      if (createError.message.includes("already been registered")) {
+
+      const errorCode = (createError as any)?.code as string | undefined;
+      const isEmailExistsError =
+        createError.message?.includes("already been registered") || errorCode === "email_exists";
+
+      // If user already exists in auth, link existing user to record.
+      // IMPORTANT: do NOT reset the password unless explicitly requested.
+      if (isEmailExistsError) {
         console.log(`Email ${email} already exists in auth. Attempting to link existing user...`);
-        
-        // Find the existing user by email
-        const { data: existingUsers, error: listError } = await supabaseAdmin.auth.admin.listUsers();
-        
-        if (listError) {
-          console.error("Error listing users:", listError);
-          throw listError;
+
+        // Find the existing user by email (with basic pagination)
+        let existingAuthUser:
+          | { id: string; email?: string | null }
+          | null = null;
+
+        const perPage = 1000;
+        for (let page = 1; page <= 10 && !existingAuthUser; page++) {
+          const { data: usersPage, error: listError } = await supabaseAdmin.auth.admin.listUsers({
+            page,
+            perPage,
+          });
+
+          if (listError) {
+            console.error("Error listing users:", listError);
+            throw listError;
+          }
+
+          existingAuthUser =
+            usersPage.users.find((u) => (u.email ?? "").toLowerCase() === email.toLowerCase()) ?? null;
+
+          if (usersPage.users.length < perPage) break;
         }
-        
-        const existingAuthUser = existingUsers.users.find(u => u.email?.toLowerCase() === email.toLowerCase());
-        
+
         if (!existingAuthUser) {
           return new Response(
-            JSON.stringify({ 
+            JSON.stringify({
               error: "Email já registado no sistema mas não encontrado",
-              code: "USER_EXISTS"
+              code: "USER_EXISTS",
             }),
             {
               status: 400,
@@ -249,41 +267,62 @@ const handler = async (req: Request): Promise<Response> => {
             }
           );
         }
-        
+
         // Link the existing auth user to the record
         const { error: linkError } = await supabaseAdmin
           .from(tableName)
-          .update({ 
-            user_id: existingAuthUser.id,
-            password_changed: false 
-          })
+          .update({ user_id: existingAuthUser.id })
           .eq("id", recordId);
-        
+
         if (linkError) {
           console.error(`Error linking existing user to ${recordType}:`, linkError);
           throw linkError;
         }
-        
-        // Reset password for the existing user
-        const newTempPassword = password ?? generateSecurePassword(16);
-        const { error: resetError } = await supabaseAdmin.auth.admin.updateUserById(existingAuthUser.id, {
-          password: newTempPassword,
-        });
-        
-        if (resetError) {
-          console.error("Error resetting password for existing user:", resetError);
-          throw resetError;
+
+        let appliedPassword: string | null = null;
+
+        // Only reset password when explicitly requested
+        if (forceResetPassword || typeof password === "string") {
+          const newTempPassword = password ?? generateSecurePassword(16);
+
+          const { error: resetError } = await supabaseAdmin.auth.admin.updateUserById(existingAuthUser.id, {
+            password: newTempPassword,
+          });
+
+          if (resetError) {
+            console.error("Error resetting password for existing user:", resetError);
+            throw resetError;
+          }
+
+          const { error: updateRecordError } = await supabaseAdmin
+            .from(tableName)
+            .update({ password_changed: false })
+            .eq("id", recordId);
+
+          if (updateRecordError) {
+            console.error(`Error updating ${recordType} after password reset:`, updateRecordError);
+            throw updateRecordError;
+          }
+
+          appliedPassword = newTempPassword;
+          console.log(`Linked existing auth user ${existingAuthUser.id} to ${recordType} ${recordId} and reset password`);
+        } else {
+          console.log(`Linked existing auth user ${existingAuthUser.id} to ${recordType} ${recordId} (password unchanged)`);
         }
-        
-        console.log(`Linked existing auth user ${existingAuthUser.id} to ${recordType} ${recordId} and reset password`);
-        
+
         return new Response(
-          JSON.stringify({ 
-            success: true, 
+          JSON.stringify({
+            success: true,
             userId: existingAuthUser.id,
-            temporaryPassword: newTempPassword,
-            message: `Conta existente vinculada. Senha temporária: ${newTempPassword}`,
-            linkedExisting: true
+            linkedExisting: true,
+            ...(appliedPassword
+              ? {
+                  temporaryPassword: appliedPassword,
+                  message: `Conta existente vinculada. Senha temporária: ${appliedPassword}`,
+                }
+              : {
+                  message: "Conta existente vinculada. Senha não foi alterada.",
+                }),
           }),
           {
             status: 200,
@@ -291,7 +330,7 @@ const handler = async (req: Request): Promise<Response> => {
           }
         );
       }
-      
+
       throw createError;
     }
 
