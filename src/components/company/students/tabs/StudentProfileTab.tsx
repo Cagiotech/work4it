@@ -19,6 +19,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { PasswordManagementCard } from "@/components/shared/PasswordManagementCard";
 
 interface StudentData {
   id: string;
@@ -39,6 +40,8 @@ interface StudentData {
   emergency_phone: string | null;
   status: string | null;
   profile_photo_url?: string | null;
+  user_id?: string | null;
+  company_id?: string;
 }
 
 interface StudentProfileTabProps {
@@ -440,6 +443,18 @@ export function StudentProfileTab({ student, canEdit, onUpdate }: StudentProfile
             </div>
           </div>
         </div>
+
+        {/* Password Management */}
+        {student.user_id && student.company_id && student.email && canEdit && (
+          <PasswordManagementCard
+            userId={student.id}
+            userType="student"
+            userEmail={student.email}
+            userName={student.full_name}
+            companyId={student.company_id}
+            hasAccount={!!student.user_id}
+          />
+        )}
       </div>
 
       {/* Save Confirmation Dialog */}
