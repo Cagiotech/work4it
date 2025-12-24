@@ -104,7 +104,7 @@ export function CompanySidebar() {
         <Separator className="bg-sidebar-border mx-2 shrink-0" />
 
         {/* Menu Items - scrollable area */}
-        <SidebarGroup className={`flex-1 ${collapsed ? 'px-1' : 'px-2'} pt-2 overflow-y-auto min-h-0`}>
+        <SidebarGroup className={`flex-1 ${collapsed ? 'px-1' : 'px-2'} pt-2`}>
           <SidebarGroupContent>
             <SidebarMenu className="space-y-1">
               {menuItems.map((item) => {
