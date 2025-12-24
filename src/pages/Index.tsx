@@ -31,23 +31,23 @@ const Index = () => {
   const { t } = useTranslation();
 
   const features = [
-    { icon: Users, title: 'Gestão de Alunos', description: 'Perfis completos com anamnese, treinos e nutrição personalizada.', gradient: 'from-orange-500 to-red-500' },
+    { icon: Users, title: 'Gestão de Alunos', description: 'Perfis completos com anamnese, treinos e nutrição personalizada.', gradient: 'from-primary to-emerald-500' },
     { icon: Calendar, title: 'Aulas e Agenda', description: 'Calendário visual com inscrições automáticas e controlo de presenças.', gradient: 'from-emerald-500 to-teal-500' },
-    { icon: DollarSign, title: 'Financeiro', description: 'Faturação automática, controlo de pagamentos e relatórios.', gradient: 'from-yellow-500 to-amber-500' },
-    { icon: UserCog, title: 'Recursos Humanos', description: 'Equipa, horários, férias e folha de pagamento integrada.', gradient: 'from-violet-500 to-purple-500' },
-    { icon: Dumbbell, title: 'Planos de Treino', description: 'Treinos personalizados com exercícios detalhados.', gradient: 'from-rose-500 to-pink-500' },
-    { icon: Apple, title: 'Nutrição', description: 'Planos alimentares com macros e receitas.', gradient: 'from-lime-500 to-green-500' },
-    { icon: BarChart3, title: 'Dashboard', description: 'KPIs em tempo real e relatórios PDF automáticos.', gradient: 'from-cyan-500 to-blue-500' },
-    { icon: MessageSquare, title: 'Comunicação', description: 'Chat integrado entre equipa e alunos.', gradient: 'from-fuchsia-500 to-pink-500' },
+    { icon: DollarSign, title: 'Financeiro', description: 'Faturação automática, controlo de pagamentos e relatórios.', gradient: 'from-amber-500 to-yellow-500' },
+    { icon: UserCog, title: 'Recursos Humanos', description: 'Equipa, horários, férias e folha de pagamento integrada.', gradient: 'from-violet-500 to-indigo-500' },
+    { icon: Dumbbell, title: 'Planos de Treino', description: 'Treinos personalizados com exercícios detalhados.', gradient: 'from-primary to-lime-400' },
+    { icon: Apple, title: 'Nutrição', description: 'Planos alimentares com macros e receitas.', gradient: 'from-green-500 to-emerald-500' },
+    { icon: BarChart3, title: 'Dashboard', description: 'KPIs em tempo real e relatórios PDF automáticos.', gradient: 'from-cyan-500 to-sky-500' },
+    { icon: MessageSquare, title: 'Comunicação', description: 'Chat integrado entre equipa e alunos.', gradient: 'from-pink-500 to-rose-500' },
   ];
 
   const benefits = [
-    { icon: Clock, title: 'Poupe 15h/semana', description: 'Automatize tarefas repetitivas e foque no que importa.', color: 'text-orange-500', bg: 'bg-orange-500/10' },
+    { icon: Clock, title: 'Poupe 15h/semana', description: 'Automatize tarefas repetitivas e foque no que importa.', color: 'text-primary', bg: 'bg-primary/10' },
     { icon: Shield, title: 'Dados Seguros', description: 'Encriptação de ponta e backups automáticos diários.', color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
     { icon: Smartphone, title: 'App para Alunos', description: 'Acesso mobile a treinos, aulas e pagamentos.', color: 'text-violet-500', bg: 'bg-violet-500/10' },
     { icon: BarChart3, title: 'Relatórios', description: 'Decisões baseadas em dados reais do seu negócio.', color: 'text-amber-500', bg: 'bg-amber-500/10' },
     { icon: Users, title: 'Multi-Utilizador', description: 'Permissões personalizadas por função e equipa.', color: 'text-cyan-500', bg: 'bg-cyan-500/10' },
-    { icon: Star, title: 'Suporte Premium', description: 'Ajuda em português com resposta rápida.', color: 'text-yellow-500', bg: 'bg-yellow-500/10' },
+    { icon: Star, title: 'Suporte Premium', description: 'Ajuda em português com resposta rápida.', color: 'text-primary', bg: 'bg-primary/10' },
   ];
 
   const plans = [
@@ -57,7 +57,7 @@ const Index = () => {
       price: '29',
       features: ['Até 100 alunos', 'Gestão de aulas', 'Dashboard básico', 'Suporte por email', '1 utilizador admin'],
       featured: false,
-      gradient: 'from-slate-600 to-slate-800'
+      gradient: 'from-slate-600 to-slate-700'
     },
     {
       name: 'Professional',
@@ -65,7 +65,7 @@ const Index = () => {
       price: '79',
       features: ['Até 500 alunos', 'Todos os módulos', 'Dashboard avançado', 'App para alunos', 'Suporte prioritário', '5 utilizadores admin', 'Relatórios PDF'],
       featured: true,
-      gradient: 'from-orange-500 to-red-500'
+      gradient: 'from-primary to-emerald-500'
     },
     {
       name: 'Enterprise',
@@ -73,7 +73,7 @@ const Index = () => {
       price: '199',
       features: ['Alunos ilimitados', 'Multi-unidades', 'API personalizada', 'Gestor dedicado', 'SLA garantido', 'Utilizadores ilimitados', 'White-label'],
       featured: false,
-      gradient: 'from-violet-600 to-purple-800'
+      gradient: 'from-violet-600 to-indigo-700'
     }
   ];
 
@@ -120,7 +120,7 @@ const Index = () => {
               <Button variant="ghost" size="sm" className="font-medium hidden sm:inline-flex">Entrar</Button>
             </Link>
             <Link to="/register">
-              <Button size="sm" className="font-semibold bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white border-0 shadow-lg shadow-orange-500/25">
+              <Button size="sm" className="font-semibold bg-primary hover:bg-primary/90 text-primary-foreground border-0 shadow-lg shadow-primary/25">
                 Começar Grátis
               </Button>
             </Link>
@@ -136,20 +136,20 @@ const Index = () => {
           <div className="container relative z-10 py-20">
             <div className="max-w-4xl mx-auto text-center">
               {/* Badge */}
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/20 backdrop-blur-sm border border-white/30 mb-8 animate-fade-in">
-                <Sparkles className="h-4 w-4 text-yellow-300" />
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/20 backdrop-blur-sm border border-primary/30 mb-8 animate-fade-in">
+                <Sparkles className="h-4 w-4 text-primary" />
                 <span className="text-sm font-medium text-white">Software de Gestão Fitness #1</span>
               </div>
 
               {/* Main headline - Pingback style */}
               <h1 className="font-heading text-5xl sm:text-6xl lg:text-8xl font-black tracking-tight animate-fade-in [animation-delay:100ms]">
-                <span className="text-white drop-shadow-lg">GESTÃO</span>
+                <span className="text-primary drop-shadow-lg">GESTÃO</span>
               </h1>
               <h1 className="font-heading text-5xl sm:text-6xl lg:text-8xl font-black tracking-tight animate-fade-in [animation-delay:200ms] mt-2">
-                <span className="text-white/70 drop-shadow-md">PARA QUEM</span>
+                <span className="text-white drop-shadow-md">PARA QUEM</span>
               </h1>
               <h1 className="font-heading text-5xl sm:text-6xl lg:text-8xl font-black tracking-tight animate-fade-in [animation-delay:300ms] mt-2">
-                <span className="text-white/50 drop-shadow-sm">CRESCE</span>
+                <span className="text-white/60 drop-shadow-sm">CRESCE</span>
               </h1>
 
               {/* CTA Button */}
@@ -157,7 +157,7 @@ const Index = () => {
                 <Link to="/register">
                   <Button 
                     size="lg" 
-                    className="h-14 px-10 text-lg font-bold rounded-full bg-slate-900 hover:bg-slate-800 text-white shadow-2xl transition-all hover:scale-105"
+                    className="h-14 px-10 text-lg font-bold rounded-full bg-primary hover:bg-primary/90 text-primary-foreground shadow-2xl shadow-primary/30 transition-all hover:scale-105"
                   >
                     Testar Grátis
                     <ArrowRight className="ml-2 h-5 w-5" />
@@ -211,11 +211,11 @@ const Index = () => {
               {useCases.map((useCase, index) => (
                 <Card 
                   key={index} 
-                  className="group cursor-pointer border-border/50 bg-card hover:bg-gradient-to-br hover:from-orange-500 hover:to-red-500 hover:border-transparent transition-all duration-300 hover:shadow-xl hover:-translate-y-1"
+                  className="group cursor-pointer border-border/50 bg-card hover:bg-primary hover:border-primary transition-all duration-300 hover:shadow-xl hover:shadow-primary/20 hover:-translate-y-1"
                 >
                   <CardContent className="p-5">
-                    <h3 className="font-bold text-foreground group-hover:text-white transition-colors">{useCase.title}</h3>
-                    <p className="text-sm text-muted-foreground group-hover:text-white/80 mt-1 transition-colors">{useCase.description}</p>
+                    <h3 className="font-bold text-foreground group-hover:text-primary-foreground transition-colors">{useCase.title}</h3>
+                    <p className="text-sm text-muted-foreground group-hover:text-primary-foreground/80 mt-1 transition-colors">{useCase.description}</p>
                   </CardContent>
                 </Card>
               ))}
@@ -302,14 +302,14 @@ const Index = () => {
                   key={index} 
                   className={`relative overflow-hidden transition-all duration-500 ${
                     plan.featured 
-                      ? 'border-2 border-orange-500 bg-card shadow-2xl shadow-orange-500/20 lg:scale-105' 
+                      ? 'border-2 border-primary bg-card shadow-2xl shadow-primary/20 lg:scale-105' 
                       : 'border-border/50 bg-card/50 hover:shadow-xl'
                   }`}
                 >
                   {plan.featured && (
                     <>
                       <div className={`absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r ${plan.gradient}`} />
-                      <Badge className="absolute top-4 right-4 bg-gradient-to-r from-orange-500 to-red-500 text-white border-0">Popular</Badge>
+                      <Badge className="absolute top-4 right-4 bg-primary text-primary-foreground border-0">Popular</Badge>
                     </>
                   )}
                   <CardHeader className="pb-4">
@@ -324,7 +324,7 @@ const Index = () => {
                     <ul className="space-y-3 mb-6">
                       {plan.features.map((feature, i) => (
                         <li key={i} className="flex items-center gap-3 text-sm">
-                          <div className={`h-5 w-5 rounded-full bg-gradient-to-br ${plan.featured ? 'from-orange-500 to-red-500' : 'from-emerald-500 to-teal-500'} flex items-center justify-center flex-shrink-0`}>
+                          <div className={`h-5 w-5 rounded-full bg-gradient-to-br ${plan.featured ? 'from-primary to-emerald-500' : 'from-emerald-500 to-teal-500'} flex items-center justify-center flex-shrink-0`}>
                             <Check className="h-3 w-3 text-white" />
                           </div>
                           <span className="text-muted-foreground">{feature}</span>
@@ -335,7 +335,7 @@ const Index = () => {
                       <Button 
                         className={`w-full h-12 font-bold ${
                           plan.featured 
-                            ? 'bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white border-0 shadow-lg' 
+                            ? 'bg-primary hover:bg-primary/90 text-primary-foreground border-0 shadow-lg shadow-primary/25' 
                             : ''
                         }`}
                         variant={plan.featured ? "default" : "outline"}
@@ -383,28 +383,29 @@ const Index = () => {
 
         {/* CTA Section */}
         <section className="py-24 relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-orange-500 via-red-500 to-pink-500" />
-          <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width=%2260%22 height=%2260%22 viewBox=%220 0 60 60%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cg fill=%22none%22 fill-rule=%22evenodd%22%3E%3Cg fill=%22%23ffffff%22 fill-opacity=%220.05%22%3E%3Cpath d=%22M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')]" />
+          <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900" />
+          <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width=%2260%22 height=%2260%22 viewBox=%220 0 60 60%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cg fill=%22none%22 fill-rule=%22evenodd%22%3E%3Cg fill=%22%23ffffff%22 fill-opacity=%220.03%22%3E%3Cpath d=%22M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')]" />
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-primary/20 rounded-full blur-[120px]" />
           
           <div className="container relative">
             <div className="max-w-3xl mx-auto text-center">
               <h2 className="font-heading text-4xl sm:text-5xl lg:text-6xl font-black text-white">
                 Pronto para transformar a sua gestão?
               </h2>
-              <p className="mt-6 text-xl text-white/80">
+              <p className="mt-6 text-xl text-white/70">
                 Junte-se a centenas de academias que já confiam no Cagiotech.
               </p>
               <div className="mt-10">
                 <Link to="/register">
                   <Button 
                     size="lg" 
-                    className="h-14 px-10 text-lg font-bold rounded-full bg-white text-orange-600 hover:bg-white/90 shadow-2xl transition-all hover:scale-105"
+                    className="h-14 px-10 text-lg font-bold rounded-full bg-primary text-primary-foreground hover:bg-primary/90 shadow-2xl shadow-primary/30 transition-all hover:scale-105"
                   >
                     Começar Teste Grátis
                     <ArrowRight className="ml-2 h-5 w-5" />
                   </Button>
                 </Link>
-                <p className="mt-4 text-white/60 text-sm">Sem cartão de crédito • Configuração em 5 minutos</p>
+                <p className="mt-4 text-white/50 text-sm">Sem cartão de crédito • Configuração em 5 minutos</p>
               </div>
             </div>
           </div>
