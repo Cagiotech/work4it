@@ -72,6 +72,7 @@ interface Student {
   company_id: string;
   personal_trainer_id: string | null;
   profile_photo_url: string | null;
+  user_id: string | null;
   // Joined data
   trainer?: Trainer | null;
   activeSubscription?: Subscription | null;

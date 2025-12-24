@@ -56,6 +56,7 @@ interface Student {
   personal_trainer_id?: string | null;
   created_at?: string;
   profile_photo_url?: string | null;
+  user_id?: string | null;
 }
 
 interface StudentStats {

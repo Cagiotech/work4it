@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { StaffSaveTriggerContext } from "../StaffProfileDialog";
+import { PasswordManagementCard } from "@/components/shared/PasswordManagementCard";
 
 interface Role {
   id: string;
@@ -388,6 +389,20 @@ export function StaffProfileTab({ staff, roles, canEdit, isNewStaff, onSaved }: 
               </Label>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Password Management - only for existing staff with accounts */}
+      {!isNewStaff && staff?.user_id && canEdit && (
+        <div className="pt-4 border-t">
+          <PasswordManagementCard
+            userId={staff.id}
+            userType="staff"
+            userEmail={staff.email}
+            userName={staff.full_name}
+            companyId={staff.company_id}
+            hasAccount={!!staff.user_id}
+          />
         </div>
       )}
 
