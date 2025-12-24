@@ -139,8 +139,18 @@ export function PasswordManagementCard({
 
       if (error) throw error;
 
+      const linkedExisting = (data as any)?.linkedExisting === true;
       const tempPassword = (data as any)?.temporaryPassword as string | undefined;
+
+      // If the email already existed, the backend links the account without changing password.
       if (!tempPassword) {
+        if (linkedExisting) {
+          setLocalHasAccount(true);
+          toast.success("Conta já existia e foi vinculada. A senha não foi alterada; use a senha existente ou defina uma nova.");
+          setDialogOpen(false);
+          return;
+        }
+
         throw new Error("Resposta inválida: senha temporária ausente");
       }
 
