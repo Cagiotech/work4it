@@ -149,12 +149,17 @@ export default function Communication() {
         }
       }
 
-      // Build conversation list with all students and staff
+      // Build conversation list with all students and staff (avoid duplicates)
       const convArray: Conversation[] = [];
+      const addedIds = new Set<string>();
       
       for (const student of students) {
-        const key = `student-${student.id}`;
-        const msgData = messageMap.get(key);
+        const uniqueKey = `student-${student.id}`;
+        if (addedIds.has(uniqueKey)) continue;
+        addedIds.add(uniqueKey);
+        
+        const msgKey = `student-${student.id}`;
+        const msgData = messageMap.get(msgKey);
         convArray.push({
           id: student.id,
           name: student.full_name,
@@ -166,8 +171,12 @@ export default function Communication() {
       }
       
       for (const member of staff) {
-        const key = `staff-${member.id}`;
-        const msgData = messageMap.get(key);
+        const uniqueKey = `staff-${member.id}`;
+        if (addedIds.has(uniqueKey)) continue;
+        addedIds.add(uniqueKey);
+        
+        const msgKey = `staff-${member.id}`;
+        const msgData = messageMap.get(msgKey);
         convArray.push({
           id: member.id,
           name: member.full_name,
