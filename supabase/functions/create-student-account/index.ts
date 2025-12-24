@@ -56,8 +56,98 @@ const handler = async (req: Request): Promise<Response> => {
       }
     );
 
+    // Step 1: Verify the caller is authenticated
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      console.error("No authorization header provided");
+      return new Response(
+        JSON.stringify({ error: "Unauthorized - no token provided" }),
+        { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    const token = authHeader.replace("Bearer ", "");
+    const { data: { user: caller }, error: authError } = await supabaseAdmin.auth.getUser(token);
+    
+    if (authError || !caller) {
+      console.error("Invalid token:", authError?.message);
+      return new Response(
+        JSON.stringify({ error: "Unauthorized - invalid token" }),
+        { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    console.log(`Authenticated caller: ${caller.id} (${caller.email})`);
+
     const { email, fullName, recordId, recordType = "student" }: CreateAccountRequest = await req.json();
 
+    // Validate required fields
+    if (!email || !fullName || !recordId) {
+      return new Response(
+        JSON.stringify({ error: "Missing required fields: email, fullName, recordId" }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    // Step 2: Get the record and verify it exists
+    const tableName = recordType === "student" ? "students" : "staff";
+    const { data: record, error: recordError } = await supabaseAdmin
+      .from(tableName)
+      .select("company_id, user_id")
+      .eq("id", recordId)
+      .single();
+
+    if (recordError || !record) {
+      console.error(`Record not found in ${tableName}:`, recordError?.message);
+      return new Response(
+        JSON.stringify({ error: "Record not found" }),
+        { status: 404, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    // Check if account already exists for this record
+    if (record.user_id) {
+      return new Response(
+        JSON.stringify({ error: "Account already exists for this record", code: "ACCOUNT_EXISTS" }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    const recordCompanyId = record.company_id;
+
+    // Step 3: Verify caller has permission (is company owner or admin staff)
+    // Check if caller is the company owner
+    const { data: company } = await supabaseAdmin
+      .from("companies")
+      .select("created_by")
+      .eq("id", recordCompanyId)
+      .single();
+
+    const isOwner = company?.created_by === caller.id;
+
+    // Check if caller is admin staff in this company
+    let isAdminStaff = false;
+    if (!isOwner) {
+      const { data: callerStaff } = await supabaseAdmin
+        .from("staff")
+        .select("id, role_id, roles:role_id(is_admin)")
+        .eq("user_id", caller.id)
+        .eq("company_id", recordCompanyId)
+        .single();
+
+      // @ts-ignore - roles relationship
+      isAdminStaff = callerStaff?.roles?.is_admin === true;
+    }
+
+    if (!isOwner && !isAdminStaff) {
+      console.error(`User ${caller.id} is not authorized to create accounts for company ${recordCompanyId}`);
+      return new Response(
+        JSON.stringify({ error: "Forbidden - insufficient permissions" }),
+        { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    console.log(`Authorization verified: isOwner=${isOwner}, isAdminStaff=${isAdminStaff}`);
     console.log(`Creating account for ${recordType}: ${email}`);
 
     // Generate a cryptographically secure random password
@@ -97,7 +187,6 @@ const handler = async (req: Request): Promise<Response> => {
     console.log(`User created successfully: ${userData.user?.id}`);
 
     // Update the record with the user_id based on record type
-    const tableName = recordType === "student" ? "students" : "staff";
     const { error: updateError } = await supabaseAdmin
       .from(tableName)
       .update({ 
@@ -113,7 +202,7 @@ const handler = async (req: Request): Promise<Response> => {
       throw updateError;
     }
 
-    console.log(`${recordType} ${recordId} linked to user ${userData.user?.id}`);
+    console.log(`${recordType} ${recordId} linked to user ${userData.user?.id} by ${caller.email}`);
 
     return new Response(
       JSON.stringify({ 
