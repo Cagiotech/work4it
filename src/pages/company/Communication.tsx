@@ -97,7 +97,7 @@ export default function Communication() {
     
     setLoading(true);
     try {
-      // Fetch all students and staff from the company
+      // Fetch all active students and staff from the company
       const [studentsResult, staffResult, messagesResult] = await Promise.all([
         supabase
           .from('students')
@@ -124,7 +124,13 @@ export default function Communication() {
       const messageMap = new Map<string, { lastMessage: string; lastMessageTime: string; unreadCount: number }>();
       
       for (const msg of messagesData) {
+        // Company sends/receives - determine the other party
         const isFromCompany = msg.sender_type === 'company';
+        const isToCompany = msg.receiver_type === 'company';
+        
+        // Skip messages that don't involve company
+        if (!isFromCompany && !isToCompany) continue;
+        
         const otherType = isFromCompany ? msg.receiver_type : msg.sender_type;
         const otherId = isFromCompany ? msg.receiver_id : msg.sender_id;
         const key = `${otherType}-${otherId}`;
@@ -133,11 +139,11 @@ export default function Communication() {
           messageMap.set(key, {
             lastMessage: msg.content,
             lastMessageTime: msg.created_at,
-            unreadCount: !msg.is_read && !isFromCompany ? 1 : 0
+            unreadCount: !msg.is_read && isToCompany ? 1 : 0
           });
         } else {
           const existing = messageMap.get(key)!;
-          if (!msg.is_read && !isFromCompany) {
+          if (!msg.is_read && isToCompany) {
             existing.unreadCount++;
           }
         }
