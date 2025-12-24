@@ -10,7 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { 
   User, Heart, CreditCard, FileText, StickyNote, Pencil, Trash2, X, Save, 
   Apple, CalendarDays, Dumbbell, Mail, Phone, MapPin, Calendar, Clock,
-  TrendingUp, MessageSquare, Ban
+  TrendingUp, MessageSquare, Ban, Shield
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { format, differenceInYears, differenceInDays } from "date-fns";
@@ -33,6 +33,7 @@ import { StudentNutritionTabNew } from "./tabs/StudentNutritionTabNew";
 import { StudentScheduleTab } from "./tabs/StudentScheduleTab";
 import { StudentTrainingTab } from "./tabs/StudentTrainingTab";
 import { StudentStatusDialog } from "./StudentStatusDialog";
+import { StudentSecurityTab } from "./tabs/StudentSecurityTab";
 interface Student {
   id: string;
   full_name: string;
@@ -366,6 +367,10 @@ export function StudentProfileDialog({
                   <StickyNote className="h-4 w-4" />
                   <span className="hidden sm:inline">Notas</span>
                 </TabsTrigger>
+                <TabsTrigger value="security" className="gap-1.5 text-xs sm:text-sm data-[state=active]:bg-primary/10 rounded-b-none border-b-2 border-transparent data-[state=active]:border-primary px-3 py-2.5">
+                  <Shield className="h-4 w-4" />
+                  <span className="hidden sm:inline">Segurança</span>
+                </TabsTrigger>
               </TabsList>
             </div>
 
@@ -657,6 +662,17 @@ export function StudentProfileDialog({
                   <StudentNotesTab 
                     studentId={student.id} 
                     canEdit={canEdit && isEditing} 
+                  />
+                </TabsContent>
+
+                <TabsContent value="security" className="mt-0">
+                  <StudentSecurityTab 
+                    studentId={student.id}
+                    studentEmail={student.email}
+                    studentName={student.full_name}
+                    companyId={student.company_id}
+                    hasAccount={!!student.user_id}
+                    onUpdate={onUpdate}
                   />
                 </TabsContent>
               </div>
