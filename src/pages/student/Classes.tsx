@@ -1,11 +1,13 @@
 import { useState, useEffect } from "react";
-import { Calendar, Clock, User, MapPin } from "lucide-react";
+import { Calendar, Clock, User, MapPin, Plus } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { format, isPast } from "date-fns";
 import { pt } from "date-fns/locale";
+import { BookClassDialog } from "@/components/student/BookClassDialog";
 
 interface ClassSession {
   id: string;
@@ -23,6 +25,8 @@ export default function StudentClasses() {
   const { user } = useAuth();
   const [sessions, setSessions] = useState<ClassSession[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [showBookDialog, setShowBookDialog] = useState(false);
+  const [studentData, setStudentData] = useState<{ id: string; personal_trainer_id: string | null } | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -35,10 +39,10 @@ export default function StudentClasses() {
     
     setIsLoading(true);
     try {
-      // First get student id
+      // First get student id and personal trainer
       const { data: student } = await supabase
         .from('students')
-        .select('id')
+        .select('id, personal_trainer_id')
         .eq('user_id', user.id)
         .maybeSingle();
 
@@ -46,6 +50,8 @@ export default function StudentClasses() {
         setIsLoading(false);
         return;
       }
+      
+      setStudentData({ id: student.id, personal_trainer_id: student.personal_trainer_id });
 
       const { data, error } = await supabase
         .from('class_enrollments')
@@ -121,18 +127,44 @@ export default function StudentClasses() {
           <CardContent className="py-16 text-center">
             <Calendar className="h-16 w-16 text-muted-foreground/50 mx-auto mb-4" />
             <h2 className="text-xl font-semibold mb-2">Aulas e Horários</h2>
-            <p className="text-muted-foreground max-w-md mx-auto">
-              Ainda não está inscrito em nenhuma aula. 
-              Quando a sua empresa o inscrever em aulas, elas aparecerão aqui.
+            <p className="text-muted-foreground max-w-md mx-auto mb-4">
+              Ainda não está inscrito em nenhuma aula.
             </p>
+            {studentData && (
+              <Button onClick={() => setShowBookDialog(true)}>
+                <Plus className="h-4 w-4 mr-1.5" />
+                Agendar Aula
+              </Button>
+            )}
           </CardContent>
         </Card>
+        
+        {studentData && (
+          <BookClassDialog
+            open={showBookDialog}
+            onOpenChange={setShowBookDialog}
+            studentId={studentData.id}
+            personalTrainerId={studentData.personal_trainer_id}
+            onSuccess={fetchSessions}
+          />
+        )}
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
+      {/* Header with Book Button */}
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">As Minhas Aulas</h1>
+        {studentData && (
+          <Button onClick={() => setShowBookDialog(true)}>
+            <Plus className="h-4 w-4 mr-1.5" />
+            Agendar Aula
+          </Button>
+        )}
+      </div>
+      
       {/* Upcoming Classes */}
       {upcomingSessions.length > 0 && (
         <Card>
@@ -252,6 +284,17 @@ export default function StudentClasses() {
           </div>
         </Card>
       </div>
+
+      {/* Book Class Dialog */}
+      {studentData && (
+        <BookClassDialog
+          open={showBookDialog}
+          onOpenChange={setShowBookDialog}
+          studentId={studentData.id}
+          personalTrainerId={studentData.personal_trainer_id}
+          onSuccess={fetchSessions}
+        />
+      )}
     </div>
   );
 }
