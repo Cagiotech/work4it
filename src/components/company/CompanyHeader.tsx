@@ -1,9 +1,10 @@
 import { useTranslation } from "react-i18next";
-import { Bell, Search, User, Menu, LogOut } from "lucide-react";
+import { Search, User, Menu, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
+import { NotificationsDropdown } from "@/components/shared/NotificationsDropdown";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -52,12 +53,7 @@ export function CompanyHeader() {
           <LanguageSwitcher />
           <ThemeSwitcher />
           
-          <Button variant="ghost" size="icon" className="relative">
-            <Bell className="h-5 w-5" />
-            <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-primary text-[10px] font-medium text-primary-foreground flex items-center justify-center">
-              0
-            </span>
-          </Button>
+          <NotificationsDropdown />
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
