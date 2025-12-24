@@ -175,11 +175,12 @@ export default function PersonalChat() {
         let unreadQuery;
 
         if (conv.type === 'company') {
+          // Mensagens entre staff e company
           lastMsgQuery = await supabase
             .from('messages')
             .select('content, created_at')
             .eq('company_id', staff.company_id)
-            .or(`and(sender_type.eq.company,receiver_id.eq.${myId},receiver_type.eq.staff),and(sender_id.eq.${myId},sender_type.eq.staff,receiver_type.eq.company)`)
+            .or(`and(sender_type.eq.company,receiver_id.eq.${myId},receiver_type.eq.staff),and(sender_id.eq.${myId},sender_type.eq.staff,receiver_type.eq.company,receiver_id.eq.${staff.company_id})`)
             .order('created_at', { ascending: false })
             .limit(1)
             .maybeSingle();
@@ -248,11 +249,14 @@ export default function PersonalChat() {
       let query;
 
       if (conversation.type === 'company') {
+        // Mensagens entre staff e company:
+        // - Company envia para staff: sender_type=company, receiver_id=staffId, receiver_type=staff
+        // - Staff envia para company: sender_id=staffId, sender_type=staff, receiver_type=company, receiver_id=company_id
         query = await supabase
           .from('messages')
           .select('*')
           .eq('company_id', staffInfo.company_id)
-          .or(`and(sender_type.eq.company,receiver_id.eq.${myId},receiver_type.eq.staff),and(sender_id.eq.${myId},sender_type.eq.staff,receiver_type.eq.company)`)
+          .or(`and(sender_type.eq.company,receiver_id.eq.${myId},receiver_type.eq.staff),and(sender_id.eq.${myId},sender_type.eq.staff,receiver_type.eq.company,receiver_id.eq.${staffInfo.company_id})`)
           .order('created_at', { ascending: true });
       } else {
         const theirId = conversation.id;
@@ -293,12 +297,17 @@ export default function PersonalChat() {
     if (!staffInfo || !selectedConversation) return;
 
     try {
+      // Quando envia para company, o receiver_id deve ser o company_id
+      const receiverId = selectedConversation.type === 'company' 
+        ? staffInfo.company_id 
+        : selectedConversation.id;
+
       const { error } = await supabase.from('messages').insert({
         company_id: staffInfo.company_id,
         content,
         sender_id: staffInfo.id,
         sender_type: 'staff',
-        receiver_id: selectedConversation.id,
+        receiver_id: receiverId,
         receiver_type: selectedConversation.type
       });
 
