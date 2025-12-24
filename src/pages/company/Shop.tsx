@@ -101,14 +101,27 @@ export default function Shop() {
   }, [products]);
 
   const handleSaveProduct = async (data: Partial<Product>) => {
-    if (!company?.id) return;
+    if (!company?.id || !data.name) return;
     try {
       if (selectedProduct) {
         const { error } = await supabase.from("products").update(data).eq("id", selectedProduct.id);
         if (error) throw error;
         toast.success("Produto atualizado");
       } else {
-        const { error } = await supabase.from("products").insert([{ ...data, company_id: company.id }]);
+        const { error } = await supabase.from("products").insert([{ 
+          name: data.name,
+          description: data.description,
+          sku: data.sku,
+          barcode: data.barcode,
+          price: data.price ?? 0,
+          cost_price: data.cost_price,
+          stock_quantity: data.stock_quantity ?? 0,
+          min_stock_level: data.min_stock_level,
+          image_url: data.image_url,
+          is_active: data.is_active ?? true,
+          category_id: data.category_id,
+          company_id: company.id 
+        }]);
         if (error) throw error;
         toast.success("Produto criado");
       }
@@ -121,14 +134,20 @@ export default function Shop() {
   };
 
   const handleSaveCategory = async (data: Partial<Category>) => {
-    if (!company?.id) return;
+    if (!company?.id || !data.name) return;
     try {
       if (selectedCategory) {
         const { error } = await supabase.from("product_categories").update(data).eq("id", selectedCategory.id);
         if (error) throw error;
         toast.success("Categoria atualizada");
       } else {
-        const { error } = await supabase.from("product_categories").insert([{ ...data, company_id: company.id }]);
+        const { error } = await supabase.from("product_categories").insert([{ 
+          name: data.name,
+          description: data.description,
+          color: data.color ?? '#aeca12',
+          is_active: data.is_active ?? true,
+          company_id: company.id 
+        }]);
         if (error) throw error;
         toast.success("Categoria criada");
       }
