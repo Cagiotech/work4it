@@ -360,8 +360,8 @@ export function CompanyManagementDialog({
               </TabsList>
             </div>
 
-            <ScrollArea className="max-h-[calc(90vh-200px)]">
-              <div className="p-6">
+            <ScrollArea className="h-[calc(90vh-200px)] overflow-y-auto">
+              <div className="p-6 pb-8">
                 <TabsContent value="info" className="mt-0 space-y-6">
                   {/* Company Info */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
