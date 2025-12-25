@@ -12,7 +12,7 @@ import {
 import { 
   BarChart3, TrendingUp, Download, Building2, CreditCard, 
   Calendar, ArrowUpRight, ArrowDownRight, Users, Clock,
-  CheckCircle2, XCircle, AlertCircle
+  CheckCircle2, XCircle, AlertCircle, RefreshCw
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -28,6 +28,26 @@ import {
 } from "@/components/ui/table";
 import { format, subMonths, startOfMonth, endOfMonth } from "date-fns";
 import { pt } from "date-fns/locale";
+import {
+  LineChart,
+  Line,
+  AreaChart,
+  Area,
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from "recharts";
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+
+const CHART_COLORS = ['hsl(var(--primary))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))', 'hsl(var(--chart-4))', 'hsl(var(--chart-5))'];
 
 export default function AdminReports() {
   const [period, setPeriod] = useState("month");
@@ -253,6 +273,9 @@ export default function AdminReports() {
           <p className="text-muted-foreground text-sm md:text-base">Métricas SaaS e análise de receitas</p>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" size="icon" onClick={() => refetch()}>
+            <RefreshCw className="h-4 w-4" />
+          </Button>
           <Select value={period} onValueChange={setPeriod}>
             <SelectTrigger className="w-40">
               <SelectValue placeholder="Período" />
@@ -264,7 +287,22 @@ export default function AdminReports() {
               <SelectItem value="year">Este Ano</SelectItem>
             </SelectContent>
           </Select>
-          <Button variant="outline">
+          <Button variant="outline" onClick={() => {
+            const report = {
+              generatedAt: new Date().toISOString(),
+              period,
+              metrics: saasMetrics,
+            };
+            const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `admin-report-${format(new Date(), 'yyyy-MM-dd')}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+          }}>
             <Download className="h-4 w-4 mr-2" />
             Exportar
           </Button>
@@ -360,6 +398,53 @@ export default function AdminReports() {
             </Card>
           </div>
 
+          {/* MRR Evolution Chart */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <TrendingUp className="h-5 w-5 text-primary" />
+                Evolução do MRR
+              </CardTitle>
+              <CardDescription>Receita mensal recorrente nos últimos 6 meses</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {saasMetrics?.monthlyGrowth && saasMetrics.monthlyGrowth.length > 0 ? (
+                <div className="h-[300px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={saasMetrics.monthlyGrowth.map((m, i) => ({
+                      ...m,
+                      mrr: saasMetrics.revenueByPlan?.reduce((sum, p) => sum + p.monthlyRevenue, 0) || 0
+                    }))}>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                      <XAxis dataKey="month" className="text-xs" />
+                      <YAxis className="text-xs" />
+                      <Tooltip 
+                        contentStyle={{ 
+                          backgroundColor: 'hsl(var(--background))', 
+                          border: '1px solid hsl(var(--border))',
+                          borderRadius: '8px'
+                        }} 
+                      />
+                      <Area 
+                        type="monotone" 
+                        dataKey="newSubscriptions" 
+                        stroke="hsl(var(--primary))" 
+                        fill="hsl(var(--primary))" 
+                        fillOpacity={0.2}
+                        name="Novas Subscrições"
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                <div className="text-center text-muted-foreground py-8">
+                  <BarChart3 className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p>Sem dados de evolução</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           {/* Conversion Rate */}
           <Card>
             <CardHeader>
@@ -399,62 +484,103 @@ export default function AdminReports() {
         </TabsContent>
 
         <TabsContent value="subscriptions" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Receita por Plano</CardTitle>
-              <CardDescription>Distribuição de MRR por tipo de subscrição</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {saasMetrics?.revenueByPlan && saasMetrics.revenueByPlan.length > 0 ? (
-                <div className="space-y-4">
-                  {saasMetrics.revenueByPlan.map((plan, index) => {
-                    const colors = ['bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-orange-500', 'bg-pink-500'];
-                    const totalMRR = saasMetrics.revenueByPlan.reduce((sum, p) => sum + p.monthlyRevenue, 0);
-                    const percentage = totalMRR > 0 ? ((plan.monthlyRevenue / totalMRR) * 100).toFixed(1) : '0';
+          <div className="grid gap-4 md:grid-cols-2">
+            {/* Revenue by Plan - Pie Chart */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Receita por Plano</CardTitle>
+                <CardDescription>Distribuição de MRR por tipo de subscrição</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {saasMetrics?.revenueByPlan && saasMetrics.revenueByPlan.length > 0 ? (
+                  <div className="h-[300px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={saasMetrics.revenueByPlan}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          outerRadius={100}
+                          fill="hsl(var(--primary))"
+                          dataKey="monthlyRevenue"
+                          label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                        >
+                          {saasMetrics.revenueByPlan.map((_, index) => (
+                            <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip 
+                          formatter={(value: number) => [`€${value.toFixed(2)}`, 'MRR']}
+                          contentStyle={{ 
+                            backgroundColor: 'hsl(var(--background))', 
+                            border: '1px solid hsl(var(--border))',
+                            borderRadius: '8px'
+                          }} 
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                ) : (
+                  <div className="text-center text-muted-foreground py-8">
+                    <CreditCard className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p>Nenhuma subscrição ativa</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Revenue Details */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Detalhes por Plano</CardTitle>
+                <CardDescription>Empresas e receita por plano</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {saasMetrics?.revenueByPlan && saasMetrics.revenueByPlan.length > 0 ? (
+                  <div className="space-y-4">
+                    {saasMetrics.revenueByPlan.map((plan, index) => {
+                      const totalMRR = saasMetrics.revenueByPlan.reduce((sum, p) => sum + p.monthlyRevenue, 0);
+                      const percentage = totalMRR > 0 ? ((plan.monthlyRevenue / totalMRR) * 100).toFixed(1) : '0';
+                      
+                      return (
+                        <div key={plan.id} className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <div 
+                                className="w-3 h-3 rounded-full" 
+                                style={{ backgroundColor: CHART_COLORS[index % CHART_COLORS.length] }}
+                              />
+                              <span className="font-medium">{plan.name}</span>
+                              <Badge variant="secondary">{plan.activeCount} empresas</Badge>
+                            </div>
+                            <div className="text-right">
+                              <p className="font-bold">€{plan.monthlyRevenue.toFixed(2)}/mês</p>
+                              <p className="text-xs text-muted-foreground">{percentage}% do MRR</p>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
                     
-                    return (
-                      <div key={plan.id} className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <div className={`w-3 h-3 rounded-full ${colors[index % colors.length]}`} />
-                            <span className="font-medium">{plan.name}</span>
-                            <Badge variant="secondary">{plan.activeCount} empresas</Badge>
-                            <Badge variant="outline" className="text-xs">
-                              €{plan.price}/{plan.billingCycle === 'yearly' ? 'ano' : 'mês'}
-                            </Badge>
-                          </div>
-                          <div className="text-right">
-                            <p className="font-bold">€{plan.monthlyRevenue.toFixed(2)}/mês</p>
-                            <p className="text-xs text-muted-foreground">{percentage}% do MRR</p>
-                          </div>
-                        </div>
-                        <div className="h-2 bg-muted rounded-full overflow-hidden">
-                          <div 
-                            className={`h-full ${colors[index % colors.length]} rounded-full transition-all`}
-                            style={{ width: `${percentage}%` }}
-                          />
-                        </div>
+                    <div className="pt-4 border-t mt-4">
+                      <div className="flex justify-between items-center">
+                        <span className="font-semibold">Total MRR</span>
+                        <span className="text-xl font-bold text-primary">
+                          €{saasMetrics.revenueByPlan.reduce((sum, p) => sum + p.monthlyRevenue, 0).toFixed(2)}/mês
+                        </span>
                       </div>
-                    );
-                  })}
-                  
-                  <div className="pt-4 border-t mt-4">
-                    <div className="flex justify-between items-center">
-                      <span className="font-semibold">Total MRR</span>
-                      <span className="text-xl font-bold text-primary">
-                        €{saasMetrics.revenueByPlan.reduce((sum, p) => sum + p.monthlyRevenue, 0).toFixed(2)}/mês
-                      </span>
                     </div>
                   </div>
-                </div>
-              ) : (
-                <div className="text-center text-muted-foreground py-8">
-                  <CreditCard className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                  <p>Nenhuma subscrição ativa</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                ) : (
+                  <div className="text-center text-muted-foreground py-8">
+                    <CreditCard className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p>Nenhuma subscrição ativa</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
 
           {/* Subscription Status Distribution */}
           <div className="grid gap-4 md:grid-cols-3">
@@ -489,6 +615,7 @@ export default function AdminReports() {
         </TabsContent>
 
         <TabsContent value="growth" className="space-y-4">
+          {/* Growth Bar Chart */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -499,23 +626,67 @@ export default function AdminReports() {
             </CardHeader>
             <CardContent>
               {saasMetrics?.monthlyGrowth && saasMetrics.monthlyGrowth.length > 0 ? (
-                <div className="space-y-4">
-                  {saasMetrics.monthlyGrowth.map((month, index) => (
-                    <div key={month.month} className="flex items-center gap-4 p-3 rounded-lg bg-muted/50">
-                      <div className="w-24 font-medium capitalize">{month.month}</div>
-                      <div className="flex-1 grid grid-cols-2 gap-4">
-                        <div className="flex items-center gap-2">
-                          <Building2 className="h-4 w-4 text-blue-600" />
-                          <span className="text-sm">{month.newCompanies} empresas</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <CreditCard className="h-4 w-4 text-green-600" />
-                          <span className="text-sm">{month.newSubscriptions} subscrições</span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+                <div className="h-[350px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={saasMetrics.monthlyGrowth}>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                      <XAxis dataKey="month" className="text-xs" />
+                      <YAxis className="text-xs" />
+                      <Tooltip 
+                        contentStyle={{ 
+                          backgroundColor: 'hsl(var(--background))', 
+                          border: '1px solid hsl(var(--border))',
+                          borderRadius: '8px'
+                        }} 
+                      />
+                      <Legend />
+                      <Bar dataKey="newCompanies" fill="hsl(var(--primary))" name="Novas Empresas" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="newSubscriptions" fill="hsl(var(--chart-2))" name="Novas Subscrições" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
                 </div>
+              ) : (
+                <div className="text-center text-muted-foreground py-8">
+                  <Calendar className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p>Sem dados de crescimento</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Growth Table */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Detalhes Mensais</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {saasMetrics?.monthlyGrowth && saasMetrics.monthlyGrowth.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Mês</TableHead>
+                      <TableHead className="text-right">Novas Empresas</TableHead>
+                      <TableHead className="text-right">Novas Subscrições</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {saasMetrics.monthlyGrowth.map((month) => (
+                      <TableRow key={month.month}>
+                        <TableCell className="font-medium capitalize">{month.month}</TableCell>
+                        <TableCell className="text-right">
+                          <Badge variant={month.newCompanies > 0 ? "default" : "secondary"}>
+                            +{month.newCompanies}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Badge variant={month.newSubscriptions > 0 ? "default" : "secondary"}>
+                            +{month.newSubscriptions}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               ) : (
                 <div className="text-center text-muted-foreground py-8">
                   <Calendar className="h-8 w-8 mx-auto mb-2 opacity-50" />
