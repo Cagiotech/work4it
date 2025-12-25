@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { User, Lock, Building, Save, LogOut, Link, FileText, Copy, Check, Trash2, AlertTriangle, LayoutGrid, UserCheck, Phone, Mail, MapPin, Globe, FileCheck, Users, CreditCard, Smartphone, KeyRound } from "lucide-react";
+import { User, Lock, Building, Save, LogOut, Link, FileText, Copy, Check, Trash2, AlertTriangle, LayoutGrid, UserCheck, Phone, Mail, MapPin, Globe, FileCheck, Users, CreditCard, Smartphone, KeyRound, Tag, Dumbbell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -18,6 +18,8 @@ import { ClassesSettingsSection } from "@/components/company/settings/ClassesSet
 import { RolesSettingsSection } from "@/components/company/settings/RolesSettingsSection";
 import { PlansSettingsSection } from "@/components/company/settings/PlansSettingsSection";
 import { PasswordResetRequestsSection } from "@/components/company/settings/PasswordResetRequestsSection";
+import { StudentCategoriesSection } from "@/components/company/settings/StudentCategoriesSection";
+import { ExerciseLibrarySection } from "@/components/company/settings/ExerciseLibrarySection";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -410,6 +412,14 @@ export default function Settings() {
           <TabsTrigger value="password-reset" className="text-xs sm:text-sm data-[state=active]:bg-background">
             <KeyRound className="h-4 w-4 sm:mr-2" />
             <span className="hidden sm:inline">Senhas</span>
+          </TabsTrigger>
+          <TabsTrigger value="student-categories" className="text-xs sm:text-sm data-[state=active]:bg-background">
+            <Tag className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Categorias</span>
+          </TabsTrigger>
+          <TabsTrigger value="exercises" className="text-xs sm:text-sm data-[state=active]:bg-background">
+            <Dumbbell className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Exercícios</span>
           </TabsTrigger>
           <TabsTrigger value="security" className="text-xs sm:text-sm data-[state=active]:bg-background">
             <Lock className="h-4 w-4 sm:mr-2" />
@@ -875,6 +885,14 @@ export default function Settings() {
 
         <TabsContent value="password-reset" className="mt-0">
           <PasswordResetRequestsSection />
+        </TabsContent>
+
+        <TabsContent value="student-categories" className="mt-0">
+          <StudentCategoriesSection />
+        </TabsContent>
+
+        <TabsContent value="exercises" className="mt-0">
+          <ExerciseLibrarySection />
         </TabsContent>
       </Tabs>
 

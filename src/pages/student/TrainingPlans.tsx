@@ -2,9 +2,11 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { Dumbbell, Loader2, Moon, Target } from "lucide-react";
+import { Dumbbell, Loader2, Moon, Target, Timer } from "lucide-react";
+import { ExerciseTimer } from "@/components/student/ExerciseTimer";
 
 const WEEK_DAYS = [
   { value: 0, label: "Domingo", short: "Dom" },
@@ -50,6 +52,8 @@ export default function TrainingPlans() {
   const [loading, setLoading] = useState(true);
   const [plan, setPlan] = useState<TrainingPlan | null>(null);
   const [selectedDay, setSelectedDay] = useState<number>(new Date().getDay());
+  const [showTimer, setShowTimer] = useState(false);
+  const [timerSeconds, setTimerSeconds] = useState(60);
 
   useEffect(() => {
     fetchActivePlan();
@@ -231,7 +235,18 @@ export default function TrainingPlans() {
                                     </span>
                                   )}
                                   {exercise.rest_seconds && (
-                                    <span className="text-xs">⏱️ {exercise.rest_seconds}s descanso</span>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-6 px-2 text-xs"
+                                      onClick={() => {
+                                        setTimerSeconds(exercise.rest_seconds!);
+                                        setShowTimer(true);
+                                      }}
+                                    >
+                                      <Timer className="h-3 w-3 mr-1" />
+                                      {exercise.rest_seconds}s
+                                    </Button>
                                   )}
                                 </div>
                                 {exercise.notes && (
@@ -252,6 +267,12 @@ export default function TrainingPlans() {
           </Tabs>
         </CardContent>
       </Card>
+
+      <ExerciseTimer
+        isOpen={showTimer}
+        onClose={() => setShowTimer(false)}
+        initialSeconds={timerSeconds}
+      />
     </div>
   );
 }
