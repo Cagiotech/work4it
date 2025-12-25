@@ -292,6 +292,45 @@ export type Database = {
           },
         ]
       }
+      admin_notifications: {
+        Row: {
+          created_at: string
+          id: string
+          is_read: boolean | null
+          message: string
+          read_at: string | null
+          reference_id: string | null
+          reference_type: string | null
+          title: string
+          type: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_read?: boolean | null
+          message: string
+          read_at?: string | null
+          reference_id?: string | null
+          reference_type?: string | null
+          title: string
+          type?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_read?: boolean | null
+          message?: string
+          read_at?: string | null
+          reference_id?: string | null
+          reference_type?: string | null
+          title?: string
+          type?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       admin_plans: {
         Row: {
           billing_cycle: string
@@ -984,6 +1023,71 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "events_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      exercise_library: {
+        Row: {
+          company_id: string
+          created_at: string
+          description: string | null
+          difficulty: string | null
+          equipment: string | null
+          id: string
+          image_url: string | null
+          instructions: string | null
+          is_active: boolean | null
+          is_global: boolean | null
+          muscle_group: string
+          name: string
+          secondary_muscles: string[] | null
+          tips: string | null
+          updated_at: string
+          video_url: string | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          description?: string | null
+          difficulty?: string | null
+          equipment?: string | null
+          id?: string
+          image_url?: string | null
+          instructions?: string | null
+          is_active?: boolean | null
+          is_global?: boolean | null
+          muscle_group: string
+          name: string
+          secondary_muscles?: string[] | null
+          tips?: string | null
+          updated_at?: string
+          video_url?: string | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          description?: string | null
+          difficulty?: string | null
+          equipment?: string | null
+          id?: string
+          image_url?: string | null
+          instructions?: string | null
+          is_active?: boolean | null
+          is_global?: boolean | null
+          muscle_group?: string
+          name?: string
+          secondary_muscles?: string[] | null
+          tips?: string | null
+          updated_at?: string
+          video_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exercise_library_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
@@ -2880,6 +2984,132 @@ export type Database = {
             foreignKeyName: "student_anamnesis_student_id_fkey"
             columns: ["student_id"]
             isOneToOne: true
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_categories: {
+        Row: {
+          can_book_advance_days: number | null
+          color: string | null
+          company_id: string
+          created_at: string
+          custom_benefits: Json | null
+          description: string | null
+          discount_percentage: number | null
+          free_guest_passes: number | null
+          has_locker: boolean | null
+          has_nutrition_plan: boolean | null
+          has_parking: boolean | null
+          has_personal_trainer: boolean | null
+          has_priority_service: boolean | null
+          has_towel_service: boolean | null
+          id: string
+          is_active: boolean | null
+          max_classes_per_week: number | null
+          name: string
+          sort_order: number | null
+          updated_at: string
+        }
+        Insert: {
+          can_book_advance_days?: number | null
+          color?: string | null
+          company_id: string
+          created_at?: string
+          custom_benefits?: Json | null
+          description?: string | null
+          discount_percentage?: number | null
+          free_guest_passes?: number | null
+          has_locker?: boolean | null
+          has_nutrition_plan?: boolean | null
+          has_parking?: boolean | null
+          has_personal_trainer?: boolean | null
+          has_priority_service?: boolean | null
+          has_towel_service?: boolean | null
+          id?: string
+          is_active?: boolean | null
+          max_classes_per_week?: number | null
+          name: string
+          sort_order?: number | null
+          updated_at?: string
+        }
+        Update: {
+          can_book_advance_days?: number | null
+          color?: string | null
+          company_id?: string
+          created_at?: string
+          custom_benefits?: Json | null
+          description?: string | null
+          discount_percentage?: number | null
+          free_guest_passes?: number | null
+          has_locker?: boolean | null
+          has_nutrition_plan?: boolean | null
+          has_parking?: boolean | null
+          has_personal_trainer?: boolean | null
+          has_priority_service?: boolean | null
+          has_towel_service?: boolean | null
+          id?: string
+          is_active?: boolean | null
+          max_classes_per_week?: number | null
+          name?: string
+          sort_order?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_categories_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_category_assignments: {
+        Row: {
+          assigned_at: string
+          assigned_by: string | null
+          category_id: string
+          id: string
+          notes: string | null
+          student_id: string
+        }
+        Insert: {
+          assigned_at?: string
+          assigned_by?: string | null
+          category_id: string
+          id?: string
+          notes?: string | null
+          student_id: string
+        }
+        Update: {
+          assigned_at?: string
+          assigned_by?: string | null
+          category_id?: string
+          id?: string
+          notes?: string | null
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_category_assignments_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_category_assignments_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "student_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_category_assignments_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
             referencedRelation: "students"
             referencedColumns: ["id"]
           },
