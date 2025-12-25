@@ -32,7 +32,8 @@ import {
   MapPin, Phone, Mail, Hash, Clock, TrendingUp, UserCheck, 
   GraduationCap, Dumbbell, Receipt, AlertCircle, CheckCircle2,
   Lock, Unlock, Key, Download, Trash2, Shield, History,
-  Ban, RefreshCw, FileText, Settings, Eye, BarChart3
+  Ban, RefreshCw, FileText, Settings, Eye, BarChart3,
+  Plus, Minus, CalendarX, CalendarCheck, Timer
 } from "lucide-react";
 import { formatCurrency } from "@/lib/formatters";
 import { supabase } from "@/integrations/supabase/client";
@@ -95,10 +96,14 @@ export default function CompanyDetails() {
   const [showUnblockDialog, setShowUnblockDialog] = useState(false);
   const [showResetPasswordDialog, setShowResetPasswordDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showTrialDialog, setShowTrialDialog] = useState(false);
+  const [trialAction, setTrialAction] = useState<'extend' | 'reduce' | 'cancel' | 'activate' | 'set'>('extend');
   
   // Form states
   const [blockReason, setBlockReason] = useState("");
   const [newPassword, setNewPassword] = useState("");
+  const [trialDays, setTrialDays] = useState("7");
+  const [trialEndDate, setTrialEndDate] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
@@ -385,13 +390,115 @@ export default function CompanyDetails() {
     toast.success('Dados exportados com sucesso');
   };
 
+  // Trial management functions
+  const handleTrialAction = async () => {
+    if (!id) return;
+    
+    setActionLoading(true);
+    try {
+      let newTrialEndsAt: string | null = null;
+      let newTrialStartedAt: string | null = company?.trial_started_at || null;
+      
+      const currentEnd = company?.trial_ends_at ? new Date(company.trial_ends_at) : new Date();
+      const days = parseInt(trialDays) || 7;
+      
+      switch (trialAction) {
+        case 'extend':
+          newTrialEndsAt = new Date(currentEnd.getTime() + days * 24 * 60 * 60 * 1000).toISOString();
+          break;
+        case 'reduce':
+          newTrialEndsAt = new Date(currentEnd.getTime() - days * 24 * 60 * 60 * 1000).toISOString();
+          break;
+        case 'cancel':
+          newTrialEndsAt = new Date().toISOString(); // Set to now (expired)
+          break;
+        case 'activate':
+          newTrialStartedAt = new Date().toISOString();
+          newTrialEndsAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
+          break;
+        case 'set':
+          if (trialEndDate) {
+            newTrialEndsAt = new Date(trialEndDate).toISOString();
+          }
+          break;
+      }
+      
+      const { error } = await supabase
+        .from('companies')
+        .update({
+          trial_started_at: newTrialStartedAt,
+          trial_ends_at: newTrialEndsAt
+        })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      await logAction('trial_update', { 
+        action: trialAction, 
+        days: trialAction === 'extend' || trialAction === 'reduce' ? days : undefined,
+        new_end_date: newTrialEndsAt
+      });
+      
+      const messages: Record<string, string> = {
+        extend: `Trial estendido em ${days} dias`,
+        reduce: `Trial reduzido em ${days} dias`,
+        cancel: 'Trial cancelado',
+        activate: 'Trial de 14 dias ativado',
+        set: 'Data do trial definida'
+      };
+      
+      toast.success(messages[trialAction]);
+      setShowTrialDialog(false);
+      setTrialDays("7");
+      setTrialEndDate("");
+      fetchCompanyData();
+    } catch (error) {
+      console.error('Error updating trial:', error);
+      toast.error('Erro ao atualizar trial');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleToggleSubscription = async () => {
+    if (!id) return;
+    
+    setActionLoading(true);
+    try {
+      const { error } = await supabase
+        .from('companies')
+        .update({
+          has_active_subscription: !company?.has_active_subscription
+        })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      await logAction('subscription_toggle', { 
+        activated: !company?.has_active_subscription 
+      });
+      
+      toast.success(company?.has_active_subscription 
+        ? 'Subscrição desativada' 
+        : 'Subscrição ativada');
+      fetchCompanyData();
+    } catch (error) {
+      console.error('Error toggling subscription:', error);
+      toast.error('Erro ao alterar subscrição');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const getActionLabel = (type: string) => {
     const labels: Record<string, string> = {
       block: 'Bloqueio',
       unblock: 'Desbloqueio',
       password_reset: 'Reset de Senha',
       data_export: 'Exportação de Dados',
-      delete: 'Eliminação'
+      delete: 'Eliminação',
+      trial_update: 'Alteração de Trial',
+      subscription_toggle: 'Alteração de Subscrição'
     };
     return labels[type] || type;
   };
@@ -403,6 +510,8 @@ export default function CompanyDetails() {
       case 'password_reset': return <Key className="h-4 w-4 text-blue-500" />;
       case 'data_export': return <Download className="h-4 w-4 text-purple-500" />;
       case 'delete': return <Trash2 className="h-4 w-4 text-red-500" />;
+      case 'trial_update': return <Timer className="h-4 w-4 text-orange-500" />;
+      case 'subscription_toggle': return <CreditCard className="h-4 w-4 text-green-500" />;
       default: return <Settings className="h-4 w-4 text-gray-500" />;
     }
   };
@@ -720,25 +829,109 @@ export default function CompanyDetails() {
                         Período de Teste Expirado
                       </Badge>
                     ) : (
-                      <Badge variant="outline" className="w-full justify-center py-2 bg-green-500/10 text-green-600 border-green-500/20">
-                        Período de Teste Ativo
-                      </Badge>
+                      <div className="space-y-2">
+                        <Badge variant="outline" className="w-full justify-center py-2 bg-green-500/10 text-green-600 border-green-500/20">
+                          Período de Teste Ativo - {Math.ceil((new Date(company.trial_ends_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24))} dias restantes
+                        </Badge>
+                      </div>
                     )}
                   </>
                 ) : (
-                  <p className="text-center text-muted-foreground py-4">
-                    Sem informação de período de teste
-                  </p>
+                  <div className="text-center py-4">
+                    <p className="text-muted-foreground mb-3">Sem período de teste configurado</p>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => {
+                        setTrialAction('activate');
+                        setShowTrialDialog(true);
+                      }}
+                    >
+                      <CalendarCheck className="h-4 w-4 mr-2" />
+                      Ativar Trial de 14 dias
+                    </Button>
+                  </div>
                 )}
 
-                <div className="pt-4 border-t">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Subscrição Ativa</span>
+                {/* Trial Action Buttons */}
+                {company.trial_ends_at && (
+                  <div className="grid grid-cols-2 gap-2 pt-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      className="text-green-600 border-green-600/50 hover:bg-green-50"
+                      onClick={() => {
+                        setTrialAction('extend');
+                        setShowTrialDialog(true);
+                      }}
+                    >
+                      <Plus className="h-4 w-4 mr-1" />
+                      Estender
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      className="text-orange-600 border-orange-600/50 hover:bg-orange-50"
+                      onClick={() => {
+                        setTrialAction('reduce');
+                        setShowTrialDialog(true);
+                      }}
+                    >
+                      <Minus className="h-4 w-4 mr-1" />
+                      Reduzir
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => {
+                        setTrialAction('set');
+                        setShowTrialDialog(true);
+                      }}
+                    >
+                      <Calendar className="h-4 w-4 mr-1" />
+                      Definir Data
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      className="text-red-600 border-red-600/50 hover:bg-red-50"
+                      onClick={() => {
+                        setTrialAction('cancel');
+                        setShowTrialDialog(true);
+                      }}
+                    >
+                      <CalendarX className="h-4 w-4 mr-1" />
+                      Cancelar
+                    </Button>
+                  </div>
+                )}
+
+                <Separator />
+
+                {/* Subscription Toggle */}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-sm font-medium">Subscrição Ativa</span>
+                    <p className="text-xs text-muted-foreground">
+                      {company.has_active_subscription 
+                        ? "A empresa tem acesso completo" 
+                        : "Empresa limitada ao período de teste"}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
                     {company.has_active_subscription ? (
-                      <Badge className="bg-green-500">Sim</Badge>
+                      <Badge className="bg-green-500">Ativa</Badge>
                     ) : (
-                      <Badge variant="secondary">Não</Badge>
+                      <Badge variant="secondary">Inativa</Badge>
                     )}
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={handleToggleSubscription}
+                      disabled={actionLoading}
+                    >
+                      {company.has_active_subscription ? "Desativar" : "Ativar"}
+                    </Button>
                   </div>
                 </div>
               </CardContent>
@@ -1173,6 +1366,66 @@ export default function CompanyDetails() {
               disabled={actionLoading}
             >
               {actionLoading ? "A eliminar..." : "Eliminar Permanentemente"}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Trial Management Dialog */}
+      <AlertDialog open={showTrialDialog} onOpenChange={setShowTrialDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Timer className="h-5 w-5 text-orange-500" />
+              {trialAction === 'extend' && 'Estender Período de Teste'}
+              {trialAction === 'reduce' && 'Reduzir Período de Teste'}
+              {trialAction === 'cancel' && 'Cancelar Período de Teste'}
+              {trialAction === 'activate' && 'Ativar Período de Teste'}
+              {trialAction === 'set' && 'Definir Data do Trial'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {trialAction === 'extend' && 'Adicione dias ao período de teste atual.'}
+              {trialAction === 'reduce' && 'Reduza dias do período de teste atual.'}
+              {trialAction === 'cancel' && 'Isto irá expirar imediatamente o período de teste da empresa.'}
+              {trialAction === 'activate' && 'Isto irá ativar um novo período de teste de 14 dias.'}
+              {trialAction === 'set' && 'Defina uma data específica para o fim do trial.'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          
+          {(trialAction === 'extend' || trialAction === 'reduce') && (
+            <div className="py-4">
+              <label className="text-sm font-medium">Número de dias</label>
+              <Input
+                type="number"
+                min="1"
+                value={trialDays}
+                onChange={(e) => setTrialDays(e.target.value)}
+                placeholder="7"
+                className="mt-2"
+              />
+            </div>
+          )}
+          
+          {trialAction === 'set' && (
+            <div className="py-4">
+              <label className="text-sm font-medium">Data de término</label>
+              <Input
+                type="date"
+                value={trialEndDate}
+                onChange={(e) => setTrialEndDate(e.target.value)}
+                className="mt-2"
+              />
+            </div>
+          )}
+
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={actionLoading}>Cancelar</AlertDialogCancel>
+            <Button
+              variant={trialAction === 'cancel' ? 'destructive' : 'default'}
+              onClick={handleTrialAction}
+              disabled={actionLoading || (trialAction === 'set' && !trialEndDate)}
+            >
+              {actionLoading ? "A processar..." : "Confirmar"}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
