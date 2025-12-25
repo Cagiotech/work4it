@@ -15,6 +15,7 @@ import {
   Mail,
   Shield,
 } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 import { NavLink } from "@/components/NavLink";
 import {
   Sidebar,
@@ -50,6 +51,7 @@ export function AdminSidebar() {
   const { state, toggleSidebar } = useSidebar();
   const location = useLocation();
   const navigate = useNavigate();
+  const { signOut, user } = useAuth();
   const collapsed = state === "collapsed";
 
   const isActive = (path: string) => {
@@ -59,7 +61,8 @@ export function AdminSidebar() {
     return location.pathname.startsWith(path);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await signOut();
     navigate("/login");
   };
 
@@ -80,7 +83,7 @@ export function AdminSidebar() {
           {!collapsed && (
             <div className="mt-3 p-3 rounded-xl bg-primary/10 border border-primary/20">
               <p className="text-sm font-medium text-sidebar-foreground truncate">Super Admin</p>
-              <p className="text-xs text-sidebar-foreground/60 mt-0.5 truncate">admin@cagiotech.com</p>
+              <p className="text-xs text-sidebar-foreground/60 mt-0.5 truncate">{user?.email || 'admin@cagiotech.com'}</p>
             </div>
           )}
         </div>
