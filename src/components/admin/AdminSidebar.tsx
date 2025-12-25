@@ -10,6 +10,10 @@ import {
   CreditCard,
   LogOut,
   ChevronLeft,
+  Users,
+  Receipt,
+  Mail,
+  Shield,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import {
@@ -30,9 +34,13 @@ import logoLight from "@/assets/logo-light.png";
 const menuItems = [
   { title: "Dashboard", url: "/admin", icon: LayoutDashboard },
   { title: "Empresas", url: "/admin/companies", icon: Building2 },
+  { title: "Utilizadores", url: "/admin/users", icon: Users },
   { title: "Planos", url: "/admin/plans", icon: CreditCard },
+  { title: "Faturação", url: "/admin/billing", icon: Receipt },
+  { title: "Comunicações", url: "/admin/communications", icon: Mail },
   { title: "Relatórios", url: "/admin/reports", icon: BarChart3 },
   { title: "Monitorização", url: "/admin/monitoring", icon: Activity },
+  { title: "Segurança", url: "/admin/security", icon: Shield },
   { title: "Eventos/Anúncios", url: "/admin/events", icon: Megaphone },
   { title: "Roadmap", url: "/admin/roadmap", icon: Map },
   { title: "Definições", url: "/admin/settings", icon: Settings },

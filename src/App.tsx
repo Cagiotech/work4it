@@ -58,9 +58,13 @@ import PersonalSettings from "./pages/personal/Settings";
 import AdminLayout from "./layouts/AdminLayout";
 import AdminDashboard from "./pages/admin/Dashboard";
 import AdminCompanies from "./pages/admin/Companies";
+import AdminUsers from "./pages/admin/Users";
 import AdminPlans from "./pages/admin/Plans";
+import AdminBilling from "./pages/admin/Billing";
+import AdminCommunications from "./pages/admin/Communications";
 import AdminReports from "./pages/admin/Reports";
 import AdminMonitoring from "./pages/admin/Monitoring";
+import AdminSecurity from "./pages/admin/Security";
 import AdminEvents from "./pages/admin/Events";
 import AdminRoadmap from "./pages/admin/Roadmap";
 import AdminSettings from "./pages/admin/Settings";
@@ -130,9 +134,13 @@ const App = () => (
               <Route path="/admin" element={<AdminLayout />}>
                 <Route index element={<AdminDashboard />} />
                 <Route path="companies" element={<AdminCompanies />} />
+                <Route path="users" element={<AdminUsers />} />
                 <Route path="plans" element={<AdminPlans />} />
+                <Route path="billing" element={<AdminBilling />} />
+                <Route path="communications" element={<AdminCommunications />} />
                 <Route path="reports" element={<AdminReports />} />
                 <Route path="monitoring" element={<AdminMonitoring />} />
+                <Route path="security" element={<AdminSecurity />} />
                 <Route path="events" element={<AdminEvents />} />
                 <Route path="roadmap" element={<AdminRoadmap />} />
                 <Route path="settings" element={<AdminSettings />} />
