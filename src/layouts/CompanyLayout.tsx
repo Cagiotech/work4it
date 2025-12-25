@@ -6,9 +6,11 @@ import { CompanyHeader } from "@/components/company/CompanyHeader";
 import { DeveloperFooter } from "@/components/DeveloperFooter";
 import { AdminBanner } from "@/components/shared/AdminBanner";
 import { BlockedCompanyScreen } from "@/components/company/BlockedCompanyScreen";
+import { TrialExpiredScreen } from "@/components/company/TrialExpiredScreen";
 import { useAuth } from "@/hooks/useAuth";
 import { ShieldX } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 export function CompanyLayout() {
   const { user, profile, company, loading: authLoading } = useAuth();
@@ -95,6 +97,39 @@ export function CompanyLayout() {
       />
     );
   }
+
+  // Check if trial has expired and no active subscription
+  const isTrialExpired = () => {
+    if (!company) return false;
+    if (company.has_active_subscription) return false;
+    if (!company.trial_ends_at) return false;
+    
+    const trialEndDate = new Date(company.trial_ends_at);
+    const now = new Date();
+    return now > trialEndDate;
+  };
+
+  // Show trial expired screen
+  if (isTrialExpired()) {
+    return (
+      <TrialExpiredScreen 
+        companyName={company?.name || "Sua empresa"} 
+        trialEndedAt={company?.trial_ends_at || undefined}
+      />
+    );
+  }
+
+  // Calculate days remaining in trial
+  const getTrialDaysRemaining = () => {
+    if (!company?.trial_ends_at || company?.has_active_subscription) return null;
+    const trialEndDate = new Date(company.trial_ends_at);
+    const now = new Date();
+    const diffTime = trialEndDate.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays > 0 ? diffDays : 0;
+  };
+
+  const trialDaysRemaining = getTrialDaysRemaining();
   
   return (
     <SidebarProvider>
@@ -103,6 +138,28 @@ export function CompanyLayout() {
         <div className="flex-1 flex flex-col min-w-0 bg-muted/30">
           <CompanyHeader />
           <main className="flex-1 p-4 md:p-6 overflow-auto">
+            {/* Trial Banner */}
+            {trialDaysRemaining !== null && trialDaysRemaining <= 7 && (
+              <div className={`mb-4 p-3 rounded-lg flex items-center justify-between ${
+                trialDaysRemaining <= 3 
+                  ? 'bg-destructive/10 border border-destructive/30' 
+                  : 'bg-warning/10 border border-warning/30'
+              }`}>
+                <div className="flex items-center gap-3">
+                  <Badge variant={trialDaysRemaining <= 3 ? "destructive" : "secondary"}>
+                    {trialDaysRemaining === 0 
+                      ? 'Último dia!' 
+                      : `${trialDaysRemaining} dia${trialDaysRemaining > 1 ? 's' : ''}`}
+                  </Badge>
+                  <span className="text-sm font-medium">
+                    {trialDaysRemaining === 0 
+                      ? 'O seu período de teste termina hoje. Subscreva um plano para continuar.'
+                      : `O seu período de teste termina em ${trialDaysRemaining} dia${trialDaysRemaining > 1 ? 's' : ''}. Subscreva um plano para manter o acesso.`
+                    }
+                  </span>
+                </div>
+              </div>
+            )}
             <AdminBanner audience="companies" />
             <Outlet />
           </main>
