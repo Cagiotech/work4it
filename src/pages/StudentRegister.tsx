@@ -10,6 +10,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { DeveloperFooter } from "@/components/DeveloperFooter";
 import logoLight from "@/assets/logo-light.png";
+import { getAuthRedirectUrl } from "@/lib/platform";
+import { sanitizeError, logError } from "@/lib/errorHandler";
 
 interface Company {
   id: string;
@@ -54,8 +56,8 @@ export default function StudentRegister() {
         // RPC returns array, get first result
         const companyData = Array.isArray(data) && data.length > 0 ? data[0] : null;
         setCompany(companyData);
-      } catch (error) {
-        console.error('Error fetching company:', error);
+      } catch (error: unknown) {
+        logError(error, 'Fetch company');
       } finally {
         setLoading(false);
       }
@@ -83,12 +85,12 @@ export default function StudentRegister() {
     try {
       // Create auth user
       const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: formData.email,
+        email: formData.email.trim().toLowerCase(),
         password: formData.password,
         options: {
-          emailRedirectTo: `${window.location.origin}/new-student`,
+          emailRedirectTo: getAuthRedirectUrl('/new-student'),
           data: {
-            full_name: formData.fullName,
+            full_name: formData.fullName.trim(),
             role: 'student',
           }
         }
@@ -116,7 +118,7 @@ export default function StudentRegister() {
           }]);
 
         if (studentError) {
-          console.error('Error creating student:', studentError);
+          logError(studentError, 'Create student');
           // If we can't create student, we should inform but account is created
         }
 
@@ -134,12 +136,13 @@ export default function StudentRegister() {
           }, 2000);
         }
       }
-    } catch (error: any) {
-      console.error('Error registering:', error);
-      if (error.message.includes('already registered')) {
+    } catch (error: unknown) {
+      logError(error, 'Student register');
+      const errorMessage = error instanceof Error ? error.message : '';
+      if (errorMessage.includes('already registered')) {
         toast.error("Este email já está registado. Faça login.");
       } else {
-        toast.error(error.message || "Erro ao criar conta");
+        toast.error(sanitizeError(error).message);
       }
     } finally {
       setSubmitting(false);

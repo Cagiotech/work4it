@@ -1,7 +1,9 @@
-import { ShieldX, Mail, Phone } from "lucide-react";
+import { ShieldX, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/hooks/useAuth";
+import { useNavigate } from "react-router-dom";
+import { openExternalLink } from "@/lib/platform";
 
 interface BlockedCompanyScreenProps {
   companyName: string;
@@ -10,10 +12,11 @@ interface BlockedCompanyScreenProps {
 
 export function BlockedCompanyScreen({ companyName, blockedReason }: BlockedCompanyScreenProps) {
   const { signOut } = useAuth();
+  const navigate = useNavigate();
 
   const handleLogout = async () => {
     await signOut();
-    window.location.href = "/login";
+    navigate("/login");
   };
 
   return (
@@ -46,7 +49,7 @@ export function BlockedCompanyScreen({ companyName, blockedReason }: BlockedComp
             <Button 
               variant="outline" 
               className="w-full"
-              onClick={() => window.location.href = "mailto:suporte@cagiotech.com"}
+              onClick={() => openExternalLink("mailto:suporte@cagiotech.com")}
             >
               <Mail className="h-4 w-4 mr-2" />
               Contactar Suporte

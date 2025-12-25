@@ -11,6 +11,8 @@ import logo from '@/assets/logo-light.png';
 import { Eye, EyeOff, Mail, Lock, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { getAuthRedirectUrl } from '@/lib/platform';
+import { sanitizeError, logError } from '@/lib/errorHandler';
 
 const Register = () => {
   const { t } = useTranslation();
@@ -42,10 +44,10 @@ const Register = () => {
 
     setLoading(true);
     try {
-      const redirectUrl = `${window.location.origin}/`;
+      const redirectUrl = getAuthRedirectUrl('/');
       
       const { data, error } = await supabase.auth.signUp({
-        email: formData.email,
+        email: formData.email.trim().toLowerCase(),
         password: formData.password,
         options: {
           emailRedirectTo: redirectUrl,
@@ -65,9 +67,9 @@ const Register = () => {
         toast.success(t('auth.accountCreated'));
         navigate('/onboarding');
       }
-    } catch (error: any) {
-      console.error('Register error:', error);
-      toast.error(error.message || t('auth.registerError'));
+    } catch (error: unknown) {
+      logError(error, 'Register');
+      toast.error(sanitizeError(error).message);
     } finally {
       setLoading(false);
     }
