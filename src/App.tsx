@@ -58,6 +58,7 @@ import PersonalSettings from "./pages/personal/Settings";
 import AdminLayout from "./layouts/AdminLayout";
 import AdminDashboard from "./pages/admin/Dashboard";
 import AdminCompanies from "./pages/admin/Companies";
+import AdminCompanyDetails from "./pages/admin/CompanyDetails";
 import AdminUsers from "./pages/admin/Users";
 import AdminPlans from "./pages/admin/Plans";
 import AdminBilling from "./pages/admin/Billing";
@@ -134,6 +135,7 @@ const App = () => (
               <Route path="/admin" element={<AdminLayout />}>
                 <Route index element={<AdminDashboard />} />
                 <Route path="companies" element={<AdminCompanies />} />
+                <Route path="companies/:id" element={<AdminCompanyDetails />} />
                 <Route path="users" element={<AdminUsers />} />
                 <Route path="plans" element={<AdminPlans />} />
                 <Route path="billing" element={<AdminBilling />} />
