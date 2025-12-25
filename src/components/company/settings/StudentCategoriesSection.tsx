@@ -47,7 +47,7 @@ interface StudentCategory {
   max_classes_per_week: number | null;
   has_towel_service: boolean;
   has_parking: boolean;
-  custom_benefits: unknown[];
+  custom_benefits: string[];
   is_active: boolean;
   sort_order: number;
 }
@@ -98,7 +98,9 @@ export function StudentCategoriesSection() {
       if (error) throw error;
       setCategories((data || []).map(cat => ({
         ...cat,
-        custom_benefits: Array.isArray(cat.custom_benefits) ? cat.custom_benefits : []
+        custom_benefits: Array.isArray(cat.custom_benefits) 
+          ? (cat.custom_benefits as string[]) 
+          : []
       })));
     } catch (error) {
       console.error("Error fetching categories:", error);
@@ -160,7 +162,7 @@ export function StudentCategoriesSection() {
         max_classes_per_week: form.max_classes_per_week,
         has_towel_service: form.has_towel_service,
         has_parking: form.has_parking,
-        custom_benefits: form.custom_benefits,
+        custom_benefits: form.custom_benefits as string[],
         is_active: form.is_active,
         sort_order: form.sort_order,
       };
