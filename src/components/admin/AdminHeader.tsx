@@ -1,4 +1,4 @@
-import { Bell, Search, User, Menu, ShieldCheck, LogOut } from "lucide-react";
+import { Search, User, Menu, ShieldCheck, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -13,6 +13,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
+import { AdminNotificationsDropdown } from "@/components/admin/AdminNotificationsDropdown";
 import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
@@ -53,12 +54,7 @@ export function AdminHeader() {
           <LanguageSwitcher />
           <ThemeSwitcher />
           
-          <Button variant="ghost" size="icon" className="relative">
-            <Bell className="h-5 w-5" />
-            <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-destructive text-[10px] font-medium text-destructive-foreground flex items-center justify-center">
-              5
-            </span>
-          </Button>
+          <AdminNotificationsDropdown />
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
