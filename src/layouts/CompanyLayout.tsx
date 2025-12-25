@@ -5,12 +5,13 @@ import { CompanySidebar } from "@/components/company/CompanySidebar";
 import { CompanyHeader } from "@/components/company/CompanyHeader";
 import { DeveloperFooter } from "@/components/DeveloperFooter";
 import { AdminBanner } from "@/components/shared/AdminBanner";
+import { BlockedCompanyScreen } from "@/components/company/BlockedCompanyScreen";
 import { useAuth } from "@/hooks/useAuth";
 import { ShieldX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export function CompanyLayout() {
-  const { user, profile, loading: authLoading } = useAuth();
+  const { user, profile, company, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [minTimeElapsed, setMinTimeElapsed] = useState(false);
 
@@ -84,6 +85,16 @@ export function CompanyLayout() {
       </div>
     );
   }
+
+  // Show blocked screen if company is blocked
+  if (company?.is_blocked) {
+    return (
+      <BlockedCompanyScreen 
+        companyName={company.name || "Sua empresa"} 
+        blockedReason={company.blocked_reason}
+      />
+    );
+  }
   
   return (
     <SidebarProvider>
@@ -92,7 +103,7 @@ export function CompanyLayout() {
         <div className="flex-1 flex flex-col min-w-0 bg-muted/30">
           <CompanyHeader />
           <main className="flex-1 p-4 md:p-6 overflow-auto">
-            <AdminBanner audience="company" />
+            <AdminBanner audience="companies" />
             <Outlet />
           </main>
           <DeveloperFooter />

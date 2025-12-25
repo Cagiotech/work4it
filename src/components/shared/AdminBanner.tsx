@@ -20,7 +20,7 @@ interface Banner {
 }
 
 interface AdminBannerProps {
-  audience: "company" | "student" | "staff" | "all";
+  audience: "companies" | "students" | "staff" | "all";
 }
 
 const DISMISSED_BANNERS_KEY = "dismissed_banners";
