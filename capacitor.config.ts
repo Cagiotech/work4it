@@ -1,13 +1,40 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'app.lovable.f3e3a053c4de446a88149c96c9244043',
-  appName: 'A Lovable project',
+  appId: 'app.lovable.ee1ef185eb6144898c9bd293b150b6ed',
+  appName: 'work4it',
   webDir: 'dist',
   server: {
-    url: 'https://f3e3a053-c4de-446a-8814-9c96c9244043.lovableproject.com?forceHideBadge=true',
+    url: 'https://ee1ef185-eb61-4489-8c9b-d293b150b6ed.lovableproject.com?forceHideBadge=true',
     cleartext: true
-  }
+  },
+  plugins: {
+    // Deep link configuration for auth redirects
+    App: {
+      appUrlOpen: {
+        domains: ['work4it.lovableproject.com', 'ee1ef185-eb61-4489-8c9b-d293b150b6ed.lovableproject.com'],
+      },
+    },
+    // Secure storage for auth tokens
+    CapacitorCookies: {
+      enabled: true,
+    },
+    // HTTP configuration
+    CapacitorHttp: {
+      enabled: true,
+    },
+  },
+  // iOS specific configuration
+  ios: {
+    scheme: 'work4it',
+    contentInset: 'automatic',
+  },
+  // Android specific configuration  
+  android: {
+    allowMixedContent: false,
+    captureInput: true,
+    webContentsDebuggingEnabled: false, // Disable for production
+  },
 };
 
 export default config;

@@ -4019,6 +4019,14 @@ export type Database = {
         }
         Returns: string
       }
+      get_company_basic_info: {
+        Args: { p_company_id: string }
+        Returns: {
+          address: string
+          id: string
+          name: string
+        }[]
+      }
       get_company_registration_info: {
         Args: { p_registration_code: string }
         Returns: {
@@ -4036,6 +4044,14 @@ export type Database = {
         Returns: boolean
       }
       is_admin: { Args: never; Returns: boolean }
+      is_company_member: {
+        Args: { _company_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_company_staff: {
+        Args: { _company_id: string; _user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
