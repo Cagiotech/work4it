@@ -31,12 +31,12 @@ const Register = () => {
     e.preventDefault();
     
     if (formData.password !== formData.confirmPassword) {
-      toast.error('As senhas não coincidem');
+      toast.error(t('auth.passwordsNotMatch'));
       return;
     }
 
     if (formData.password.length < 6) {
-      toast.error('A senha deve ter pelo menos 6 caracteres');
+      toast.error(t('auth.passwordMinLength'));
       return;
     }
 
@@ -54,7 +54,7 @@ const Register = () => {
 
       if (error) {
         if (error.message.includes('already registered')) {
-          toast.error('Este email já está registrado. Por favor, faça login.');
+          toast.error(t('auth.emailAlreadyRegistered'));
         } else {
           throw error;
         }
@@ -62,22 +62,22 @@ const Register = () => {
       }
 
       if (data.user) {
-        toast.success('Conta criada com sucesso!');
+        toast.success(t('auth.accountCreated'));
         navigate('/onboarding');
       }
     } catch (error: any) {
       console.error('Register error:', error);
-      toast.error(error.message || 'Erro ao criar conta');
+      toast.error(error.message || t('auth.registerError'));
     } finally {
       setLoading(false);
     }
   };
 
   const benefits = [
-    'Gestão completa de alunos e staff',
-    'Planos de treino e nutrição',
-    'Controlo financeiro integrado',
-    'Comunicação em tempo real',
+    t('auth.benefits.management'),
+    t('auth.benefits.plans'),
+    t('auth.benefits.financial'),
+    t('auth.benefits.communication'),
   ];
 
   return (
@@ -195,7 +195,7 @@ const Register = () => {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                     </svg>
-                    Criando conta...
+                    {t('common.creatingAccount')}
                   </span>
                 ) : (
                   <span className="flex items-center gap-2">
@@ -229,10 +229,10 @@ const Register = () => {
             <img src={logo} alt="Cagiotech" className="h-20 w-auto brightness-0 invert" />
           </div>
           <h1 className="font-heading text-4xl font-bold text-primary-foreground mb-4">
-            Comece a Transformar o Seu Negócio
+            {t('auth.startTransform')}
           </h1>
           <p className="text-lg text-primary-foreground/80 mb-10">
-            Junte-se a centenas de empresas que já usam a Cagiotech para gerir os seus espaços fitness.
+            {t('auth.joinCompanies')}
           </p>
           
           {/* Benefits list */}

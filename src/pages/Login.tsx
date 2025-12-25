@@ -129,7 +129,7 @@ const Login = () => {
 
       if (error) {
         if (error.message.includes('Invalid login credentials')) {
-          toast.error('Email ou senha incorretos');
+          toast.error(t('auth.invalidCredentials'));
         } else {
           throw error;
         }
@@ -137,12 +137,12 @@ const Login = () => {
       }
 
       if (data.user) {
-        toast.success('Login realizado com sucesso!');
+        toast.success(t('auth.loginSuccess'));
         await redirectBasedOnRole(data.user.id);
       }
     } catch (error: any) {
       console.error('Login error:', error);
-      toast.error(error.message || 'Erro ao fazer login');
+      toast.error(error.message || t('auth.loginError'));
     } finally {
       setLoading(false);
     }
@@ -171,23 +171,23 @@ const Login = () => {
             <img src={logo} alt="Cagiotech" className="h-20 w-auto brightness-0 invert" />
           </div>
           <h1 className="font-heading text-4xl font-bold text-primary-foreground mb-4">
-            Bem-vindo de Volta
+            {t('auth.welcomeBack')}
           </h1>
           <p className="text-lg text-primary-foreground/80 mb-10">
-            A plataforma completa para gerir o seu negócio de fitness e wellness em Portugal.
+            {t('auth.platformDescription')}
           </p>
           <div className="flex items-center justify-center gap-4">
             <div className="flex flex-col items-center p-5 rounded-2xl bg-white/10 backdrop-blur-sm">
               <span className="text-3xl font-bold text-primary-foreground">500+</span>
-              <span className="text-sm text-primary-foreground/70">Empresas</span>
+              <span className="text-sm text-primary-foreground/70">{t('common.companies')}</span>
             </div>
             <div className="flex flex-col items-center p-5 rounded-2xl bg-white/10 backdrop-blur-sm">
               <span className="text-3xl font-bold text-primary-foreground">10k+</span>
-              <span className="text-sm text-primary-foreground/70">Atletas</span>
+              <span className="text-sm text-primary-foreground/70">{t('common.athletes')}</span>
             </div>
             <div className="flex flex-col items-center p-5 rounded-2xl bg-white/10 backdrop-blur-sm">
               <span className="text-3xl font-bold text-primary-foreground">99%</span>
-              <span className="text-sm text-primary-foreground/70">Satisfação</span>
+              <span className="text-sm text-primary-foreground/70">{t('common.satisfaction')}</span>
             </div>
           </div>
         </div>
@@ -293,7 +293,7 @@ const Login = () => {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                     </svg>
-                    Entrando...
+                    {t('common.loggingIn')}
                   </span>
                 ) : (
                   <span className="flex items-center gap-2">
@@ -308,17 +308,17 @@ const Login = () => {
             <div className="mt-10 flex items-center justify-center gap-8 lg:hidden">
               <div className="text-center">
                 <div className="text-2xl font-bold text-primary">500+</div>
-                <div className="text-xs text-muted-foreground">Empresas</div>
+                <div className="text-xs text-muted-foreground">{t('common.companies')}</div>
               </div>
               <div className="w-px h-10 bg-border/50 rounded-full" />
               <div className="text-center">
                 <div className="text-2xl font-bold text-primary">10k+</div>
-                <div className="text-xs text-muted-foreground">Atletas</div>
+                <div className="text-xs text-muted-foreground">{t('common.athletes')}</div>
               </div>
               <div className="w-px h-10 bg-border/50 rounded-full" />
               <div className="text-center">
                 <div className="text-2xl font-bold text-primary">99%</div>
-                <div className="text-xs text-muted-foreground">Satisfação</div>
+                <div className="text-xs text-muted-foreground">{t('common.satisfaction')}</div>
               </div>
             </div>
           </div>

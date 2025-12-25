@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,6 +13,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 const ForgotPassword = () => {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [submitted, setSubmitted] = useState(false);
@@ -92,7 +94,7 @@ const ForgotPassword = () => {
       setSubmitted(true);
     } catch (error: any) {
       console.error('Error submitting reset request:', error);
-      toast.error('Erro ao enviar pedido. Tente novamente.');
+      toast.error(t('auth.sendError'));
     } finally {
       setLoading(false);
     }
@@ -109,10 +111,10 @@ const ForgotPassword = () => {
               <CheckCircle className="h-20 w-20 text-primary-foreground" />
             </div>
             <h1 className="font-heading text-4xl font-bold text-primary-foreground mb-4">
-              Pedido Enviado!
+              {t('auth.requestSent')}
             </h1>
             <p className="text-lg text-primary-foreground/80">
-              O seu pedido de recuperação foi registado com sucesso.
+              {t('auth.requestSuccess')}
             </p>
           </div>
         </div>
@@ -144,7 +146,7 @@ const ForgotPassword = () => {
                 </div>
                 
                 <h2 className="font-heading text-3xl font-bold text-foreground mb-4">
-                  Pedido Registado
+                  {t('auth.requestRegistered')}
                 </h2>
                 
                 <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 mb-6">
@@ -152,28 +154,22 @@ const ForgotPassword = () => {
                     <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
                     <div className="text-left text-sm text-amber-800 dark:text-amber-200">
                       {userType === 'company' ? (
-                        <p>
-                          O seu pedido será analisado pelo <strong>Administrador da plataforma</strong>. 
-                          Em breve receberá uma nova senha ou será contactado.
-                        </p>
+                        <p>{t('auth.companyResetInfo')}</p>
                       ) : (
-                        <p>
-                          O seu pedido será analisado pela <strong>empresa responsável</strong>. 
-                          Em breve irão liberar o seu acesso ou entrar em contacto consigo.
-                        </p>
+                        <p>{t('auth.otherResetInfo')}</p>
                       )}
                     </div>
                   </div>
                 </div>
 
                 <p className="text-muted-foreground mb-8">
-                  O email <strong>{email}</strong> foi registado para recuperação de acesso.
+                  {t('auth.emailRegisteredFor', { email })}
                 </p>
 
                 <Link to="/login">
                   <Button className="w-full h-14 text-base font-semibold rounded-2xl">
                     <ArrowLeft className="h-5 w-5 mr-2" />
-                    Voltar ao Login
+                    {t('common.backToLogin')}
                   </Button>
                 </Link>
               </div>
@@ -196,10 +192,10 @@ const ForgotPassword = () => {
             <img src={logo} alt="Cagiotech" className="h-20 w-auto brightness-0 invert" />
           </div>
           <h1 className="font-heading text-4xl font-bold text-primary-foreground mb-4">
-            Recuperar Acesso
+            {t('auth.recoverAccess')}
           </h1>
           <p className="text-lg text-primary-foreground/80 mb-10">
-            Não se preocupe, vamos ajudá-lo a recuperar o acesso à sua conta.
+            {t('auth.recoverAccessDesc')}
           </p>
         </div>
       </div>
@@ -227,17 +223,17 @@ const ForgotPassword = () => {
             {/* Form */}
             <div className="mb-8">
               <h2 className="font-heading text-3xl font-bold text-foreground">
-                Esqueceu a Senha?
+                {t('auth.forgotPasswordTitle')}
               </h2>
               <p className="mt-3 text-base text-muted-foreground">
-                Insira o email usado no cadastro. O responsável irá analisar o seu pedido e liberar o acesso.
+                {t('auth.forgotPasswordDesc')}
               </p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-foreground font-medium text-sm">
-                  Email do Cadastro
+                  {t('auth.registeredEmail')}
                 </Label>
                 <div className="relative">
                   <Mail className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
@@ -255,19 +251,19 @@ const ForgotPassword = () => {
               </div>
 
               <div className="p-4 rounded-xl bg-muted/50 border border-border">
-                <h4 className="font-medium text-sm mb-2">Como funciona?</h4>
+                <h4 className="font-medium text-sm mb-2">{t('auth.howItWorks')}</h4>
                 <ul className="text-sm text-muted-foreground space-y-1.5">
                   <li className="flex items-start gap-2">
                     <span className="font-semibold text-primary">1.</span>
-                    Insira o email utilizado no cadastro
+                    {t('auth.step1')}
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="font-semibold text-primary">2.</span>
-                    O responsável receberá o seu pedido
+                    {t('auth.step2')}
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="font-semibold text-primary">3.</span>
-                    Após aprovação, receberá uma nova senha
+                    {t('auth.step3')}
                   </li>
                 </ul>
               </div>
@@ -284,10 +280,10 @@ const ForgotPassword = () => {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                     </svg>
-                    Enviando...
+                    {t('common.sending')}
                   </span>
                 ) : (
-                  'Enviar Pedido de Recuperação'
+                  t('common.sendRequest')
                 )}
               </Button>
 
@@ -297,7 +293,7 @@ const ForgotPassword = () => {
                   className="text-sm font-medium text-primary hover:text-primary/80 transition-colors inline-flex items-center gap-2"
                 >
                   <ArrowLeft className="h-4 w-4" />
-                  Voltar ao Login
+                  {t('common.backToLogin')}
                 </Link>
               </div>
             </form>
