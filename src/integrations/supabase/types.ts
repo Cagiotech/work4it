@@ -62,6 +62,41 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_company_logs: {
+        Row: {
+          action_details: Json | null
+          action_type: string
+          company_id: string
+          created_at: string
+          id: string
+          performed_by: string
+        }
+        Insert: {
+          action_details?: Json | null
+          action_type: string
+          company_id: string
+          created_at?: string
+          id?: string
+          performed_by: string
+        }
+        Update: {
+          action_details?: Json | null
+          action_type?: string
+          company_id?: string
+          created_at?: string
+          id?: string
+          performed_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_company_logs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       admin_plans: {
         Row: {
           billing_cycle: string
@@ -397,9 +432,13 @@ export type Database = {
         Row: {
           address: string | null
           anamnesis_filled_by: string | null
+          blocked_at: string | null
+          blocked_by: string | null
+          blocked_reason: string | null
           created_at: string
           created_by: string
           id: string
+          is_blocked: boolean | null
           mbway_phone: string | null
           name: string | null
           registration_code: string | null
@@ -411,9 +450,13 @@ export type Database = {
         Insert: {
           address?: string | null
           anamnesis_filled_by?: string | null
+          blocked_at?: string | null
+          blocked_by?: string | null
+          blocked_reason?: string | null
           created_at?: string
           created_by: string
           id?: string
+          is_blocked?: boolean | null
           mbway_phone?: string | null
           name?: string | null
           registration_code?: string | null
@@ -425,9 +468,13 @@ export type Database = {
         Update: {
           address?: string | null
           anamnesis_filled_by?: string | null
+          blocked_at?: string | null
+          blocked_by?: string | null
+          blocked_reason?: string | null
           created_at?: string
           created_by?: string
           id?: string
+          is_blocked?: boolean | null
           mbway_phone?: string | null
           name?: string | null
           registration_code?: string | null

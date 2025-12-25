@@ -11,7 +11,7 @@ import {
   Search, Users, Building2, Settings, Calendar, CreditCard, 
   MapPin, Phone, Mail, Hash, Clock, TrendingUp, UserCheck, 
   GraduationCap, Dumbbell, Receipt, AlertCircle, CheckCircle2,
-  X, ExternalLink
+  X, ExternalLink, Lock, MoreVertical
 } from "lucide-react";
 import {
   Select,
@@ -26,9 +26,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useAdminCompanies, useAdminPlans } from "@/hooks/useAdminData";
 import { formatCurrency } from "@/lib/formatters";
 import { supabase } from "@/integrations/supabase/client";
+import { CompanyManagementDialog } from "@/components/admin/CompanyManagementDialog";
 
 interface CompanyDetails {
   id: string;
@@ -60,18 +67,23 @@ interface CompanyDetails {
 }
 
 export default function AdminCompanies() {
-  const { data: companies, isLoading } = useAdminCompanies();
+  const { data: companies, isLoading, refetch } = useAdminCompanies();
   const { data: plans } = useAdminPlans();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterPlan, setFilterPlan] = useState("all");
+  const [filterStatus, setFilterStatus] = useState("all");
   const [selectedCompany, setSelectedCompany] = useState<CompanyDetails | null>(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [companyDetails, setCompanyDetails] = useState<any>(null);
+  const [showManagementDialog, setShowManagementDialog] = useState(false);
 
   const filteredCompanies = companies?.filter((company) => {
     const matchesSearch = (company.name || "").toLowerCase().includes(searchTerm.toLowerCase());
     const matchesPlan = filterPlan === "all" || company.subscription?.name === filterPlan;
-    return matchesSearch && matchesPlan;
+    const matchesStatus = filterStatus === "all" || 
+      (filterStatus === "blocked" && company.is_blocked) ||
+      (filterStatus === "active" && !company.is_blocked);
+    return matchesSearch && matchesPlan && matchesStatus;
   }) || [];
 
   // Calculate stats
@@ -268,6 +280,16 @@ export default function AdminCompanies() {
                 ))}
               </SelectContent>
             </Select>
+            <Select value={filterStatus} onValueChange={setFilterStatus}>
+              <SelectTrigger className="w-full md:w-48">
+                <SelectValue placeholder="Filtrar por estado" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os Estados</SelectItem>
+                <SelectItem value="active">Ativas</SelectItem>
+                <SelectItem value="blocked">Bloqueadas</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </CardContent>
       </Card>
@@ -288,14 +310,18 @@ export default function AdminCompanies() {
           {filteredCompanies.map((company) => (
             <Card 
               key={company.id} 
-              className="hover:shadow-md transition-all cursor-pointer hover:border-primary/50"
+              className={`hover:shadow-md transition-all cursor-pointer hover:border-primary/50 ${company.is_blocked ? 'border-red-500/50 bg-red-500/5' : ''}`}
               onClick={() => handleCompanyClick(company)}
             >
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-primary/10">
-                      <Building2 className="h-5 w-5 text-primary" />
+                    <div className={`p-2 rounded-lg ${company.is_blocked ? 'bg-red-500/10' : 'bg-primary/10'}`}>
+                      {company.is_blocked ? (
+                        <Lock className="h-5 w-5 text-red-500" />
+                      ) : (
+                        <Building2 className="h-5 w-5 text-primary" />
+                      )}
                     </div>
                     <div className="min-w-0">
                       <CardTitle className="text-base truncate">{company.name || "Sem nome"}</CardTitle>
@@ -304,10 +330,33 @@ export default function AdminCompanies() {
                       </CardDescription>
                     </div>
                   </div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={(e) => {
+                        e.stopPropagation();
+                        handleCompanyClick(company);
+                        setShowManagementDialog(true);
+                      }}>
+                        <Settings className="h-4 w-4 mr-2" />
+                        Gerir Empresa
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  {company.is_blocked && (
+                    <Badge variant="destructive" className="gap-1">
+                      <Lock className="h-3 w-3" />
+                      Bloqueada
+                    </Badge>
+                  )}
                   {company.subscription ? (
                     <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
                       {company.subscription.name}
@@ -729,6 +778,18 @@ export default function AdminCompanies() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Company Management Dialog */}
+      <CompanyManagementDialog
+        company={selectedCompany}
+        companyDetails={companyDetails}
+        open={showManagementDialog}
+        onOpenChange={setShowManagementDialog}
+        onRefresh={() => {
+          refetch();
+          if (selectedCompany) handleCompanyClick(selectedCompany);
+        }}
+      />
     </div>
   );
 }
