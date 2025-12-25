@@ -18,6 +18,9 @@ interface Company {
   address: string | null;
   is_blocked: boolean | null;
   blocked_reason: string | null;
+  trial_started_at: string | null;
+  trial_ends_at: string | null;
+  has_active_subscription: boolean | null;
 }
 
 interface AuthContextType {
@@ -62,7 +65,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (profileData.company_id) {
           const { data: companyData } = await supabase
             .from('companies')
-            .select('id, name, address, is_blocked, blocked_reason')
+            .select('id, name, address, is_blocked, blocked_reason, trial_started_at, trial_ends_at, has_active_subscription')
             .eq('id', profileData.company_id)
             .maybeSingle();
 

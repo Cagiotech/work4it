@@ -632,6 +632,7 @@ export type Database = {
           blocked_reason: string | null
           created_at: string
           created_by: string
+          has_active_subscription: boolean | null
           id: string
           is_blocked: boolean | null
           mbway_phone: string | null
@@ -640,6 +641,8 @@ export type Database = {
           regulations_text: string | null
           require_student_approval: boolean | null
           terms_text: string | null
+          trial_ends_at: string | null
+          trial_started_at: string | null
           updated_at: string
         }
         Insert: {
@@ -650,6 +653,7 @@ export type Database = {
           blocked_reason?: string | null
           created_at?: string
           created_by: string
+          has_active_subscription?: boolean | null
           id?: string
           is_blocked?: boolean | null
           mbway_phone?: string | null
@@ -658,6 +662,8 @@ export type Database = {
           regulations_text?: string | null
           require_student_approval?: boolean | null
           terms_text?: string | null
+          trial_ends_at?: string | null
+          trial_started_at?: string | null
           updated_at?: string
         }
         Update: {
@@ -668,6 +674,7 @@ export type Database = {
           blocked_reason?: string | null
           created_at?: string
           created_by?: string
+          has_active_subscription?: boolean | null
           id?: string
           is_blocked?: boolean | null
           mbway_phone?: string | null
@@ -676,6 +683,8 @@ export type Database = {
           regulations_text?: string | null
           require_student_approval?: boolean | null
           terms_text?: string | null
+          trial_ends_at?: string | null
+          trial_started_at?: string | null
           updated_at?: string
         }
         Relationships: []
