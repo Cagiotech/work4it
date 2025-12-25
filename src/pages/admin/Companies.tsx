@@ -11,7 +11,7 @@ import {
   Search, Users, Building2, Settings, Calendar, CreditCard, 
   MapPin, Phone, Mail, Hash, Clock, TrendingUp, UserCheck, 
   GraduationCap, Dumbbell, Receipt, AlertCircle, CheckCircle2,
-  X, ExternalLink, Lock, MoreVertical
+  X, ExternalLink, Lock, Pencil
 } from "lucide-react";
 import {
   Select,
@@ -26,12 +26,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { useAdminCompanies, useAdminPlans } from "@/hooks/useAdminData";
 import { formatCurrency } from "@/lib/formatters";
 import { supabase } from "@/integrations/supabase/client";
@@ -330,23 +324,19 @@ export default function AdminCompanies() {
                       </CardDescription>
                     </div>
                   </div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={(e) => {
-                        e.stopPropagation();
-                        handleCompanyClick(company);
-                        setShowManagementDialog(true);
-                      }}>
-                        <Settings className="h-4 w-4 mr-2" />
-                        Gerir Empresa
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-8 w-8 hover:bg-primary/10"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleCompanyClick(company);
+                      setShowManagementDialog(true);
+                    }}
+                    title="Gerir Empresa"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -393,20 +383,29 @@ export default function AdminCompanies() {
       <Dialog open={!!selectedCompany} onOpenChange={(open) => !open && setSelectedCompany(null)}>
         <DialogContent className="max-w-4xl max-h-[90vh] p-0">
           <DialogHeader className="p-6 pb-0">
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-xl bg-primary/10">
-                <Building2 className="h-8 w-8 text-primary" />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="p-3 rounded-xl bg-primary/10">
+                  <Building2 className="h-8 w-8 text-primary" />
+                </div>
+                <div>
+                  <DialogTitle className="text-2xl">{selectedCompany?.name || "Empresa"}</DialogTitle>
+                  <p className="text-muted-foreground mt-1">
+                    Registada em {selectedCompany && new Date(selectedCompany.created_at).toLocaleDateString("pt-PT", {
+                      day: "2-digit",
+                      month: "long",
+                      year: "numeric"
+                    })}
+                  </p>
+                </div>
               </div>
-              <div>
-                <DialogTitle className="text-2xl">{selectedCompany?.name || "Empresa"}</DialogTitle>
-                <p className="text-muted-foreground mt-1">
-                  Registada em {selectedCompany && new Date(selectedCompany.created_at).toLocaleDateString("pt-PT", {
-                    day: "2-digit",
-                    month: "long",
-                    year: "numeric"
-                  })}
-                </p>
-              </div>
+              <Button
+                onClick={() => setShowManagementDialog(true)}
+                className="gap-2"
+              >
+                <Settings className="h-4 w-4" />
+                Gerir
+              </Button>
             </div>
           </DialogHeader>
 
