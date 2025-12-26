@@ -6,7 +6,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { User, CreditCard, FileText, GraduationCap, Pencil, Trash2, X, Save, ClipboardCheck, Loader2, Dumbbell } from "lucide-react";
+import { User, CreditCard, FileText, GraduationCap, Pencil, Trash2, X, Save, ClipboardCheck, Loader2, Dumbbell, Shield } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -17,6 +17,7 @@ import { StaffDocumentsTab } from "./tabs/StaffDocumentsTab";
 import { StaffTrainingsTab } from "./tabs/StaffTrainingsTab";
 import { StaffEvaluationsTab } from "./tabs/StaffEvaluationsTab";
 import { StaffClassesTab } from "./tabs/StaffClassesTab";
+import { StaffSecurityTab } from "./tabs/StaffSecurityTab";
 
 // Context for save trigger
 export const StaffSaveTriggerContext = createContext<{
@@ -332,10 +333,14 @@ export function StaffProfileDialog({
           <StaffSaveTriggerContext.Provider value={{ registerSave, unregisterSave }}>
             <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1">
               <div className="px-6 pt-2">
-                <TabsList className="grid w-full grid-cols-6">
+                <TabsList className="grid w-full grid-cols-7">
                   <TabsTrigger value="profile" className="gap-1 text-xs sm:text-sm">
                     <User className="h-4 w-4" />
                     <span className="hidden sm:inline">Perfil</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="security" className="gap-1 text-xs sm:text-sm">
+                    <Shield className="h-4 w-4" />
+                    <span className="hidden sm:inline">Segurança</span>
                   </TabsTrigger>
                   <TabsTrigger value="classes" className="gap-1 text-xs sm:text-sm">
                     <Dumbbell className="h-4 w-4" />
@@ -371,6 +376,17 @@ export function StaffProfileDialog({
                       fetchStaffData();
                       onSaved();
                     }}
+                  />
+                </TabsContent>
+
+                <TabsContent value="security" className="mt-0">
+                  <StaffSecurityTab
+                    staffId={staff.id}
+                    staffEmail={staff.email}
+                    staffName={staff.full_name}
+                    companyId={staff.company_id}
+                    hasAccount={!!staff.user_id}
+                    onUpdate={fetchStaffData}
                   />
                 </TabsContent>
 
