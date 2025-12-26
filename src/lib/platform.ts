@@ -38,8 +38,8 @@ export const getBaseUrl = (): string => {
   if (typeof window !== 'undefined' && window.location) {
     return window.location.origin;
   }
-  // Fallback for SSR or edge cases
-  return import.meta.env.VITE_APP_URL || 'https://work4it.lovableproject.com';
+  // Fallback for SSR or edge cases - use Vercel production domain
+  return import.meta.env.VITE_APP_URL || 'https://cagiotechview.vercel.app';
 };
 
 /**
