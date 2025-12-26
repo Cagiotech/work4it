@@ -1,9 +1,21 @@
 import { useState, useEffect } from "react";
-import { CreditCard, CheckCircle, Loader2, Calendar, RefreshCw, Clock, AlertTriangle } from "lucide-react";
+import { CreditCard, CheckCircle, Loader2, Calendar, RefreshCw, Clock, AlertTriangle, Upload, Phone } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface SubscriptionPayment {
   id: string;
@@ -40,6 +52,17 @@ export default function Payments() {
   const [loading, setLoading] = useState(true);
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [activeSubscription, setActiveSubscription] = useState<Subscription | null>(null);
+  const [studentId, setStudentId] = useState<string | null>(null);
+  const [companyMbway, setCompanyMbway] = useState<string | null>(null);
+  
+  // Payment proof dialog
+  const [proofDialogOpen, setProofDialogOpen] = useState(false);
+  const [selectedPayment, setSelectedPayment] = useState<SubscriptionPayment | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [amount, setAmount] = useState("");
+  const [notes, setNotes] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
+  const [existingProofs, setExistingProofs] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const fetchPayments = async () => {
@@ -48,11 +71,25 @@ export default function Payments() {
 
       const { data: studentData } = await supabase
         .from('students')
-        .select('id')
+        .select('id, company_id')
         .eq('user_id', user.id)
         .maybeSingle();
 
       if (studentData) {
+        setStudentId(studentData.id);
+        
+        // Fetch company MBWay
+        const { data: companyData } = await supabase
+          .from('companies')
+          .select('mbway_phone')
+          .eq('id', studentData.company_id)
+          .single();
+        
+        if (companyData) {
+          setCompanyMbway(companyData.mbway_phone);
+        }
+
+        // Fetch subscriptions
         const { data: subsData } = await supabase
           .from('student_subscriptions')
           .select(`
@@ -69,6 +106,23 @@ export default function Payments() {
           if (active) {
             setActiveSubscription(active as Subscription);
           }
+        }
+
+        // Fetch existing payment proofs to check which payments have pending proofs
+        const { data: proofsData } = await supabase
+          .from('payment_proofs')
+          .select('subscription_id, status')
+          .eq('student_id', studentData.id)
+          .eq('status', 'pending');
+
+        if (proofsData) {
+          const proofsMap: Record<string, string> = {};
+          proofsData.forEach(proof => {
+            if (proof.subscription_id) {
+              proofsMap[proof.subscription_id] = proof.status;
+            }
+          });
+          setExistingProofs(proofsMap);
         }
       }
 
@@ -133,6 +187,86 @@ export default function Payments() {
     return labels[frequency || ''] || frequency || 'Único';
   };
 
+  const handleOpenProofDialog = (payment: SubscriptionPayment) => {
+    setSelectedPayment(payment);
+    setAmount(payment.amount.toFixed(2));
+    setNotes("");
+    setSelectedFile(null);
+    setProofDialogOpen(true);
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error("O ficheiro não pode exceder 5MB");
+        return;
+      }
+      if (!['image/jpeg', 'image/png', 'application/pdf'].includes(file.type)) {
+        toast.error("Formato inválido. Use JPG, PNG ou PDF");
+        return;
+      }
+      setSelectedFile(file);
+    }
+  };
+
+  const handleSubmitProof = async () => {
+    if (!selectedFile || !studentId || !activeSubscription) {
+      toast.error("Selecione um ficheiro");
+      return;
+    }
+
+    setIsUploading(true);
+
+    try {
+      const fileExt = selectedFile.name.split('.').pop();
+      const fileName = `${studentId}/${Date.now()}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('payment-proofs')
+        .upload(fileName, selectedFile);
+
+      if (uploadError) throw uploadError;
+
+      const { error: insertError } = await supabase
+        .from('payment_proofs')
+        .insert({
+          student_id: studentId,
+          subscription_id: activeSubscription.id,
+          amount: parseFloat(amount) || selectedPayment?.amount || 0,
+          proof_file_name: selectedFile.name,
+          proof_file_path: fileName,
+          proof_file_type: selectedFile.type,
+          notes: notes || null,
+          status: 'pending'
+        });
+
+      if (insertError) throw insertError;
+
+      toast.success("Comprovante enviado com sucesso!");
+      setProofDialogOpen(false);
+      setSelectedFile(null);
+      setExistingProofs(prev => ({
+        ...prev,
+        [activeSubscription.id]: 'pending'
+      }));
+    } catch (error: any) {
+      console.error('Error uploading proof:', error);
+      toast.error("Erro ao enviar comprovante");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  // Get overdue payments
+  const overduePayments = activeSubscription?.subscription_payments?.filter(payment => {
+    return payment.status === 'pending' && new Date(payment.due_date) < new Date();
+  }) || [];
+
+  const pendingPayments = activeSubscription?.subscription_payments?.filter(payment => {
+    return payment.status === 'pending' && new Date(payment.due_date) >= new Date();
+  }) || [];
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -147,6 +281,59 @@ export default function Payments() {
 
   return (
     <div className="space-y-6">
+      {/* Overdue Alert */}
+      {overduePayments.length > 0 && (
+        <Card className="border-destructive bg-destructive/5">
+          <CardContent className="p-4">
+            <div className="flex items-start gap-3">
+              <div className="h-10 w-10 rounded-lg bg-destructive/10 flex items-center justify-center shrink-0">
+                <AlertTriangle className="h-5 w-5 text-destructive" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-destructive">Pagamentos em Atraso</h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Você tem {overduePayments.length} pagamento(s) em atraso. 
+                  Total: €{overduePayments.reduce((sum, p) => sum + p.amount, 0).toFixed(2)}
+                </p>
+                {!existingProofs[activeSubscription?.id || ''] && (
+                  <Button 
+                    size="sm" 
+                    className="mt-3"
+                    onClick={() => overduePayments[0] && handleOpenProofDialog(overduePayments[0])}
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    Enviar Comprovante
+                  </Button>
+                )}
+                {existingProofs[activeSubscription?.id || ''] === 'pending' && (
+                  <Badge variant="outline" className="mt-3 border-yellow-500 text-yellow-600">
+                    <Clock className="h-3 w-3 mr-1" />
+                    Comprovante em análise
+                  </Badge>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* MBWay Info Card */}
+      {companyMbway && (
+        <Card className="bg-primary/5 border-primary/20">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                <Phone className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Pagamento por MBWay</p>
+                <p className="font-semibold text-lg">{companyMbway}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Current Plan Card */}
       {activeSubscription ? (
         <Card className="bg-gradient-card border-primary/20">
@@ -292,6 +479,12 @@ export default function Payments() {
                       <div className="flex items-center justify-between sm:justify-end gap-3">
                         <span className="font-semibold">€{payment.amount.toFixed(2)}</span>
                         {getPaymentStatusBadge(isOverdue ? 'overdue' : payment.status)}
+                        {(isOverdue || payment.status === 'pending') && payment.status !== 'paid' && !existingProofs[activeSubscription.id] && (
+                          <Button size="sm" variant="outline" onClick={() => handleOpenProofDialog(payment)}>
+                            <Upload className="h-4 w-4 mr-1" />
+                            Enviar
+                          </Button>
+                        )}
                       </div>
                     </div>
                   );
@@ -361,6 +554,94 @@ export default function Payments() {
           </CardContent>
         </Card>
       )}
+
+      {/* Payment Proof Dialog */}
+      <Dialog open={proofDialogOpen} onOpenChange={setProofDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Enviar Comprovante de Pagamento</DialogTitle>
+            <DialogDescription>
+              Envie o comprovante do seu pagamento para validação
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 pt-4">
+            {companyMbway && (
+              <div className="p-4 rounded-lg bg-primary/5 border border-primary/20">
+                <div className="flex items-center gap-3">
+                  <Phone className="h-5 w-5 text-primary" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">Número MBWay</p>
+                    <p className="font-semibold text-lg">{companyMbway}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label>Valor (€)</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                placeholder="0.00"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Comprovante (JPG, PNG ou PDF - máx 5MB)</Label>
+              <Input
+                type="file"
+                accept="image/jpeg,image/png,application/pdf"
+                onChange={handleFileChange}
+              />
+              {selectedFile && (
+                <p className="text-sm text-muted-foreground">
+                  Ficheiro: {selectedFile.name}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label>Observações (opcional)</Label>
+              <Textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Informações adicionais..."
+                rows={3}
+              />
+            </div>
+
+            <div className="flex gap-3 pt-4">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => setProofDialogOpen(false)}
+              >
+                Cancelar
+              </Button>
+              <Button
+                className="flex-1"
+                onClick={handleSubmitProof}
+                disabled={!selectedFile || isUploading}
+              >
+                {isUploading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Enviando...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="h-4 w-4 mr-2" />
+                    Enviar
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
