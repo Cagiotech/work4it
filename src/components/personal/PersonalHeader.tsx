@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Bell, Search, User, Menu, LogOut } from "lucide-react";
+import { Search, User, Menu, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -14,6 +14,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
+import { PersonalNotificationsDropdown } from "@/components/personal/PersonalNotificationsDropdown";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -76,12 +77,7 @@ export function PersonalHeader() {
           <LanguageSwitcher />
           <ThemeSwitcher />
           
-          <Button variant="ghost" size="icon" className="relative">
-            <Bell className="h-5 w-5" />
-            <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-primary text-[10px] font-medium text-primary-foreground flex items-center justify-center">
-              3
-            </span>
-          </Button>
+          <PersonalNotificationsDropdown />
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
