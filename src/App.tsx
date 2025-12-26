@@ -46,6 +46,7 @@ import StudentSettings from "./pages/student/Settings";
 import PersonalLayout from "./layouts/PersonalLayout";
 import PersonalDashboard from "./pages/personal/Dashboard";
 import PersonalStudents from "./pages/personal/Students";
+import PersonalStudentProfile from "./pages/personal/StudentProfile";
 import PersonalSchedule from "./pages/personal/Schedule";
 import PersonalTrainingPlans from "./pages/personal/TrainingPlans";
 import PersonalNutrition from "./pages/personal/Nutrition";
@@ -123,6 +124,7 @@ const App = () => (
               <Route path="/personal" element={<PersonalLayout />}>
                 <Route index element={<PersonalDashboard />} />
                 <Route path="students" element={<PersonalStudents />} />
+                <Route path="students/:id" element={<PersonalStudentProfile />} />
                 <Route path="schedule" element={<PersonalSchedule />} />
                 <Route path="training-plans" element={<PersonalTrainingPlans />} />
                 <Route path="nutrition" element={<PersonalNutrition />} />
