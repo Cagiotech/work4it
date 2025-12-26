@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Plus, Search, LayoutGrid, List, ArrowUpAZ, ArrowDownAZ, Download, Trash2, Loader2, User, Calendar, CreditCard, Clock, Upload, Users, Filter, CheckCircle, Clock as ClockIcon, X, MessageCircle, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -11,7 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { AddStudentDialog } from "@/components/company/students/AddStudentDialog";
-import { StudentProfileDialog } from "@/components/company/students/StudentProfileDialog";
+
 import { ImportStudentsDialog } from "@/components/company/students/ImportStudentsDialog";
 import { StudentGroupsDialog } from "@/components/company/students/StudentGroupsDialog";
 import { useAuth } from "@/hooks/useAuth";
@@ -84,6 +85,7 @@ interface SubscriptionPlan {
 }
 
 export default function Students() {
+  const navigate = useNavigate();
   const { t } = useTranslation();
   const { company } = useAuth();
   const { canCreate, canEdit, canDelete, canExport } = usePermissions();
@@ -103,8 +105,6 @@ export default function Students() {
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [groupsDialogOpen, setGroupsDialogOpen] = useState(false);
-  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
-  const [profileDialogOpen, setProfileDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [studentToDelete, setStudentToDelete] = useState<Student | null>(null);
   const [activeTab, setActiveTab] = useState<'active' | 'pending'>('active');
@@ -170,14 +170,6 @@ export default function Students() {
       })) || [];
 
       setStudents(enrichedStudents);
-      
-      // Update selectedStudent if it exists
-      if (selectedStudent) {
-        const updated = enrichedStudents.find(s => s.id === selectedStudent.id);
-        if (updated) {
-          setSelectedStudent(updated);
-        }
-      }
     } catch (error: any) {
       console.error('Error fetching students:', error);
       toast.error('Erro ao carregar alunos');
@@ -345,7 +337,6 @@ export default function Students() {
       toast.success('Aluno excluído com sucesso!');
       setDeleteDialogOpen(false);
       setStudentToDelete(null);
-      setProfileDialogOpen(false);
     } catch (error: any) {
       console.error('Error deleting student:', error);
       toast.error(error.message || 'Erro ao excluir aluno');
@@ -364,8 +355,7 @@ export default function Students() {
   };
 
   const handleStudentClick = (student: Student) => {
-    setSelectedStudent(student);
-    setProfileDialogOpen(true);
+    navigate(`/company/students/${student.id}`);
   };
 
   const confirmDelete = (student: Student) => {
@@ -838,22 +828,6 @@ export default function Students() {
         onOpenChange={setAddDialogOpen} 
         onAdd={handleAddStudent}
         isLoading={addingStudent}
-      />
-      
-      <StudentProfileDialog
-        student={selectedStudent}
-        open={profileDialogOpen}
-        onOpenChange={setProfileDialogOpen}
-        onUpdate={() => {
-          fetchStudents();
-        }}
-        onDelete={canDelete('students') ? () => {
-          if (selectedStudent) {
-            confirmDelete(selectedStudent);
-          }
-        } : undefined}
-        canEdit={canEdit('students')}
-        canDelete={canDelete('students')}
       />
 
       {/* Delete Confirmation Dialog */}

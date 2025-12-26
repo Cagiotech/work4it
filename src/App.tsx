@@ -21,6 +21,7 @@ import NotFound from "./pages/NotFound";
 import { CompanyLayout } from "./layouts/CompanyLayout";
 import CompanyDashboard from "./pages/company/Dashboard";
 import Students from "./pages/company/Students";
+import StudentProfile from "./pages/company/StudentProfile";
 import HumanResources from "./pages/company/HumanResources";
 import Classes from "./pages/company/Classes";
 import Communication from "./pages/company/Communication";
@@ -95,6 +96,7 @@ const App = () => (
               <Route path="/company" element={<CompanyLayout />}>
                 <Route index element={<CompanyDashboard />} />
                 <Route path="students" element={<Students />} />
+                <Route path="students/:id" element={<StudentProfile />} />
                 <Route path="hr" element={<HumanResources />} />
                 <Route path="classes" element={<Classes />} />
                 <Route path="communication" element={<Communication />} />
