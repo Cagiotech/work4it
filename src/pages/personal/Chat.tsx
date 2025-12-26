@@ -171,54 +171,71 @@ export default function PersonalChat() {
       for (const conv of convList) {
         const myId = staff.id;
 
-        let lastMsgQuery;
-        let unreadQuery;
+        let lastMsgData = null;
+        let unreadCount = 0;
 
         if (conv.type === 'company') {
-          // Mensagens entre staff e company
-          lastMsgQuery = await supabase
+          // Mensagens entre staff e company - buscar todas e filtrar
+          const { data: allMsgs } = await supabase
             .from('messages')
-            .select('content, created_at')
+            .select('content, created_at, sender_type, sender_id, receiver_type, receiver_id, is_read')
             .eq('company_id', staff.company_id)
-            .or(`and(sender_type.eq.company,receiver_id.eq.${myId},receiver_type.eq.staff),and(sender_id.eq.${myId},sender_type.eq.staff,receiver_type.eq.company,receiver_id.eq.${staff.company_id})`)
             .order('created_at', { ascending: false })
-            .limit(1)
-            .maybeSingle();
+            .limit(100);
 
-          unreadQuery = await supabase
-            .from('messages')
-            .select('*', { count: 'exact', head: true })
-            .eq('receiver_id', myId)
-            .eq('receiver_type', 'staff')
-            .eq('sender_type', 'company')
-            .eq('is_read', false);
+          if (allMsgs) {
+            // Filtrar mensagens entre este staff e a company
+            const relevantMsgs = allMsgs.filter(m => 
+              (m.sender_type === 'company' && m.receiver_id === myId && m.receiver_type === 'staff') ||
+              (m.sender_id === myId && m.sender_type === 'staff' && m.receiver_type === 'company')
+            );
+
+            if (relevantMsgs.length > 0) {
+              lastMsgData = relevantMsgs[0];
+            }
+
+            unreadCount = relevantMsgs.filter(m => 
+              m.sender_type === 'company' && 
+              m.receiver_id === myId && 
+              m.receiver_type === 'staff' && 
+              !m.is_read
+            ).length;
+          }
         } else {
           const theirId = conv.id;
 
-          lastMsgQuery = await supabase
+          // Mensagens entre staff e student
+          const { data: allMsgs } = await supabase
             .from('messages')
-            .select('content, created_at')
+            .select('content, created_at, sender_id, receiver_id, is_read')
             .eq('company_id', staff.company_id)
-            .or(`and(sender_id.eq.${myId},receiver_id.eq.${theirId}),and(sender_id.eq.${theirId},receiver_id.eq.${myId})`)
             .order('created_at', { ascending: false })
-            .limit(1)
-            .maybeSingle();
+            .limit(100);
 
-          unreadQuery = await supabase
-            .from('messages')
-            .select('*', { count: 'exact', head: true })
-            .eq('receiver_id', myId)
-            .eq('receiver_type', 'staff')
-            .eq('sender_id', theirId)
-            .eq('is_read', false);
+          if (allMsgs) {
+            const relevantMsgs = allMsgs.filter(m => 
+              (m.sender_id === myId && m.receiver_id === theirId) ||
+              (m.sender_id === theirId && m.receiver_id === myId)
+            );
+
+            if (relevantMsgs.length > 0) {
+              lastMsgData = relevantMsgs[0];
+            }
+
+            unreadCount = relevantMsgs.filter(m => 
+              m.sender_id === theirId && 
+              m.receiver_id === myId && 
+              !m.is_read
+            ).length;
+          }
         }
 
-        if (lastMsgQuery.data) {
-          conv.lastMessage = lastMsgQuery.data.content;
-          conv.lastMessageTime = lastMsgQuery.data.created_at;
+        if (lastMsgData) {
+          conv.lastMessage = lastMsgData.content;
+          conv.lastMessageTime = lastMsgData.created_at;
         }
 
-        conv.unreadCount = unreadQuery.count || 0;
+        conv.unreadCount = unreadCount;
       }
 
       const companyConv = convList.find(c => c.type === 'company');
@@ -246,46 +263,49 @@ export default function PersonalChat() {
     const myId = staffInfo.id;
 
     try {
-      let query;
+      // Buscar todas as mensagens e filtrar no cliente
+      const { data: allMsgs } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('company_id', staffInfo.company_id)
+        .order('created_at', { ascending: true });
 
-      if (conversation.type === 'company') {
-        // Mensagens entre staff e company:
-        // - Company envia para staff: sender_type=company, receiver_id=staffId, receiver_type=staff
-        // - Staff envia para company: sender_id=staffId, sender_type=staff, receiver_type=company, receiver_id=company_id
-        query = await supabase
-          .from('messages')
-          .select('*')
-          .eq('company_id', staffInfo.company_id)
-          .or(`and(sender_type.eq.company,receiver_id.eq.${myId},receiver_type.eq.staff),and(sender_id.eq.${myId},sender_type.eq.staff,receiver_type.eq.company,receiver_id.eq.${staffInfo.company_id})`)
-          .order('created_at', { ascending: true });
-      } else {
-        const theirId = conversation.id;
-        query = await supabase
-          .from('messages')
-          .select('*')
-          .eq('company_id', staffInfo.company_id)
-          .or(`and(sender_id.eq.${myId},receiver_id.eq.${theirId}),and(sender_id.eq.${theirId},receiver_id.eq.${myId})`)
-          .order('created_at', { ascending: true });
-      }
+      let filteredMessages: Message[] = [];
 
-      setMessages(query.data || []);
-
-      if (query.data) {
-        const unreadIds = query.data
-          .filter(m => !m.is_read && m.receiver_id === myId && m.receiver_type === 'staff')
-          .map(m => m.id);
-
-        if (unreadIds.length > 0) {
-          await supabase
-            .from('messages')
-            .update({ is_read: true, read_at: new Date().toISOString() })
-            .in('id', unreadIds);
+      if (allMsgs) {
+        if (conversation.type === 'company') {
+          // Mensagens entre staff e company
+          filteredMessages = allMsgs.filter(m => 
+            (m.sender_type === 'company' && m.receiver_id === myId && m.receiver_type === 'staff') ||
+            (m.sender_id === myId && m.sender_type === 'staff' && m.receiver_type === 'company')
+          );
+        } else {
+          const theirId = conversation.id;
+          // Mensagens entre staff e student
+          filteredMessages = allMsgs.filter(m => 
+            (m.sender_id === myId && m.receiver_id === theirId) ||
+            (m.sender_id === theirId && m.receiver_id === myId)
+          );
         }
-
-        setConversations(prev => prev.map(c =>
-          c.id === conversation.id ? { ...c, unreadCount: 0 } : c
-        ));
       }
+
+      setMessages(filteredMessages);
+
+      // Marcar mensagens como lidas
+      const unreadIds = filteredMessages
+        .filter(m => !m.is_read && m.receiver_id === myId && m.receiver_type === 'staff')
+        .map(m => m.id);
+
+      if (unreadIds.length > 0) {
+        await supabase
+          .from('messages')
+          .update({ is_read: true, read_at: new Date().toISOString() })
+          .in('id', unreadIds);
+      }
+
+      setConversations(prev => prev.map(c =>
+        c.id === conversation.id ? { ...c, unreadCount: 0 } : c
+      ));
     } catch (error) {
       console.error('Error fetching messages:', error);
     } finally {
